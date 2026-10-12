@@ -1,0 +1,7 @@
+---
+description: Quy ước làm việc cho agent trong repo ticketing-platform
+alwaysApply: true
+---
+
+Đọc và tuân thủ `AGENTS.md` ở thư mục gốc trước khi làm bất kỳ việc gì.
+Mỗi lần chỉ làm một task theo Task Run Protocol; danh sách việc ở `docs/agent/TUAN_PLAN.md`, trạng thái ở `docs/agent/STATUS.md`.

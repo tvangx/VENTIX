@@ -1,0 +1,85 @@
+openapi: 3.1.0
+info:
+  title: Event service — API nội bộ (seat-classes)
+  version: 1.0.0
+  description: >
+    Booking prefetch ánh xạ ghế → hạng vé (ADR-0010, C5). Chỉ gọi nội bộ, KHÔNG đi qua Kong.
+    Chủ sở hữu: event-service (Sơn, task S-206).
+servers:
+  - url: http://localhost:3002
+security:
+  - internalKey: []
+paths:
+  /v1/internal/events/{eventId}/seat-classes:
+    get:
+      operationId: listSeatClasses
+      summary: Danh sách ghế và hạng vé của seat map đã publish (phân trang theo cursor)
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: seat_map_version
+          in: query
+          required: false
+          description: Mặc định là phiên bản đã publish mới nhất.
+          schema: { type: integer, minimum: 1 }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 5000, default: 1000 }
+      responses:
+        "200":
+          description: Một trang kết quả. `next_cursor` là null ở trang cuối.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [event_id, seat_map_version, seats, next_cursor]
+                properties:
+                  event_id: { type: string, format: uuid }
+                  seat_map_version: { type: integer }
+                  seats:
+                    type: array
+                    items:
+                      type: object
+                      required: [seat_id, ticket_class_id]
+                      properties:
+                        seat_id: { type: string, format: uuid }
+                        ticket_class_id: { type: string, format: uuid }
+                  next_cursor:
+                    type: [string, "null"]
+        "401":
+          $ref: "#/components/responses/InternalAuthRequired"
+        "404":
+          description: Sự kiện hoặc phiên bản seat map không tồn tại (`code` = EVENT_NOT_FOUND).
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+components:
+  securitySchemes:
+    internalKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Key
+  responses:
+    InternalAuthRequired:
+      description: Thiếu hoặc sai khóa nội bộ (`code` = INTERNAL_AUTH_REQUIRED).
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string }
+        request_id: { type: string }

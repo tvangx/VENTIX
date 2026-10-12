@@ -1,0 +1,100 @@
+openapi: 3.1.0
+info:
+  title: Merch service — API nội bộ (quotes)
+  version: 1.0.0
+  description: >
+    Booking xin báo giá merch khi order có merch (ADR-0010, C6). Chỉ gọi nội bộ, KHÔNG đi qua Kong.
+    Chủ sở hữu: merch-service (Vũ, task V-306). Tuần 3: chỉ SKU lẻ; combo trả 422 COMBO_NOT_SUPPORTED.
+servers:
+  - url: http://localhost:3007
+security:
+  - internalKey: []
+paths:
+  /v1/internal/quotes:
+    post:
+      operationId: createQuote
+      summary: Báo giá cho các dòng merch của một order (không giữ hàng)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, merch_items]
+              properties:
+                event_id: { type: string, format: uuid }
+                ticket_class_ids:
+                  type: array
+                  description: Hạng vé trong order (dùng cho combo từ tuần 4).
+                  items: { type: string, format: uuid }
+                merch_items:
+                  type: array
+                  items:
+                    type: object
+                    required: [sku_id, quantity]
+                    properties:
+                      sku_id: { type: string, format: uuid }
+                      quantity: { type: integer, minimum: 1 }
+                combo_items:
+                  type: array
+                  description: Chưa hỗ trợ ở tuần 3; có phần tử sẽ nhận 422 COMBO_NOT_SUPPORTED.
+                  items:
+                    type: object
+                    required: [combo_id, quantity]
+                    properties:
+                      combo_id: { type: string, format: uuid }
+                      quantity: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Báo giá. `unit_price_vnd` là giá thực thu (đã trừ giảm giá) nên merch_amount = tổng các dòng.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [lines, merch_amount_vnd, discount_vnd]
+                properties:
+                  lines:
+                    type: array
+                    items:
+                      type: object
+                      required: [sku_id, quantity, unit_price_vnd]
+                      properties:
+                        sku_id: { type: string, format: uuid }
+                        quantity: { type: integer }
+                        unit_price_vnd: { type: integer, minimum: 0 }
+                        combo_id: { type: string, format: uuid }
+                  merch_amount_vnd: { type: integer, minimum: 0 }
+                  discount_vnd: { type: integer, minimum: 0 }
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+components:
+  securitySchemes:
+    internalKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Key
+  responses:
+    Problem:
+      description: >
+        Lỗi dạng problem+json. `code`: INTERNAL_AUTH_REQUIRED (401), SKU_NOT_FOUND (404),
+        SKU_NOT_FOR_EVENT (409), COMBO_NOT_SUPPORTED (422).
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string }
+        request_id: { type: string }

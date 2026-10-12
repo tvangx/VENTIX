@@ -1,0 +1,96 @@
+id	week	owner	title	days	deps	dod	priority
+T-101	1	tuan	Monorepo pnpm + Turborepo; ESLint, Prettier, commitlint, husky; cấu trúc `/apps /services /packages /infra /docs`	0 (xong ở Phase 0)	—	Clone về chạy `pnpm i && pnpm build` thành công	must
+T-102	1	tuan	Template NestJS service: config, health/readiness, logger JSON + `request_id`, OpenTelemetry, Swagger, error format chuẩn, auth guard dùng JWKS, Prisma, endpoint `/metrics`	1.0	T-101	Sơn/Vũ tạo service mới từ template trong < 1 giờ	must
+T-103	1	tuan	`packages/outbox-inbox`: bảng `outbox_events`/`processed_events`, relay polling `FOR UPDATE SKIP LOCKED`, wrapper consumer idempotent, test Testcontainers	1.0	T-102	Test: publish lỗi giữa chừng không mất/không trùng sự kiện	must
+T-104	1	tuan	docker-compose hạ tầng: Kafka KRaft, Redis, PostgreSQL + script tạo database + user riêng cho từng service, MinIO, Mailpit, Kong DB-less (declarative); profile `tools` cho Kafka UI/Adminer	0 (xong ở Phase 0)	T-101	`make up` lên đủ; `make verify` toàn xanh (gồm kiểm tra cô lập DB)	must
+T-105	1	tuan	CI GitHub Actions: workflow đã có sẵn, chạy lần đầu trên GitHub và đặt 2 check bắt buộc (`build`, `security`)	0.25	T-102	PR chạy CI tự động, fail khi có lỗ hổng mức cao	must
+T-106	1	tuan	Thử `cloudflared` nhận IPN từ VNPay sandbox; đo RAM profile `core`	0.25	Ngày 0 #3	Có ghi chú cấu hình và số đo RAM	must
+T-107	1	tuan	Workshop chốt `packages/event-contracts` (envelope, topic, schema sự kiện) + soạn ADR-001…008 (theo mục 0 Tài liệu KT)	0.75	—	Contract v1 merge; ADR được cả nhóm đọc	must
+T-301a	1	tuan	Chốt hợp đồng saga: đã cài đặt sẵn (`event-contracts`, ADR-0009/0010, OpenAPI nội bộ). Việc còn lại: review, commit, gửi Sơn/Vũ xác nhận	0.25	T-107	PR merge; Sơn và Vũ đã xác nhận phần ảnh hưởng	must
+T-201	1	tuan	Schema + migration `booking_db` (orders, order_items, seat_allocations + partial unique index `uq_seat_active`, ticket_class_stock, event_snapshots (+`event_version`, `pricing_ready`), seat_pricing, vouchers, idempotency_keys, processed_events, outbox_events)	0.5	T-102, T-103	Index chặn được 2 allocation active cho cùng ghế (có test); migration chạy từ DB rỗng	must
+T-207	1	tuan	Dựng VPS, cài Docker, deploy thử hạ tầng + 1 service lên staging (chưa cần domain đẹp)	0.5	Ngày 0 #6	Truy cập được staging qua HTTPS	must
+S-101	1	son	Schema + migration `identity_db` (users, oauth_accounts, refresh_tokens, roles, user_roles, kyc_profiles, organizers, organizer_documents)	0.5	T-102	Migration chạy từ DB rỗng, có seed 4 role	must
+S-102	1	son	Đăng ký/đăng nhập email, argon2id, JWT RS256 + endpoint JWKS, refresh token rotation + phát hiện tái sử dụng (`family_id`)	1.25	S-101	Test: dùng lại refresh token cũ → thu hồi cả family	must
+S-103	1	son	Google OAuth (PKCE)	0.5	S-102	Đăng nhập Google tạo/liên kết tài khoản	must
+S-104	1	son	RBAC guard/decorator + ngữ cảnh tenant (`organizer_id`); seed tài khoản Admin	0.5	S-102	Test truy cập sai role/tenant → 403	must
+S-105	1	son	Đăng ký Organizer + API Admin duyệt/từ chối + upload giấy phép lên MinIO	0.75	S-104	Luồng UC-02 chạy được qua API	must
+S-106	1	son	OpenAPI cho identity + bộ request mẫu (Bruno/Postman)	0.5	S-102	Vũ sinh được client từ OpenAPI	must
+S-107	1	son	Schema + migration `event_db` (venues, events, ticket_classes, sale_phases, seat_maps, zones, blocks, seats, event_approvals)	0.5	T-102	Migration chạy được; ERD khớp mục 5.2 Tài liệu KT	must
+V-101	1	vu	Khởi tạo `apps/web` và `apps/staff-pwa` (Vite, React 18, Tailwind, shadcn/ui, React Query, Zustand, routing); Axios interceptor tự refresh token	1.0	T-101	Chạy `pnpm dev`; interceptor có test	must
+V-102	1	vu	Layout, theme sáng/tối, responsive 375–1920 px; trang đăng nhập, đăng ký, nút Google	1.25	V-101, S-106	Đăng nhập được với identity thật (hoặc mock)	must
+V-103	1	vu	Sinh client từ OpenAPI + mock server (MSW) để làm UI khi backend chưa xong	0.75	S-106	Mọi màn hình có thể chạy hoàn toàn bằng mock	must
+V-104	1	vu	Dữ liệu seed nội dung: 5 sự kiện, merch, ảnh banner (nguồn tự do bản quyền), FAQ cơ bản	0.5	—	File seed dùng chung cho cả nhóm	must
+V-105	1	vu	Wireframe ~12 màn hình: danh sách/chi tiết sự kiện, seat map, hàng đợi, checkout, vé của tôi, Staff quét, wizard Organizer, dashboard, Admin	1.0	—	Cả nhóm duyệt wireframe tại sync thứ Tư	must
+T-202	2	tuan	Lua `hold_seats` / `release_seats`, `SeatHoldService`, REST `POST /holds`, `DELETE /holds`; giới hạn số ghế/người; TTL 10 phút	1.0	T-104	Test song song: 100 client tranh 1 ghế → đúng 1 thành công; hold nhiều ghế là all-or-nothing	must
+T-203	2	tuan	Consumer `EventApproved/Updated` → `event_snapshots`; job rehydrate Redis từ `seat_allocations`	0.75	T-103, S-203	Xóa Redis → rehydrate → trạng thái ghế khôi phục đúng	must
+T-203b	2	tuan	Prefetch `seat_pricing`: khi `EventApproved/Updated` có `seat_map_version` mới, gọi `GET /v1/internal/events/{id}/seat-classes` (phân trang) và upsert; xong mới đặt `pricing_ready=true` (ADR-0010, C5)	0.5	T-203, S-206	Mất kết nối giữa chừng rồi chạy lại vẫn đúng; chưa `pricing_ready` thì không cho bán	must
+T-204	2	tuan	API trạng thái ghế (snapshot nén) + publisher delta gộp lô 500 ms qua Redis pub/sub	0.5	T-202	Client nhận được delta khi ghế đổi trạng thái	must
+T-205	2	tuan	k6 kịch bản S1 + script SQL kiểm tra oversell + báo cáo baseline v0 (cấu hình máy, RPS, p95, lỗi)	1.0	T-202	`docs/test-reports/s1-baseline.md`; truy vấn kiểm tra trả 0 dòng	must
+T-206	2	tuan	Hoàn thiện Kong: route identity/event/booking, CORS, request-id, rate limit theo IP và chặn mọi đường `/internal` (ADR-0010). JWT verify do `auth-guard` trong service (ADR-0004)	0.75	T-104	Request tới service không token → 401 (từ guard); vượt ngưỡng → 429 (từ Kong); `/api/*/v1/internal*` → 404 từ Kong	must
+S-201	2	son	CRUD venue, event, ticket_classes, sale_phases, kiểm tra tenant	1.0	S-107, S-104	Organizer A không sửa được event của B	must
+S-202	2	son	Seat map: validate layout JSON, sinh zones/blocks/seats hàng loạt (≥ 10.000 ghế), version bất biến sau khi publish	1.25	S-201	Sinh 10k ghế < vài giây; sửa seat map đã publish bị từ chối	must
+S-203	2	son	Luồng duyệt: `DRAFT → PENDING → APPROVED/REJECTED → PUBLISHED`; outbox `EventApproved/Updated/Cancelled`	1.0	S-201, T-103	Máy trạng thái có test; sự kiện xuất hiện trên Kafka	must
+S-204	2	son	API công khai (danh sách/tìm kiếm/chi tiết) với Redis cache-aside + chống stampede + ETag	0.75	S-201	Test tải đọc: phần lớn request trúng cache	must
+S-205	2	son	Script seed: 3 sự kiện, 1 sự kiện ≥ 10k ghế, ticket class, sale phase	0.25	S-202	`pnpm seed` chạy lặp lại được	must
+S-206	2	son	API nội bộ `GET /v1/internal/events/{id}/seat-classes` (xem `docs/api/internal/seat-classes.yaml`), xác thực `X-Internal-Key`, phân trang cursor	0.5	S-202	Trả đúng ánh xạ ghế→hạng vé; thiếu khóa → 401; bị Kong chặn từ ngoài	must
+V-201	2	vu	Trang danh sách/tìm kiếm/chi tiết sự kiện	1.0	V-102, S-204	Hiển thị đúng với dữ liệu seed	must
+V-202	2	vu	Seat map viewer bằng Konva: zoom/pan, chọn ghế, chú thích hạng vé, hiệu năng với 10k ghế	1.5	V-103	Mượt khi zoom/pan trên máy trung bình; chọn được ghế	must
+V-203	2	vu	Wizard Organizer: thông tin sự kiện, ticket class, sale phase, upload banner, gửi duyệt	1.0	V-102, S-201	Tạo sự kiện đầy đủ qua giao diện	must
+V-204	2	vu	`merchandise-service`: schema `merch_db`, CRUD product/SKU/inventory, upload ảnh	1.0	T-102	API khớp ERD mục 5.7 Tài liệu KT	must
+T-301	3	tuan	Checkout API: một transaction tạo order + items + `seat_allocations(HELD)`, `Idempotency-Key`, giá lấy từ server (`seat_pricing`, `event_snapshots`, báo giá merch qua REST nội bộ khi có merch), máy trạng thái order theo ADR-0009, outbox `OrderCreated` / `OrderAwaitingPayment`	1.75	T-202, T-301a, T-203b	Gọi lặp cùng key → cùng kết quả; 2 user cùng ghế → 1 thắng; merch lỗi chỉ ảnh hưởng order có merch	must
+T-302	3	tuan	`payment-service`: schema, `IPaymentAdapter`, `MockAdapter`, `VnpayAdapter` (tạo URL, chữ ký HMAC-SHA512, `vnp_Amount ×100`, xử lý Return/IPN)	1.25	T-103, Ngày 0 #3	Thanh toán thành công trên VNPay sandbox bằng thẻ test	must
+T-303	3	tuan	Webhook IPN idempotent (`provider_txn_id` unique) + outbox `PaymentSucceeded/Failed`; sweeper hết hạn (`SKIP LOCKED`) → `OrderExpired` + bù trừ nhả ghế	1.0	T-301, T-302	Gửi IPN 2 lần chỉ xử lý 1 lần; order quá hạn tự hủy và nhả ghế	must
+T-304	3	tuan	Waiting Room: ZSET queue, admission worker (`admit_rate`), admission token JWT ngắn hạn, SSE trạng thái, kiểm tra token ở `/holds` và `/checkout`. *Làm cuối tuần 3; được phép trượt sang đầu tuần 4 mà không chặn G2*	1.0	T-202, T-206	Không có token → từ chối; admit đúng tốc độ cấu hình	must
+S-301	3	son	Schema `ticket_db`; consumer `OrderConfirmed` → phát hành vé idempotent theo `order_item_id`, `ticket_secrets` mã hóa AES-256-GCM (có `key_id`)	1.25	T-103, T-301a	Event trùng không sinh vé trùng; số vé = số item vé trong order	must
+S-302	3	son	Thư viện TOTP RFC 6238 (cho phép lệch ±1 bước) + endpoint QR/token + API "vé của tôi"	1.0	S-301	Test với vector chuẩn RFC; mã đổi mỗi 30 giây	must
+S-303	3	son	Consumer `OrderCancelled`/`RefundCompleted` → vé `REFUNDED/REVOKED`	0.5	S-301	Vé bị hoàn không còn check-in được	must
+S-304	3	son	Schema `resale_db` + khung API niêm yết + kiểm tra trần giá	0.75	T-102	Giá > 120% giá gốc bị từ chối	should
+S-305	3	son	KYC: OTP (Redis, TTL), lưu CCCD mã hóa + HMAC unique; API phục vụ giới hạn vé theo `kycHash`	1.0	S-101	Một CCCD không gắn được nhiều tài khoản	must
+V-301	3	vu	Seat map realtime: snapshot + delta (Socket.IO/SSE), giữ ghế, đếm ngược, toast khi xung đột	1.25	V-202, T-204	2 trình duyệt thấy trạng thái ghế của nhau trong ≤ 1–2 giây	must
+V-302	3	vu	Trang Waiting Room (SSE vị trí hàng đợi) + xử lý admission token	0.5	T-304	Hiển thị vị trí; vào được khi tới lượt	must
+V-303	3	vu	Giỏ hàng, checkout (SKU lẻ, chưa combo), chuyển hướng/nhận kết quả thanh toán	1.0	V-301, T-301	Hoàn tất mua vé qua UI với MockAdapter	must
+V-304	3	vu	"Vé của tôi" + QR động (TOTP phía client, đếm ngược 30 giây, cache offline)	0.75	S-302	QR tự đổi mỗi 30 giây	must
+V-305	3	vu	`merchandise-service`: consumer `OrderCreated` → reserve (chỉ item MERCH), `OrderConfirmed` → commit, `OrderExpired/Cancelled` → release	1.0	V-204, T-103, T-301a	`UNIQUE(order_id, sku_id)`; không âm tồn kho	must
+V-306	3	vu	API nội bộ `POST /v1/internal/quotes` cho SKU lẻ (xem `docs/api/internal/merch-quotes.yaml`); combo trả `422 COMBO_NOT_SUPPORTED`	0.75	V-204	Báo giá đúng; thiếu khóa → 401; SKU không thuộc sự kiện → 409	must
+T-401	4	tuan	Refund đơn lẻ + hoàn lô (API Admin; VNPay refund hoặc mock), outbox `RefundCompleted`	1.0	T-302	Hủy sự kiện → hoàn lô thành công; ghế/tồn kho được nhả	must
+T-402	4	tuan	`finance-service` tối thiểu: consumer, sổ cái (bút toán cân đối, chỉ INSERT), `revenue_records` tách TICKET/MERCH và VAT, `audit_logs` hash-chain, `event_sales_stats`	1.5	T-103	Tổng Nợ = tổng Có; sửa bản ghi cũ làm hỏng chuỗi hash (có test phát hiện)	should
+T-403	4	tuan	Load test vòng 1 (S1–S3, MockAdapter) chạy k6 từ máy khác; phân tích nút cổ chai; tối ưu (PgBouncer, index, scale `booking` ×3)	1.5	G2	`docs/test-reports/loadtest-1.md`: bảng trước/sau tối ưu, oversell = 0	must
+T-404	4	tuan	Prometheus scrape + Grafana dashboard cơ bản (RED: rate/error/duration theo service)	0.5	T-102	Dashboard hiển thị p95, lỗi, RPS	must
+S-401	4	son	Gate + phân công Staff; API gói xác thực (verification package) theo event/gate: danh sách vé + secret mã hóa, có TTL (phương án A)	1.0	S-301	Staff chỉ tải được gói của cổng được phân công	must
+S-402	4	son	Check-in online: unique index `uq_checkin_accepted`, mã phản hồi rõ (hợp lệ/đã dùng/sai sự kiện/không hợp lệ)	0.75	S-302, S-401	Quét 2 lần cùng vé → lần 2 trả "đã dùng"	must
+S-403	4	son	Sync offline: nhận batch có HMAC, phát hiện trùng (`DUPLICATE`), trả delta vé bị thu hồi; `offline_sync_batches`	1.0	S-402	Batch sai chữ ký bị từ chối; trùng giữa 2 thiết bị được ghi nhận	must
+S-404	4	son	Resale: tạo listing (freeze vé qua gọi đồng bộ idempotent), hủy listing, tìm kiếm, trần 120%	0.75	S-304	Một vé chỉ một listing active (unique index)	should
+S-405	4	son	Resale mua: thanh toán, escrow, `ResaleCompleted` → chuyển quyền, `secret_version++`, thu hồi secret cũ	1.25	S-404, T-302	Sau chuyển quyền QR cũ vô hiệu, người mua có QR mới	should
+V-401	4	vu	Staff PWA: đăng nhập, chọn sự kiện/cổng, tải gói xác thực, lưu IndexedDB mã hóa (WebCrypto, khóa non-extractable, PIN), quét QR bằng camera, verify TOTP cục bộ, màn hình kết quả rõ ràng	2.0	S-401	Tắt mạng vẫn quét và xác thực được vé trong gói	must
+V-402	4	vu	Hàng đợi đồng bộ (Background Sync), hiển thị xung đột sau sync	0.75	S-403, V-401	Bật mạng lại tự sync; xung đột hiển thị cho Staff	must
+V-403	4	vu	UI resale: niêm yết, chợ, mua, hủy	0.75	S-404	Luồng UC-13 chạy qua UI	should
+V-404	4	vu	`notification-service`: consumer `TicketIssued`/`Order*`, template, gửi qua SMTP/Mailpit, thông báo in-app, `dedupe_key`	1.0	T-103	Event trùng không gửi 2 email	should
+V-406	4	vu	Combo upsell: combo API, báo giá combo trong `quotes`, UI upsell trong checkout	0.5	V-306, V-303	Order có combo: giảm giá chỉ áp lên dòng merch; tổng tiền khớp hợp đồng	must
+T-501	5	tuan	Dashboard đầy đủ: Kafka consumer lag, Redis, kết nối DB; Loki + Promtail; Jaeger tracing xuyên service	0.75	T-404	Truy vết được một đơn hàng từ gateway tới ticket qua `trace_id`	must
+T-502	5	tuan	Chaos test S4: dừng Redis, dừng Kafka, payment trễ giữa lúc chạy S3; sửa lỗi phát hiện; báo cáo	1.25	T-403	Không mất đơn, không trùng vé, hệ thống tự hồi phục; có báo cáo	must
+T-503	5	tuan	Hardening: security headers/CORS, tinh chỉnh rate limit, OWASP ZAP baseline, gitleaks pre-commit, xử lý lỗi Trivy, Docker secrets	1.0	—	Báo cáo ZAP không còn lỗi mức cao; không còn secret trong repo	must
+T-504	5	tuan	Load test vòng 2 + báo cáo cuối	0.75	T-502	`loadtest-2.md` so sánh với vòng 1	must
+T-505	5	tuan	Pipeline deploy: build image, push registry, deploy staging tự động, prod duyệt tay, smoke test	1.0	T-207	Merge vào `main` tự deploy staging	must
+S-501	5	son	Job giải ngân escrow theo chính sách đã chốt + tranh chấp cơ bản (Admin giữ/hoàn)	0.75	S-405	Giải ngân đúng điều kiện; tranh chấp chặn giải ngân	should
+S-502	5	son	NFT worker (timebox 2 ngày): hợp đồng ERC-721 (Hardhat + OpenZeppelin) trên Polygon Amoy, consumer `TicketIssued`, retry, `nft_mints`, metadata lên Pinata. Nếu quá timebox → giữ `MockMinter`	2.0	S-301	Vé mint được trên testnet **hoặc** mock hoạt động; lỗi mint không ảnh hưởng vé off-chain	could
+S-503	5	son	Cổng tra cứu vé công khai (không cần đăng nhập, có rate limit): trạng thái vé + tx hash	0.5	S-301	Tra cứu được tính hợp lệ của vé	should
+S-504	5	son	Rà soát mã hóa PII: kyc, secret vé, địa chỉ; script xoay khóa theo `key_id`	0.5	S-305	Xoay khóa không làm mất khả năng giải mã dữ liệu cũ	must
+S-505	5	son	`IInvoiceAdapter` + MockAdapter (+ sandbox MISA nếu có) trong `finance-service`	0.75	T-402	Có hóa đơn cho order đã thanh toán; lỗi nhà cung cấp → retry	should
+V-501	5	vu	Admin portal: duyệt Organizer, duyệt sự kiện, hoàn tiền lô, xem audit log, xem/replay DLQ	1.5	T-401, T-402	Các luồng UC-02, UC-05, UC-15 chạy qua UI	should
+V-502	5	vu	Dashboard Organizer realtime (Recharts, SSE): doanh thu, tiến độ bán vé và merch, check-in	1.25	T-402	Số liệu cập nhật theo thời gian thực khi có đơn mới	must
+V-503	5	vu	UI quản lý merch cho Organizer + cảnh báo sắp hết hàng	0.75	V-204, V-305	Tồn kho dưới ngưỡng hiện cảnh báo	must
+V-504	5	vu	Rà soát trạng thái loading/empty/error, a11y cơ bản, QA responsive	0.75	—	Không còn màn hình trắng khi lỗi API	must
+V-505	5	vu	UI thông báo in-app	0.25	V-404	Chuông thông báo hiển thị và đánh dấu đã đọc	should
+T-601	6	tuan	Deploy production: domain, TLS (Cloudflare), secret prod, backup cron + thử restore thật 1 lần, smoke test	1.0	T-505, G3	Truy cập được bằng domain; có biên bản restore thành công	must
+T-602	6	tuan	Load test + chaos lần cuối trên môi trường thật; chốt báo cáo hiệu năng	1.0	T-601	Báo cáo cuối kèm cấu hình máy và giới hạn đã biết	must
+T-603	6	tuan	Viết tài liệu kiến trúc, concurrency (mục 3), ADR, báo cáo kiểm thử hiệu năng	1.5	—	Cập nhật khớp bản cuối	must
+T-604	6	tuan	Hỗ trợ sửa lỗi, tập dượt bảo vệ	0.5	—	—	must
+S-601	6	son	E2E (Playwright/API) cho luồng tới hạn: mua vé, hết hạn order, IPN trùng, check-in, resale (phối hợp Vũ)	1.5	G3	Chạy được trong CI hoặc một lệnh; đạt 100%	should
+S-602	6	son	Sửa lỗi tồn đọng	1.0	—	Không còn lỗi chặn luồng chính	must
+S-603	6	son	Cập nhật SRS/UC/ERD/sequence cho identity, event, ticket, resale; ADR offline TOTP	1.5	—	Tài liệu khớp hệ thống thực tế	should
+S-604	6	son	Hỗ trợ tập dượt	0.5	—	—	must
+V-601	6	vu	Trau chuốt UI, thương hiệu, seed dữ liệu demo (sự kiện, người dùng, đơn mẫu)	1.0	G3	Môi trường demo có dữ liệu đẹp, nhất quán	must
+V-602	6	vu	Phối hợp viết E2E phía UI	0.5	S-601	—	must
+V-603	6	vu	Kịch bản demo, slide, video demo dự phòng	1.5	—	Video chạy đủ luồng chính; kịch bản có thời gian từng bước	must
+V-604	6	vu	Tài liệu: đặc tả màn hình, hướng dẫn sử dụng	1.0	—	Có hướng dẫn cho 4 vai trò	must
+V-605	6	vu	Sửa lỗi UI tồn đọng	0.5	—	—	must

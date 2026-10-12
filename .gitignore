@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+.env
+*.log
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+# secrets / keys
+*.pem
+*.key
+secrets/

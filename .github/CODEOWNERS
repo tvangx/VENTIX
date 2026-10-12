@@ -1,0 +1,17 @@
+# THAY @tvangx, @luxmountain, @RaynNg bằng username GitHub thật (xem hướng dẫn Phase 0).
+*                                   @tvangx
+/infra/                             @tvangx
+/.github/                           @tvangx
+/packages/event-contracts/          @tvangx
+/packages/outbox-inbox/             @tvangx
+/services/booking/                  @tvangx @luxmountain
+/services/payment/                  @tvangx @luxmountain
+/services/finance/                  @tvangx @luxmountain
+/services/identity/                 @luxmountain @tvangx
+/services/event/                    @luxmountain @tvangx
+/services/ticket/                   @luxmountain @tvangx
+/services/resale/                   @luxmountain @tvangx
+/services/merch/                    @RaynNg @tvangx
+/services/notification/             @RaynNg @tvangx
+/apps/                              @RaynNg @luxmountain
+/docs/adr/                          @tvangx @luxmountain @RaynNg
