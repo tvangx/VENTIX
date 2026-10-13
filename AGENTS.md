@@ -45,7 +45,7 @@ scripts/     check-prereqs · verify-infra · gh-bootstrap · create-issues · g
 **Quyền sở hữu:** theo `.github/CODEOWNERS`. Việc của Tuấn: `infra/`, `.github/`, `packages/*`, `services/booking`, `services/payment`, `services/finance`, load test, giám sát, deploy. Muốn sửa vùng của người khác → chỉ **đề xuất trong PR/Issue**, không tự sửa.
 
 **Stack đã chốt:** Node 20 · pnpm 9 · TypeScript strict (CommonJS) · NestJS (Express) · Prisma (migration `--create-only` rồi **sửa tay SQL**) · kafkajs · ioredis · jose · pino · zod · Jest + Testcontainers (service) / Vitest (contracts, FE).
-Muốn thêm thư viện: xem mục 8.
+Muốn thêm thư viện: xem mục 8. **Image Docker mới:** phải `docker pull` thành công trước khi commit (registry có thể gỡ image, ví dụ `minio/mc`); ghim tag qua biến trong `.env`/`.env.example`; không pull được thì dừng và hỏi.
 
 ---
 

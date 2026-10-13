@@ -104,9 +104,11 @@ services:
     entrypoint: ["/bin/sh", "/create-topics.sh"]
     restart: "no"
 
-    # ---------- MinIO (S3 tương thích) ----------
+  # ---------- MinIO (S3 tương thích) ----------
   minio:
-    image: cgr.dev/chainguard/minio:latest
+    # MinIO không còn đăng image mới lên Docker Hub (minio/minio, minio/mc) nên dùng bản Chainguard.
+    # Đổi image qua MINIO_IMAGE / MINIO_MC_IMAGE trong .env nếu cần.
+    image: ${MINIO_IMAGE:-cgr.dev/chainguard/minio:latest}
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
@@ -119,7 +121,7 @@ services:
       - miniodata:/data
 
   minio-init:
-    image: cgr.dev/chainguard/minio-client:latest-dev
+    image: ${MINIO_MC_IMAGE:-cgr.dev/chainguard/minio-client:latest-dev}
     depends_on:
       - minio
     environment:

@@ -52,6 +52,9 @@ Thứ tự đầy đủ, kèm prompt, người đọc và "phá thử" cho từn
 | 1    | T-102 → T-103 → T-201 (+ T-207); song song T-105, T-106, T-107 và review T-301a | `make verify` xanh trên cả 3 máy; hợp đồng được xác nhận |
 | 2    | T-202 → T-206 → T-203 → T-204 → T-205; T-203b khi Sơn xong S-206                | **G1:** oversell = 0                                     |
 | 3    | T-301 → T-302 → T-303 → T-304 (T-304 được trượt sang đầu tuần 4)                | **G2:** luồng mua vé chạy trọn vẹn                       |
+| 4    | T-401 → T-402 → T-404 → T-403 → T-405                                           | Số đo thật vòng 1; hoàn tiền đúng một lần                |
+| 5    | T-501 → T-502 → T-503 → T-505 → T-504                                           | **G3:** đóng băng tính năng                              |
+| 6    | T-601 → T-602; T-603 song song; T-604                                           | **G4:** sẵn sàng bảo vệ                                  |
 
 Ghi chú:
 

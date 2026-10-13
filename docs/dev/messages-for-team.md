@@ -27,6 +27,7 @@ Tóm tắt thay đổi:
 
 Ảnh hưởng tới Sơn:
 - S-301: ticket-service phát vé khi nhận OrderConfirmed (idempotent theo order_item_id). Không consume PaymentSucceeded.
+- S-405 (resale mua): resale-service phát ResaleOrderAwaitingPayment (resale.events) khi tạo đơn resale; payment-service dựng read-model và tạo thanh toán; resale lắng nghe PaymentSucceeded{purpose: RESALE} để hoàn tất đơn. Hoàn tiền resale chưa hỗ trợ (ghi vào hạn chế đã biết).
 - S-206 (MỚI, 0,5 ngày, tuần 2): GET /v1/internal/events/{id}/seat-classes (phân trang cursor) theo docs/api/internal/seat-classes.yaml,
   xác thực X-Internal-Key. Booking dùng để prefetch giá ghế.
 

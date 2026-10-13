@@ -245,7 +245,7 @@ sequenceDiagram
   MC-->>K: StockReserved / StockRejected
   K-->>BK: StockReserved, order AWAITING_PAYMENT
   BK-->>K: OrderAwaitingPayment (không có merch thì phát ngay)
-  K-->>PAY: payable_orders (read-model)
+  K-->>PAY: payables (read-model)
   U->>PAY: POST /payments (chọn VNPay)
   PAY-->>U: redirect VNPay
   U->>PAY: provider webhook IPN (verify chữ ký)
@@ -633,8 +633,10 @@ erDiagram
 
   payments {
     uuid id PK
-    uuid order_id UK "ref:booking_db"
-    varchar provider "VNPAY MOMO"
+    varchar purpose "ORDER RESALE"
+    uuid ref_id "order_id hoac resale_order_id, ref:booking_db / resale_db"
+    uuid event_id "denormalized tu payables"
+    varchar provider "VNPAY MOMO MOCK"
     bigint amount_vnd
     varchar status "PENDING SUCCEEDED FAILED EXPIRED"
     varchar idempotency_key UK
@@ -651,11 +653,15 @@ erDiagram
   }
   refunds {
     uuid id PK
-    uuid payment_id FK
+    uuid payment_id UK "hoan tien toan phan: moi payment toi da 1"
     uuid batch_id FK
     bigint amount_vnd
     varchar reason
-    varchar status
+    varchar status "PENDING PROCESSING SUCCEEDED NEEDS_MANUAL"
+    int attempts
+    timestamptz next_attempt_at
+    varchar provider_refund_id
+    text last_error
     uuid approved_by
   }
   refund_batches {
@@ -665,9 +671,11 @@ erDiagram
     varchar status
     uuid created_by
   }
-  payable_orders {
-    uuid order_id PK "ref:booking_db, read-model tu OrderAwaitingPayment"
+  payables {
+    varchar purpose PK "ORDER RESALE"
+    uuid ref_id PK "read-model tu OrderAwaitingPayment / ResaleOrderAwaitingPayment"
     uuid user_id
+    uuid event_id
     bigint amount_vnd
     timestamptz expires_at
     varchar status
