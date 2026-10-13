@@ -192,4 +192,26 @@ describe("event contracts v1 (draft)", () => {
       expect(parseMessage(msg).type).toBe("OrderCreated");
     });
   });
+
+  it("ResaleOrderAwaitingPayment hợp lệ, đúng topic resale.events (ADR-0009 C7)", () => {
+    const msg = newMessage("ResaleOrderAwaitingPayment", {
+      resale_order_id: uuid(),
+      listing_id: uuid(),
+      buyer_id: uuid(),
+      event_id: uuid(),
+      amount_vnd: 600000,
+      expires_at: new Date(Date.now() + 900_000).toISOString(),
+    });
+    expect(parseMessage(msg).type).toBe("ResaleOrderAwaitingPayment");
+    expect(topicOf.ResaleOrderAwaitingPayment).toBe(Topics.RESALE_EVENTS);
+    const bad = newMessage("ResaleOrderAwaitingPayment", {
+      resale_order_id: uuid(),
+      listing_id: uuid(),
+      buyer_id: uuid(),
+      event_id: uuid(),
+      amount_vnd: -1,
+      expires_at: new Date().toISOString(),
+    });
+    expect(() => parseMessage(bad)).toThrow();
+  });
 });

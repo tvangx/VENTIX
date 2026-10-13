@@ -296,6 +296,19 @@ export const ListingCancelled = envelope(
   z.object({ listing_id: id, ticket_id: id }),
 );
 
+/** Đơn resale sẵn sàng thanh toán: payment-service dựng read-model `payables` (purpose RESALE) từ sự kiện này (ADR-0009, C7). */
+export const ResaleOrderAwaitingPayment = envelope(
+  "ResaleOrderAwaitingPayment",
+  z.object({
+    resale_order_id: id,
+    listing_id: id,
+    buyer_id: id,
+    event_id: id,
+    amount_vnd: vnd,
+    expires_at: iso,
+  }),
+);
+
 export const ResaleCompleted = envelope(
   "ResaleCompleted",
   z.object({
@@ -344,6 +357,7 @@ export const eventSchemas = {
   TicketCheckedIn,
   ListingCreated,
   ListingCancelled,
+  ResaleOrderAwaitingPayment,
   ResaleCompleted,
   AuditRecorded,
 } as const;
@@ -373,6 +387,7 @@ export const topicOf: Record<EventType, string> = {
   TicketCheckedIn: Topics.TICKET_EVENTS,
   ListingCreated: Topics.RESALE_EVENTS,
   ListingCancelled: Topics.RESALE_EVENTS,
+  ResaleOrderAwaitingPayment: Topics.RESALE_EVENTS,
   ResaleCompleted: Topics.RESALE_EVENTS,
   AuditRecorded: Topics.AUDIT_EVENTS,
 };

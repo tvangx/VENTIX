@@ -20,7 +20,7 @@ make up && make verify                                      # chờ ~60 giây; p
 ```
 
 - [ ] Mọi lệnh trên xanh. Nếu `make verify` lỗi: xem bảng lỗi trong `docs/PHASE0-setup-guide.md` mục 5.
-- [ ] **Nếu bạn đã đổi image MinIO sang Chainguard** (như log trước): giữ thay đổi đó trong `infra/compose/docker-compose.yml` sau khi giải nén.
+- [ ] MinIO dùng image Chainguard (`MINIO_IMAGE`, `MINIO_MC_IMAGE` trong `.env`). Không cần sửa gì thêm.
 
 ### 1.2 Thay tên GitHub, commit, đẩy lên
 
@@ -127,9 +127,44 @@ Thứ tự: 5 → 6 → 7 → 8 → 9; làm 10 ngay khi Sơn xong S-206 (không 
 Làm 11 → 12 → 13 → 14. **T-304 được phép trượt sang đầu tuần 4** mà không chặn G2 (G2 chấp nhận `ADMISSION_REQUIRED=false`), nhưng phải xong trước load test vòng 1.
 **Demo thứ Sáu (G2):** chọn ghế → checkout → thanh toán (Mock; VNPay sandbox nếu đã có) → `OrderConfirmed` → vé được phát (cần Sơn S-301). IPN gửi trùng và order hết hạn không làm mất ghế/trùng vé.
 
-### Tuần 4–6
+### Tuần 4 (mục tiêu: hoàn tiền đúng, sổ cái, **số đo thật vòng 1**)
 
-Làm theo `docs/agent/TUAN_PLAN.md`. Với mỗi task chưa có đặc tả chi tiết, dùng prompt **"Mở rộng đặc tả"** trước, duyệt xong mới giao code.
+Nếu T-304 trượt từ tuần 3 thì làm nó **đầu tuần**. Tuần 4 của bạn đầy (5,0 ngày): nếu trễ, cắt theo mục 7 của `TUAN_PLAN.md` (mục [C]/[S] của T-402 trước, rồi dời T-404 sang đầu tuần 5).
+
+| #   | Task                           | Prompt                         | Người đọc | "Phá thử"                                                     | Qua khi                                            |
+| --- | ------------------------------ | ------------------------------ | --------- | ------------------------------------------------------------- | -------------------------------------------------- |
+| 15  | **T-401** Refund               | `T-401 Refund và tự hoàn tiền` | Bạn + Sơn | Bỏ `UNIQUE(payment_id)`; bỏ `SKIP LOCKED` ở worker            | 6 kiểm chứng trong prompt xanh                     |
+| 16  | **T-402** finance-service      | `T-402 finance-service`        | Bạn + Sơn | Bỏ constraint trigger cân bằng; sửa tay một dòng `audit_logs` | Nợ = Có; `verify` bắt được chuỗi bị sửa            |
+| 17  | **T-404** Prometheus + Grafana | `T-404 Prometheus và Grafana`  | Bạn       | —                                                             | Dashboard RED có dữ liệu                           |
+| 18  | **T-403** Load test vòng 1     | `T-403 Load test vòng 1`       | Bạn       | Chạy `verify-consistency` với dữ liệu cố ý sai                | Báo cáo có số **thật**; bạn chạy k6 từ máy thứ hai |
+| 19  | **T-405** Payment resale       | `T-405 Payment cho đơn resale` | Bạn       | Gửi cả hai khóa `order_id` và `resale_order_id`               | 422; IPN trùng chỉ 1 `PaymentSucceeded`            |
+
+Thứ tự: 15 → 16 → 17 → 18 → 19. T-405 chờ S-405 của Sơn (hoặc dùng sự kiện giả).
+**Demo thứ Sáu:** hủy một sự kiện có đơn đã thanh toán ⇒ hoàn lô chạy hết, sổ cái cân bằng, số liệu vòng 1 đưa lên màn hình.
+
+### Tuần 5 (mục tiêu: **Cổng G3 — đóng băng tính năng**)
+
+| #   | Task                       | Prompt                    | Người đọc | "Phá thử"                                                                 | Qua khi                                                 |
+| --- | -------------------------- | ------------------------- | --------- | ------------------------------------------------------------------------- | ------------------------------------------------------- |
+| 20  | **T-501** Giám sát đầy đủ  | `T-501 Giám sát đầy đủ`   | Bạn       | —                                                                         | Tìm 1 đơn theo `request_id` thấy log ≥ 3 service        |
+| 21  | **T-502** Chaos S4         | `T-502 Chaos S4`          | Bạn       | Bỏ `commandTimeout`/`enableOfflineQueue:false` rồi chạy test "Redis down" | Kịch bản 1–4 đạt (bạn chạy thật)                        |
+| 22  | **T-503** Hardening        | `T-503 Hardening bảo mật` | Bạn       | —                                                                         | ZAP không còn lỗi cao; checklist OWASP có bằng chứng    |
+| 23  | **T-505** Pipeline deploy  | `T-505 Pipeline deploy`   | Bạn       | Cố ý làm smoke test fail                                                  | Tự quay về bản trước; merge `main` thì staging cập nhật |
+| 24  | **T-504** Load test vòng 2 | `T-504 Load test vòng 2`  | Bạn       | —                                                                         | `loadtest-2.md` so sánh với vòng 1, số **thật**         |
+
+Thứ tự: 20 → 21 → 22 → 23 → 24 (T-504 làm sau cùng vì cần các bản sửa trước đó). Bạn tạo GitHub environments và secrets trước khi giao T-505.
+**Cổng G3:** mọi mục [M] và [S] của tuần 1–5 xong; có `loadtest-1`, `loadtest-2`, `chaos-s4`, `zap`, `hardening-checklist`; mục [C] chưa làm ghi vào hạn chế đã biết. **Từ thứ Hai tuần 6 không thêm tính năng.**
+
+### Tuần 6 (mục tiêu: **Cổng G4 — sẵn sàng bảo vệ**)
+
+| #   | Task                                  | Prompt                                      | Người đọc                      | Qua khi                                                                                                     |
+| --- | ------------------------------------- | ------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| 25  | **T-601** Deploy production           | `T-601 Deploy production`                   | Bạn                            | Truy cập bằng domain qua HTTPS; **bạn đã diễn tập khôi phục thật** và điền thời gian vào `restore-drill.md` |
+| 26  | **T-602** Load/chaos cuối             | `T-602 Load test cuối trên môi trường thật` | Bạn                            | `performance-final.md` có số thật, mọi số có nguồn                                                          |
+| 27  | **T-603** Tài liệu cuối               | `T-603 Tài liệu cuối`                       | Bạn + Sơn/Vũ đọc phần của mình | Danh sách chỗ lệch tài liệu–code đã xử lý                                                                   |
+| 28  | **T-604** Reset demo + câu hỏi bảo vệ | `T-604 Sửa lỗi và chuẩn bị bảo vệ`          | Bạn                            | Đã tập dượt ít nhất 2 lần, có video dự phòng                                                                |
+
+Thứ tự: 25 → 26; 27 làm song song; 28 cuối cùng. Lỗi phát sinh dùng prompt **"Sửa lỗi"** (mỗi lỗi một nhánh).
 
 ---
 

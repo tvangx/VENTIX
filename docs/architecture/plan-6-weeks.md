@@ -124,7 +124,7 @@ gantt
 
 | | T1 | T2 | T3 | T4 | T5 | T6 | Tổng |
 |---|---|---|---|---|---|---|---|
-| **Tuấn** | 4,5 | 4,5 | 5,0 | 4,5 | 4,75 | 4,0 | 27,25 |
+| **Tuấn** | 4,5 | 4,5 | 5,0 | 5,0 | 4,75 | 4,0 | 27,75 |
 | **Sơn** | 4,5 | 4,75 | 4,5 | 4,75 | 4,5 | 4,5 | 27,5 |
 | **Vũ** | 4,5 | 4,5 | 5,25 | 5,0 | 4,5 | 4,5 | 28,25 |
 
@@ -287,6 +287,7 @@ Làm xong **trước thứ Hai tuần 1**; mỗi mục có người phụ trách
 | T-402 | `finance-service` tối thiểu: consumer, **sổ cái** (bút toán cân đối, chỉ INSERT), `revenue_records` tách TICKET/MERCH và VAT, **`audit_logs` hash-chain**, `event_sales_stats` | 1,5 | T-103 | Tổng Nợ = tổng Có; sửa bản ghi cũ làm hỏng chuỗi hash (có test phát hiện) |
 | T-403 | **Load test vòng 1 (S1–S3, MockAdapter)** chạy k6 từ máy khác; phân tích nút cổ chai; tối ưu (PgBouncer, index, scale `booking` ×3) | 1,5 | G2 | `docs/test-reports/loadtest-1.md`: bảng trước/sau tối ưu, oversell = 0 |
 | T-404 | Prometheus scrape + Grafana dashboard cơ bản (RED: rate/error/duration theo service) | 0,5 | T-102 | Dashboard hiển thị p95, lỗi, RPS |
+| T-405 | **Payment cho đơn resale** (ADR-0009 C7): consumer `ResaleOrderAwaitingPayment` → `payables(purpose=RESALE)`, `POST /v1/payments` hỗ trợ `resale_order_id`, `PaymentSucceeded{purpose:RESALE}` | 0,5 | T-302, S-405 | Mock hoàn tất thanh toán resale; trùng IPN chỉ xử lý 1 lần |
 
 #### Sơn
 | ID | Công việc | Ngày | Phụ thuộc | DoD |

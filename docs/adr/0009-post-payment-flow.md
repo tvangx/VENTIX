@@ -18,7 +18,7 @@ Khi rà luồng saga checkout, bản hợp đồng nháp thiếu thông tin đ�
 ### C1. Sự kiện `OrderAwaitingPayment`
 
 Booking phát `OrderAwaitingPayment {order_id, user_id, event_id, amount_vnd, expires_at}` (topic `booking.orders`, key `order_id`) khi order sẵn sàng thanh toán (ngay trong transaction tạo order nếu không có merch; sau `StockReserved` nếu có merch).
-`payment-service` dựng read-model `payable_orders` từ sự kiện này. Client gọi `POST /v1/payments {order_id, provider}`; nếu read-model chưa có dữ liệu, payment trả `409 ORDER_NOT_READY` kèm `Retry-After: 1`.
+`payment-service` dựng read-model `payables` từ sự kiện này. Client gọi `POST /v1/payments {order_id, provider}`; nếu read-model chưa có dữ liệu, payment trả `409 ORDER_NOT_READY` kèm `Retry-After: 1`.
 
 ### C2. `OrderConfirmed` là điểm kích hoạt sau thanh toán
 
@@ -66,6 +66,11 @@ Mọi chuyển trạng thái là cập nhật có điều kiện `WHERE id=:id A
 ### D7. `PaymentFailed` không hủy order
 
 Thanh toán thất bại là tình huống thường gặp (nhập sai OTP...). Khách được thanh toán lại đến khi order hết hạn. Mỗi order chỉ có tối đa 1 payment đang hoạt động (`PENDING` hoặc `SUCCEEDED`). Order chỉ sang `FAILED` khi payment-service xác định không thể tiếp tục (ví dụ vượt số lần thử cấu hình), còn mặc định cứ chờ hết hạn.
+
+### C7. Thanh toán cho đơn resale đi qua cùng payment-service
+
+`resale-service` phát `ResaleOrderAwaitingPayment {resale_order_id, listing_id, buyer_id, event_id, amount_vnd, expires_at}` (topic `resale.events`). `payment-service` lưu vào read-model `payables` (khóa `(purpose, ref_id)` với `purpose` là `ORDER` hoặc `RESALE`). Thanh toán thành công phát `PaymentSucceeded {purpose: "RESALE", resale_order_id}`; `resale-service` lắng nghe để hoàn tất đơn (escrow, chuyển quyền vé).
+Giới hạn hiện tại: hoàn tiền cho đơn resale chưa được hỗ trợ trong `payment-service` (`RefundCompleted` mới có `order_id`); ghi nhận trong danh sách hạn chế đã biết.
 
 ## Phương án đã cân nhắc
 
