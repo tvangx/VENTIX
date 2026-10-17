@@ -45,7 +45,7 @@ scripts/     check-prereqs · verify-infra · gh-bootstrap · create-issues · g
 **Quyền sở hữu:** theo `.github/CODEOWNERS`. Việc của Tuấn: `infra/`, `.github/`, `packages/*`, `services/booking`, `services/payment`, `services/finance`, load test, giám sát, deploy. Muốn sửa vùng của người khác → chỉ **đề xuất trong PR/Issue**, không tự sửa.
 
 **Stack đã chốt:** Node 20 · pnpm 9 · TypeScript strict (CommonJS) · NestJS (Express) · Prisma (migration `--create-only` rồi **sửa tay SQL**) · kafkajs · ioredis · jose · pino · zod · Jest + Testcontainers (service) / Vitest (contracts, FE).
-Muốn thêm thư viện: xem mục 8. **Image Docker mới:** phải `docker pull` thành công trước khi commit (registry có thể gỡ image, ví dụ `minio/mc`); ghim tag qua biến trong `.env`/`.env.example`; không pull được thì dừng và hỏi.
+Muốn thêm thư viện: xem `docs/agent/CONVENTIONS.md` mục 8. **Image Docker mới:** phải `docker pull` thành công trước khi commit (registry có thể gỡ image, ví dụ `minio/mc`); ghim tag qua biến trong `.env`/`.env.example`; không pull được thì dừng và hỏi.
 
 ---
 
@@ -54,7 +54,7 @@ Muốn thêm thư viện: xem mục 8. **Image Docker mới:** phải `docker pu
 ### Bước 0 — Nhận diện và kiểm tra điều kiện
 
 - [ ] Xác định ID task (ví dụ `T-202`). Nếu người dùng không nêu ID → hỏi.
-- [ ] Đọc spec của task trong `docs/agent/TUAN_PLAN.md` và Issue tương ứng (nếu có).
+- [ ] Đọc `docs/agent/CONVENTIONS.md` (quy ước code/DB/Kafka/Redis/test) và spec của task trong `docs/agent/TUAN_PLAN.md`, cùng Issue tương ứng (nếu có).
 - [ ] Kiểm tra **phụ thuộc** trong `STATUS.md`: nếu task phụ thuộc chưa `Done` → dừng và báo.
 - [ ] Kiểm tra spec đủ rõ chưa. Nếu thiếu → liệt kê **giả định** và **câu hỏi** (gom một lần). Chỉ dùng giả định cho chi tiết nhỏ không ảnh hưởng hợp đồng; ghi giả định vào run report.
 
@@ -76,7 +76,7 @@ Tạo `docs/agent/runs/T-xxx.md` từ `docs/agent/RUN_REPORT_TEMPLATE.md`, đi�
 
 - Làm theo từng phần nhỏ; **commit thường xuyên** (mỗi commit biên dịch được và test liên quan xanh).
 - Viết test **cùng lúc** với code (code lõi: test trước).
-- Tuân thủ mục 4–7 (quy ước code/DB/Kafka/Redis).
+- Tuân thủ `docs/agent/CONVENTIONS.md`.
 
 ### Bước 4 — Kiểm chứng (chạy thật, ghi lại)
 
@@ -120,81 +120,15 @@ Gửi tin nhắn theo mẫu ở mục 10. **Không bắt đầu task tiếp theo
 
 ---
 
-## 3. Quy ước đặt tên và cấu trúc
+## 3 đến 8. Quy ước chi tiết (đọc bắt buộc)
 
-**Ngôn ngữ:** code, tên biến, commit message, tên nhánh: **tiếng Anh**. Tài liệu, mô tả PR, run report, comment giải thích nghiệp vụ: **tiếng Việt**.
+Đặt tên và cấu trúc, quy ước code, cơ sở dữ liệu, Kafka, Redis và test nằm trong **`docs/agent/CONVENTIONS.md`** (các mục 3 đến 8). Đọc file này ở Bước 0 của mỗi task. Tóm tắt những điều dễ sai nhất:
 
-**Đặt tên:** file `kebab-case.ts` · class/type `PascalCase` · biến/hàm `camelCase` · hằng `UPPER_SNAKE` · bảng `snake_case` số nhiều · cột `snake_case` · topic `domain.noun` · biến môi trường `UPPER_SNAKE` · mã lỗi `UPPER_SNAKE`.
-
-**Cấu trúc một service NestJS**
-
-```
-services/<name>/
-  src/
-    main.ts · app.module.ts
-    config/env.schema.ts          # zod, fail-fast khi thiếu biến
-    common/                       # filter lỗi, interceptor, decorator dùng riêng service
-    modules/<feature>/            # controller · service · repository · dto · *.spec.ts
-    messaging/                    # consumers (Inbox) · producers (qua Outbox)
-  prisma/schema.prisma · prisma/migrations/
-  test/{integration,concurrency,e2e}/
-  openapi.json                    # sinh tự động, commit
-  Dockerfile · .env.example · README.md
-```
-
-**Scripts bắt buộc trong `package.json` mỗi service:** `dev` · `build` · `start` · `lint` · `typecheck` · `test` · `test:int` · `test:conc` · `openapi:export` · `prisma:migrate:create`.
-
----
-
-## 4. Quy ước code
-
-- TypeScript `strict`. **Cấm `any`** (dùng `unknown` + zod). Cấm `// @ts-ignore` trừ khi có comment lý do + task ID.
-- **Tiền = số nguyên VND** (`number` an toàn dưới 2^53, DB `bigint`). **Thời gian = UTC**, chuỗi ISO-8601 ở API/sự kiện, `timestamptz` ở DB. **ID = UUID.**
-- Controller mỏng: validate → gọi service → trả DTO. Logic ở service; truy cập DB ở repository. Không gọi Prisma trực tiếp từ controller.
-- **Lỗi:** trả `application/problem+json` (RFC 7807) với các trường `type`, `title`, `status`, `detail`, `code`, `request_id`. Ví dụ code: `SEAT_UNAVAILABLE`, `HOLD_LIMIT_EXCEEDED`, `ADMISSION_REQUIRED`, `IDEMPOTENCY_KEY_REUSED`. Không rò stack trace ra client.
-- **API:** tiền tố `/v1`; ghi header `Idempotency-Key` cho mọi POST tạo tài nguyên có tác dụng phụ; phân trang cursor; mọi endpoint có decorator OpenAPI đầy đủ (request, response, lỗi).
-- **Cấu hình:** chỉ đọc qua `config/env.schema.ts` (zod). Không `process.env` rải rác.
-- **Log (pino, JSON):** luôn có `service`, `request_id`, `trace_id`; chỉ log `user_id` (ID), **không** log token, mật khẩu, CCCD, địa chỉ. Mức: `info` luồng chính, `warn` bất thường có thể phục hồi, `error` thất bại.
-- **Graceful shutdown:** dừng nhận request → hoàn tất job → đóng Kafka/Redis/DB. Có `/health/live` và `/health/ready`.
-- Comment giải thích **vì sao**, không lặp lại **cái gì**. Gắn `TODO(T-xxx)` khi để lại việc.
-
-## 5. Quy ước cơ sở dữ liệu
-
-- Mỗi service chỉ dùng user/DB của mình (`<name>_user` / `<name>_db`). **Không bao giờ dùng user `postgres`.** Không FK/JOIN/view chéo DB; cột tham chiếu ngoài ghi chú `ref:<db>`.
-- Migration: `prisma migrate dev --create-only --name <mô_tả>` rồi **mở file SQL, sửa tay** để thêm thứ Prisma không mô hình hóa (partial unique index, CHECK, trigger append-only, `FOR UPDATE SKIP LOCKED` nằm ở code). Tên file migration giữ mặc định của Prisma. Mỗi migration phải chạy được từ DB rỗng.
-- Mọi bảng: `id uuid`, `created_at timestamptz default now()`; bảng cập nhật nhiều có `updated_at` + `version int` (optimistic lock). Tiền `bigint`, cột trạng thái dùng CHECK hoặc enum.
-- Chuyển trạng thái bằng **cập nhật có điều kiện**: `UPDATE ... SET status=$new, version=version+1 WHERE id=$id AND status=$old AND version=$v` và kiểm tra số dòng ảnh hưởng.
-- Mỗi DB có `outbox_events` và `processed_events` (xem `packages/outbox-inbox/sql/outbox_inbox.sql`).
-- Bảng sổ cái/audit/check-in: **chỉ INSERT** (thu hồi UPDATE/DELETE).
-
-## 6. Quy ước Kafka
-
-- **Chỉ dùng** schema/topic trong `@ticketing/event-contracts`; luôn publish đúng topic theo `topicOf`, key theo comment trong `topics.ts`. Cần sự kiện/trường mới → `CONTRACT CHANGE` (mục 9).
-- **Producer:** chỉ phát qua Outbox relay (idempotent producer, `acks=all`). Không `producer.send` trực tiếp trong handler nghiệp vụ.
-- **Consumer:** `parseMessage` (zod) → kiểm tra Inbox → xử lý trong **cùng transaction** → commit offset. Message sai schema → DLQ ngay (không retry vô hạn). Lỗi tạm thời → retry có backoff + jitter, quá N lần → `<topic>.dlq` kèm header lỗi.
-- Không giả định thứ tự giữa các key khác nhau; xử lý sự kiện đến muộn/đảo thứ tự bằng version (`event_version`) hoặc điều kiện trạng thái.
-
-## 7. Quy ước Redis
-
-- Tên key theo mẫu `<loại>:{evt:<eventId>}:<định-danh>`; **hash tag `{evt:<id>}` bắt buộc** cho key cùng sự kiện (chuẩn bị Cluster, cho phép Lua nhiều key).
-- Logic nhiều bước phải là **Lua script** lưu trong file `*.lua` (không nhúng chuỗi dài trong TS), nạp qua `ioredis.defineCommand`. Script phải: kiểm tra trước, ghi sau; trả mã rõ ràng; không `KEYS`/`SCAN` trong đường nóng.
-- **Mọi key giữ chỗ phải có TTL.** Redis chạy `noeviction`: ghi lỗi khi đầy là chủ ý; cache phải có TTL + giới hạn kích thước riêng.
-- Redis **không phải nguồn sự thật**: dữ liệu quan trọng luôn có bản trong PostgreSQL (ADR-0002) và có đường rehydrate.
-
-## 8. Quy ước test
-
-| Loại        | Vị trí / đặt tên                  | Ghi chú                                                                    |
-| ----------- | --------------------------------- | -------------------------------------------------------------------------- |
-| Unit        | `src/**/*.spec.ts`                | Nhanh, không IO                                                            |
-| Integration | `test/integration/*.int-spec.ts`  | Testcontainers (Postgres, Redis, Kafka thật)                               |
-| Concurrency | `test/concurrency/*.conc-spec.ts` | ≥ 50 tác vụ song song, dữ liệu cố định, kết quả **xác định** (không flaky) |
-| E2E         | `test/e2e/*.e2e-spec.ts`          | Qua HTTP + Kong khi cần                                                    |
-
-- Code lõi (Lua, outbox/inbox, saga, state machine, idempotency, mã hóa) **bắt buộc có test**, gồm cả đường lỗi và trùng lặp.
-- Test không phụ thuộc thứ tự chạy, không dùng `sleep` cố định (dùng polling có timeout).
-- **Thư viện mới:** ưu tiên thứ đã có; nếu thêm phải nêu trong PR: lý do, giấy phép, mức độ bảo trì, kích thước. Phiên bản ghim qua `pnpm-lock.yaml`.
-
----
+- TypeScript `strict`, cấm `any`; tiền là số nguyên VND; thời gian UTC; ID là UUID; lỗi trả `application/problem+json`.
+- Migration Prisma dùng `--create-only` rồi sửa tay SQL; chuyển trạng thái bằng cập nhật có điều kiện; không truy cập DB của service khác.
+- Chỉ dùng schema/topic trong `@ticketing/event-contracts`; chỉ phát qua Outbox; consumer phải idempotent (Inbox).
+- Redis: key có hash tag `{evt:<id>}`, logic nhiều bước là Lua trong file `.lua`, mọi key giữ chỗ có TTL; Redis không phải nguồn sự thật.
+- Code lõi bắt buộc có test gồm đường lỗi và trùng lặp; thư viện/image mới phải được nêu lý do và kiểm tra pull được.
 
 ## 9. Điều kiện DỪNG và HỎI
 
