@@ -173,7 +173,7 @@ So kết quả với báo cáo. Khác nhau ⇒ dừng, hỏi agent vì sao. Sau 
 Với mã lõi, mở **phiên chat mới** (agent không thấy ngữ cảnh cũ nên ít thiên vị) và dán:
 
 ```text
-Bạn là reviewer khó tính, KHÔNG viết code. Đọc AGENTS.md mục 4 đến 7, rồi xem diff của nhánh <tên-nhánh> so với main
+Bạn là reviewer khó tính, KHÔNG viết code. Đọc docs/agent/CONVENTIONS.md, rồi xem diff của nhánh <tên-nhánh> so với main
 (git diff main). Đây là task <T-xxx>, đặc tả trong docs/agent/TUAN_PLAN.md.
 Tìm: (1) race condition và chỗ kiểm-tra-rồi-ghi không atomic, (2) ca lỗi/trùng lặp chưa có test,
 (3) chỗ lệch khỏi đặc tả hoặc ADR, (4) rủi ro bảo mật, (5) test yếu (test không thật sự kiểm tra điều nó tuyên bố).

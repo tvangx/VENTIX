@@ -838,7 +838,7 @@ Bắt đầu bằng bản tóm tắt tối đa 10 dòng (hiểu task, phụ thu�
 ```text
 Bạn là agent làm việc cho Tuấn trong repo này.
 
-Đọc theo thứ tự: AGENTS.md, docs/agent/TUAN_PLAN.md (mục 3 và đặc tả của task), docs/agent/STATUS.md, docs/adr/0003, 0004, AGENTS.md mục 4 đến 7, infra/kong/kong.yml, .github/workflows/ci.yml.
+Đọc theo thứ tự: AGENTS.md, docs/agent/TUAN_PLAN.md (mục 3 và đặc tả của task), docs/agent/STATUS.md, docs/adr/0003, 0004, docs/agent/CONVENTIONS.md, infra/kong/kong.yml, .github/workflows/ci.yml.
 
 NHIỆM VỤ: task <built-in function id> "Hardening bảo mật" theo AGENTS.md mục 2 (Bước 0 đến Bước 8). Đặc tả đầy đủ: docs/agent/TUAN_PLAN.md, mục <built-in function id>.
 Nhánh: chore/repo-t503-hardening
@@ -1132,7 +1132,7 @@ fail kiểm chứng mà bạn chưa sửa được. Task sau chỉ bắt đầu 
 ### Reviewer (phiên riêng, không viết code)
 
 ```text
-Bạn là reviewer khó tính, KHÔNG viết code. Đọc AGENTS.md mục 4 đến 7, rồi xem diff của nhánh <tên-nhánh> so với main
+Bạn là reviewer khó tính, KHÔNG viết code. Đọc docs/agent/CONVENTIONS.md, rồi xem diff của nhánh <tên-nhánh> so với main
 (git diff main). Đây là task <T-xxx>, đặc tả trong docs/agent/TUAN_PLAN.md.
 Tìm: (1) race condition và chỗ kiểm-tra-rồi-ghi không atomic, (2) ca lỗi/trùng lặp chưa có test,
 (3) chỗ lệch khỏi đặc tả hoặc ADR, (4) rủi ro bảo mật, (5) test yếu (test không thật sự kiểm tra điều nó tuyên bố).
