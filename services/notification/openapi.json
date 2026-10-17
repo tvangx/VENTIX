@@ -1,0 +1,125 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health/live": {
+      "get": {
+        "operationId": "HealthController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Process is up",
+        "tags": ["health"]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unreachable (problem+json, code NOT_READY)"
+          }
+        },
+        "summary": "Ready to serve traffic (checks the database)",
+        "tags": ["health"]
+      }
+    },
+    "/v1/whoami": {
+      "get": {
+        "operationId": "WhoamiController_whoami",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhoamiResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token (problem+json)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Return the authenticated principal",
+        "tags": ["whoami"]
+      }
+    }
+  },
+  "info": {
+    "title": "notification service",
+    "description": "",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          }
+        },
+        "required": ["status"]
+      },
+      "WhoamiResponse": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roles": {
+            "example": ["USER"],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "organizerId": {
+            "type": "string"
+          }
+        },
+        "required": ["userId", "roles"]
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+// Chưa có model nghiệp vụ (xem docs/dev/new-service.md).
+// Tạo migration: `pnpm --filter @ticketing/event prisma:migrate:create --name <mô_tả>`
+// rồi MỞ file SQL và sửa tay (CONVENTIONS mục 5). Thêm bảng outbox_events/processed_events ở T-103.
+// Lưu ý: Prisma 5 từ chối `prisma generate` khi chưa có model; scripts/prisma-generate.js tự bỏ qua trường hợp đó.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
