@@ -36,6 +36,15 @@ describe("event contracts v1 (draft)", () => {
     expect(() => parseMessage({ type: "Nope" })).toThrow(/Unknown event type/);
   });
 
+  it("newMessage sinh message_id UUIDv7, tăng dần theo thứ tự tạo (T-103)", () => {
+    const ids = Array.from({ length: 1000 }, () => newMessage("EventUpdated", {}).message_id);
+    for (const id of ids) {
+      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    }
+    expect([...ids].sort()).toEqual(ids);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it("mọi event đều có topic và topic đều có số partition", () => {
     for (const t of Object.keys(eventSchemas)) {
       const topic = topicOf[t as keyof typeof topicOf];
