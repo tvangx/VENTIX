@@ -1,0 +1,86 @@
+[
+  {
+    "id": "giu-ghe-bao-lau",
+    "category": "mua-ve",
+    "order": 1,
+    "question": "Sau khi chọn ghế, ghế được giữ cho tôi bao lâu?",
+    "answer": "Ghế được giữ riêng cho bạn trong 10 phút. Khi bạn tạo đơn và chuyển sang thanh toán, thời gian giữ được gia hạn một lần thành 15 phút. Hết thời gian mà chưa thanh toán, ghế được trả lại cho người khác."
+  },
+  {
+    "id": "phong-cho-la-gi",
+    "category": "mua-ve",
+    "order": 2,
+    "question": "Phòng chờ (hàng đợi) khi mở bán là gì?",
+    "answer": "Với các sự kiện đông người mua, hệ thống xếp hàng người vào trang chọn ghế để tránh quá tải. Vị trí của bạn trong hàng được cập nhật trực tiếp trên màn hình; khi tới lượt, bạn được chuyển vào trang chọn ghế."
+  },
+  {
+    "id": "gioi-han-so-ve",
+    "category": "mua-ve",
+    "order": 3,
+    "question": "Mỗi người được mua tối đa bao nhiêu vé?",
+    "answer": "Giới hạn khác nhau theo từng đợt mở bán và được ghi trên trang sự kiện. Một số sự kiện yêu cầu xác minh danh tính (CCCD) trước khi mua và giới hạn số vé theo mỗi người đã xác minh."
+  },
+  {
+    "id": "phuong-thuc-thanh-toan",
+    "category": "thanh-toan",
+    "order": 1,
+    "question": "Tôi có thể thanh toán bằng cách nào?",
+    "answer": "Bạn thanh toán qua cổng VNPay. Giá hiển thị là giá cuối cùng bằng VND."
+  },
+  {
+    "id": "thanh-toan-that-bai",
+    "category": "thanh-toan",
+    "order": 2,
+    "question": "Thanh toán thất bại thì đơn của tôi có bị hủy không?",
+    "answer": "Không. Đơn vẫn được giữ và bạn có thể thanh toán lại cho đến khi đơn hết hạn. Sau thời điểm hết hạn, ghế được trả lại và bạn cần đặt đơn mới."
+  },
+  {
+    "id": "thanh-toan-sau-khi-het-han",
+    "category": "thanh-toan",
+    "order": 3,
+    "question": "Tôi đã bị trừ tiền nhưng đơn báo hết hạn, phải làm sao?",
+    "answer": "Nếu tiền về sau khi đơn đã hết hạn hoặc bị hủy, hệ thống tự động hoàn lại toàn bộ số tiền đó cho bạn. Đơn sẽ không được khôi phục vì ghế có thể đã được bán cho người khác."
+  },
+  {
+    "id": "su-kien-bi-huy",
+    "category": "thanh-toan",
+    "order": 4,
+    "question": "Nếu sự kiện bị hủy thì tôi có được hoàn tiền không?",
+    "answer": "Có. Khi ban tổ chức hủy sự kiện, các đơn đã thanh toán được hoàn tiền tự động, bạn không cần gửi yêu cầu."
+  },
+  {
+    "id": "ma-qr-dong",
+    "category": "ve-va-check-in",
+    "order": 1,
+    "question": "Vé của tôi nằm ở đâu và dùng thế nào?",
+    "answer": "Vé nằm trong mục \"Vé của tôi\". Mỗi vé có mã QR tự đổi sau mỗi 30 giây, nên ảnh chụp màn hình sẽ không dùng được để vào cửa. Hãy mở ứng dụng và đưa mã QR đang hiển thị cho nhân viên soát vé."
+  },
+  {
+    "id": "check-in-khi-mat-mang",
+    "category": "ve-va-check-in",
+    "order": 2,
+    "question": "Khu vực sự kiện mất mạng thì có soát vé được không?",
+    "answer": "Được. Thiết bị của nhân viên soát vé có thể xác thực vé ngay cả khi không có mạng và tự đồng bộ khi có mạng trở lại."
+  },
+  {
+    "id": "ban-lai-ve",
+    "category": "resale",
+    "order": 1,
+    "question": "Tôi không đi được, có bán lại vé được không?",
+    "answer": "Có, qua sàn bán lại chính thức trên nền tảng. Giá bán lại tối đa bằng 120% giá gốc. Tiền của người mua được nền tảng giữ trung gian và chỉ chuyển cho người bán theo chính sách giải ngân; vé được chuyển sang tài khoản người mua và vé cũ của bạn hết hiệu lực."
+  },
+  {
+    "id": "mua-merch-kem-ve",
+    "category": "merch",
+    "order": 1,
+    "question": "Tôi có thể mua đồ lưu niệm cùng lúc với vé không?",
+    "answer": "Có. Ở bước thanh toán, bạn có thể thêm sản phẩm lưu niệm của sự kiện vào cùng đơn. Hàng chỉ được trừ khỏi kho khi thanh toán thành công."
+  },
+  {
+    "id": "dang-nhap-google",
+    "category": "tai-khoan",
+    "order": 1,
+    "question": "Tôi có thể đăng nhập bằng tài khoản Google không?",
+    "answer": "Có. Bạn có thể đăng ký và đăng nhập bằng email và mật khẩu hoặc bằng tài khoản Google."
+  }
+]
