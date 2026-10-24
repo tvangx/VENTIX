@@ -1,4 +1,4 @@
-# Trạng thái task — Tuấn
+﻿# Trạng thái task — Tuấn
 
 Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human` (việc Tuấn tự làm).
 **Agent** chỉ được đổi `Todo → Doing → In review`. **Tuấn** chuyển sang `Done` sau khi merge.
@@ -6,9 +6,9 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | ID     | Tuần | Tên                                                                 | Phụ thuộc                  | Trạng thái | PR  | Ghi chú                                                |
 | ------ | ---- | ------------------------------------------------------------------- | -------------------------- | ---------- | --- | ------------------------------------------------------ |
 | T-101  | 1    | Monorepo                                                            | —                          | Done       | —   | Phase 0                                                |
-| T-102  | 1    | Template NestJS service                                             | T-101                      | In review  |     | Chặn Sơn/Vũ; PR chưa mở (xem runs/T-102.md)            |
-| T-301a | 1    | Chốt hợp đồng saga (event-contracts, ADR-0009/0010, OpenAPI nội bộ) | T-107                      | In review  |     | Đã cài đặt sẵn; Tuấn review + commit; không giao agent |
-| T-103  | 1    | outbox-inbox                                                        | T-102                      | Todo       |     | Mã lõi, 2 người đọc                                    |
+| T-102  | 1    | Template NestJS service                                             | T-101                      | Done       |     | Chặn Sơn/Vũ; PR chưa mở (xem runs/T-102.md)            |
+| T-301a | 1    | Chốt hợp đồng saga (event-contracts, ADR-0009/0010, OpenAPI nội bộ) | T-107                      | Done       |     | Đã cài đặt sẵn; Tuấn review + commit; không giao agent |
+| T-103  | 1    | outbox-inbox                                                        | T-102                      | In review  |     | Mã lõi, 2 người đọc; PR chưa mở                        |
 | T-104  | 1    | Hạ tầng compose                                                     | T-101                      | Done       | —   | Phase 0 (đã vá Git Bash)                               |
 | T-105  | 1    | CI GitHub Actions                                                   | T-102                      | In review  |     | Chưa chạy trên GitHub                                  |
 | T-106  | 1    | VNPay sandbox + cloudflared + đo RAM                                | —                          | Human      |     |                                                        |
