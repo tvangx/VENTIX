@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { uuidv7 } from "uuidv7";
 import { z } from "zod";
 
 /**
@@ -23,14 +23,17 @@ export function envelope<T extends string, D extends z.ZodTypeAny>(type: T, data
   });
 }
 
-/** Tạo message mới. TODO(T-103): đổi sang UUIDv7 (gói `uuidv7`) để index theo thời gian. */
+/**
+ * Tạo message mới. `message_id` là UUIDv7 (sắp theo thời gian, đơn điệu trong cùng tiến trình):
+ * khóa chính của `outbox_events`/`processed_events` chèn gần cuối index nên ít phân mảnh hơn UUIDv4.
+ */
 export function newMessage<T extends string, D>(
   type: T,
   data: D,
   opts: { version?: number; trace_id?: string; tenant_id?: string } = {},
 ) {
   return {
-    message_id: randomUUID(),
+    message_id: uuidv7(),
     type,
     version: opts.version ?? 1,
     occurred_at: new Date().toISOString(),
