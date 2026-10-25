@@ -1,11 +1,183 @@
-// Chưa có model nghiệp vụ (xem docs/dev/new-service.md).
-// Tạo migration: `pnpm --filter @ticketing/event prisma:migrate:create --name <mô_tả>`
-// rồi MỞ file SQL và sửa tay (CONVENTIONS mục 5). Thêm bảng outbox_events/processed_events ở T-103.
-// Lưu ý: Prisma 5 từ chối `prisma generate` khi chưa có model; scripts/prisma-generate.js tự bỏ qua trường hợp đó.
-
 generator client {
   provider      = "prisma-client-js"
+  output        = "../generated/client"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+model Venue {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  address   String   @db.VarChar(512)
+  capacity  Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version   Int      @default(0)
+  events    Event[]
+
+  @@map("venues")
+}
+
+model Event {
+  id            String          @id @default(uuid()) @db.Uuid
+  // ref:identity_db, không FK chéo DB.
+  organizerId   String          @map("organizer_id") @db.Uuid
+  venueId       String          @map("venue_id") @db.Uuid
+  title         String          @db.VarChar(255)
+  description   String          @db.Text
+  bannerKey     String?         @map("banner_key") @db.VarChar(512)
+  status        String          @default("DRAFT") @db.VarChar(24)
+  startAt       DateTime        @map("start_at") @db.Timestamptz(6)
+  endAt         DateTime        @map("end_at") @db.Timestamptz(6)
+  version       Int             @default(0)
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  venue         Venue           @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  ticketClasses TicketClass[]
+  salePhases    SalePhase[]
+  seatMaps      SeatMap[]
+  approvals     EventApproval[]
+
+  @@index([organizerId])
+  @@index([status, startAt, id])
+  @@map("events")
+}
+
+model TicketClass {
+  id        String   @id @default(uuid()) @db.Uuid
+  eventId   String   @map("event_id") @db.Uuid
+  name      String   @db.VarChar(128)
+  priceVnd  BigInt   @map("price_vnd")
+  capacity  Int
+  kind      String   @db.VarChar(16)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version   Int      @default(0)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  seats     Seat[]
+
+  @@unique([id, eventId])
+  @@unique([eventId, name])
+  @@map("ticket_classes")
+}
+
+model SalePhase {
+  id           String   @id @default(uuid()) @db.Uuid
+  eventId      String   @map("event_id") @db.Uuid
+  startsAt     DateTime @map("starts_at") @db.Timestamptz(6)
+  endsAt       DateTime @map("ends_at") @db.Timestamptz(6)
+  queueEnabled Boolean  @default(false) @map("queue_enabled")
+  admitRate    Int      @map("admit_rate")
+  perUserLimit Int      @map("per_user_limit")
+  requireKyc   Boolean  @default(false) @map("require_kyc")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version      Int      @default(0)
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@index([eventId, startsAt])
+  @@map("sale_phases")
+}
+
+model SeatMap {
+  id          String    @id @default(uuid()) @db.Uuid
+  eventId     String    @map("event_id") @db.Uuid
+  version     Int       @default(1)
+  layout      Json
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  zones       Zone[]
+
+  @@unique([eventId, version])
+  @@unique([id, eventId])
+  @@map("seat_maps")
+}
+
+model Zone {
+  id        String   @id @default(uuid()) @db.Uuid
+  seatMapId String   @map("seat_map_id") @db.Uuid
+  eventId   String   @map("event_id") @db.Uuid
+  name      String   @db.VarChar(128)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version   Int      @default(0)
+  seatMap   SeatMap  @relation(fields: [seatMapId, eventId], references: [id, eventId], onDelete: Restrict)
+  blocks    Block[]
+
+  @@unique([id, eventId])
+  @@unique([seatMapId, name])
+  @@map("zones")
+}
+
+model Block {
+  id        String   @id @default(uuid()) @db.Uuid
+  zoneId    String   @map("zone_id") @db.Uuid
+  eventId   String   @map("event_id") @db.Uuid
+  name      String   @db.VarChar(128)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version   Int      @default(0)
+  zone      Zone     @relation(fields: [zoneId, eventId], references: [id, eventId], onDelete: Restrict)
+  seats     Seat[]
+
+  @@unique([id, eventId])
+  @@unique([zoneId, name])
+  @@map("blocks")
+}
+
+model Seat {
+  id            String      @id @default(uuid()) @db.Uuid
+  blockId       String      @map("block_id") @db.Uuid
+  eventId       String      @map("event_id") @db.Uuid
+  ticketClassId String      @map("ticket_class_id") @db.Uuid
+  rowLabel      String      @map("row_label") @db.VarChar(16)
+  seatNo        Int         @map("seat_no")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version       Int         @default(0)
+  block         Block       @relation(fields: [blockId, eventId], references: [id, eventId], onDelete: Restrict)
+  ticketClass   TicketClass @relation(fields: [ticketClassId, eventId], references: [id, eventId], onDelete: Restrict)
+
+  @@unique([blockId, rowLabel, seatNo])
+  @@index([ticketClassId, eventId])
+  @@index([eventId, id])
+  @@map("seats")
+}
+
+model EventApproval {
+  id        String   @id @default(uuid()) @db.Uuid
+  eventId   String   @map("event_id") @db.Uuid
+  // ref:identity_db, không FK chéo DB.
+  adminId   String   @map("admin_id") @db.Uuid
+  decision  String   @db.VarChar(24)
+  reason    String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@index([eventId, createdAt])
+  @@map("event_approvals")
+}
+
+model OutboxEvent {
+  id          String    @id @db.Uuid
+  topic       String
+  messageKey  String    @map("message_key")
+  eventType   String    @map("event_type")
+  payload     Json
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(6)
+
+  @@map("outbox_events")
+}
+
+model ProcessedEvent {
+  messageId   String   @map("message_id") @db.Uuid
+  consumer    String
+  processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
+
+  @@id([messageId, consumer])
+  @@map("processed_events")
 }
 
 datasource db {
