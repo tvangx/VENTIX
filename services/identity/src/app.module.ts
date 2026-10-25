@@ -8,6 +8,12 @@ import { DbModule } from "./db/db-health.service";
 import { HealthController } from "./health/health.controller";
 import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
+import { PrismaService } from "./db/prisma.service";
+import { AuthKeys } from "./modules/auth/auth-keys";
+import { AuthController, JwksController } from "./modules/auth/auth.controller";
+import { AuthRepository } from "./modules/auth/auth.repository";
+import { AuthService } from "./modules/auth/auth.service";
+import { IdempotencyService } from "./modules/auth/idempotency.service";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -23,11 +29,22 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController],
+      controllers: [
+        HealthController,
+        MetricsController,
+        WhoamiController,
+        AuthController,
+        JwksController,
+      ],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        PrismaService,
+        AuthKeys,
+        AuthRepository,
+        AuthService,
+        IdempotencyService,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],
