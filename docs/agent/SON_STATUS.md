@@ -7,7 +7,7 @@ In review chỉ có nghĩa cài đặt và kiểm thử local; Done chờ ngư�
 | ID    | Tuần | Tên                            | Trạng thái | Nhánh                     | Ghi chú                                           |
 | ----- | ---- | ------------------------------ | ---------- | ------------------------- | ------------------------------------------------- |
 | S-101 | 1    | Schema Identity                | In review  | feat/identity-s101-schema | Unit 4, integration 13 pass; native PostgreSQL 17 |
-| S-102 | 1    | Email auth, JWT/JWKS, rotation | Todo       | —                         | Phụ thuộc S-101                                   |
+| S-102 | 1    | Email auth, JWT/JWKS, rotation | In review  | feat/identity-s102-auth   | Unit 5, integration 21, concurrency 1 pass        |
 | S-103 | 1    | Google OAuth PKCE              | Todo       | —                         | Phụ thuộc S-102                                   |
 | S-104 | 1    | RBAC, tenant, Admin seed       | Todo       | —                         | Phụ thuộc S-102                                   |
 | S-105 | 1    | Organizer, duyệt, MinIO        | Todo       | —                         | Phụ thuộc S-104                                   |

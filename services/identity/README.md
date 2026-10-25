@@ -55,3 +55,17 @@ trỏ tới PostgreSQL kiểm thử riêng với user có CREATEDB: mỗi suite 
 nhiên, chạy migration/seed và xóa đúng DB đó khi kết thúc. Không dùng DB chứa dữ
 liệu thật. Rollback kiểm thử nằm ở prisma/rollback/identity-init.sql; rollback
 sẽ xóa dữ liệu Identity và chỉ được chạy sau khi xác nhận DB đích.
+
+## S-102 — Đăng nhập email
+
+- `POST /v1/auth/register`: body email/password (12–128 ký tự), header Idempotency-Key UUID; trả id/email, không tạo phiên. Cùng key/body trả cùng kết quả, đổi body trả 409.
+- `POST /v1/auth/login`: body email/password; trả access_token, token_type, expires_in và cookie ventix_refresh HttpOnly, SameSite=Lax, Secure ở production.
+- `POST /v1/auth/refresh`: dùng cookie, không có body. Mỗi lần đổi token; dùng lại token cũ thu hồi cả family và trả 401. Client phải gom các lần refresh đồng thời.
+- `POST /v1/auth/logout`: thu hồi family của cookie và xóa cookie, 204; access JWT đã phát còn hiệu lực tối đa ACCESS_TOKEN_TTL_SECONDS.
+- `GET /.well-known/jwks.json`: public RSA JWK (RS256, kid), không có trường private key. Qua gateway: `/api/identity/.well-known/jwks.json`.
+
+Client dùng credentials/include khi gọi cookie API. Chỉ WEB_ORIGIN được CORS; session API từ Origin khác bị 403. Refresh token không trả trong JSON, không đưa vào localStorage. DB chỉ lưu SHA-256 refresh token; reuse xử lý và commit thu hồi trước khi báo lỗi.
+
+Production bắt buộc JWT_PRIVATE_KEY_PEM là PKCS8 RSA ≥2048 bits. Dev/test không đặt biến sinh khóa tạm, restart làm access JWT cũ mất hiệu lực và key đăng ký cũ có thể trả 409 (fingerprint HMAC phụ thuộc khóa). Để dev ổn định, đặt khóa riêng trong `.env` không commit. JWKS hiện có một khóa; chưa có giai đoạn giữ đồng thời khóa cũ/mới khi xoay khóa.
+
+Argon2 0.41.1 được ghim vì hỗ trợ Node 20, giấy phép MIT, có native binary Windows/Linux. jose chuyển từ devDependency sang runtime dependency. Không thêm thư viện hashing khác.

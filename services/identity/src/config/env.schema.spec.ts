@@ -38,4 +38,10 @@ describe("envSchema", () => {
       }),
     ).toThrow(/AUTH_PUBLIC_KEY_PEM/);
   });
+
+  it("requires a persistent signing key in production", () => {
+    expect(() => loadEnv(envSchema, { ...base, NODE_ENV: "production" })).toThrow(
+      /JWT_PRIVATE_KEY_PEM/,
+    );
+  });
 });

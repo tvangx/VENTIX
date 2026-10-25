@@ -21,7 +21,14 @@ export async function createApp(env: Env, logger: Logger): Promise<INestApplicat
   const app = await NestFactory.create(AppModule.register(env, logger), { logger: false });
 
   app.use(helmet());
-  app.setGlobalPrefix("v1", { exclude: ["health/live", "health/ready", "metrics"] });
+  app.setGlobalPrefix("v1", {
+    exclude: ["health/live", "health/ready", "metrics", ".well-known/jwks.json"],
+  });
+  app.enableCors({
+    origin: env.WEB_ORIGIN,
+    credentials: true,
+    allowedHeaders: ["Authorization", "Content-Type", "Idempotency-Key", "X-Request-Id"],
+  });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );

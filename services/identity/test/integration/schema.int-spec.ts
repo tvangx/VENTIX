@@ -83,8 +83,12 @@ describe("S-101 identity schema on PostgreSQL", () => {
       await clean.pool.query(
         readFileSync(join(__dirname, "../../prisma/rollback/identity-init.sql"), "utf8"),
       );
-      await clean.pool.query('DROP TABLE "_prisma_migrations"');
-      clean.runPrisma("migrate", "deploy");
+      await clean.pool.query(
+        readFileSync(
+          join(__dirname, "../../prisma/migrations/20261025035958_identity_init/migration.sql"),
+          "utf8",
+        ),
+      );
       clean.seed();
       expect(
         (await clean.pool.query("SELECT count(*)::int AS count FROM roles")).rows[0].count,
