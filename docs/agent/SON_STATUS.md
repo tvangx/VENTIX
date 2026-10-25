@@ -23,4 +23,23 @@ In review chỉ có nghĩa cài đặt và kiểm thử local; Done chờ ngư�
 - OpenAPI export tái lập và sinh TypeScript declarations qua tsc; Postman 18 request, chưa chạy GUI Postman.
 - Google thật chưa chạy vì chưa có credentials. MinIO thật chưa kiểm chứng vì test container không khởi động được (Could not find a working container runtime strategy).
 - Audit prod còn đúng 29 advisory như origin/main (14 high, 13 moderate, 2 low), chênh lệch ID advisory 0. Security/CI chưa được xác nhận xanh.
-- Main vẫn cf90586; chưa push, PR, review hoặc merge vào main. Done chờ quy trình review của nhóm.
+- Main vẫn cf90586; các kết quả kiểm chứng trên được ghi nhận trước khi push/tạo PR. Done chờ quy trình review của nhóm.
+
+## Pull request — đã push ngày 2026-10-25
+
+Sơn đã yêu cầu commit, push và tạo MR. Repo GitHub dùng pull request; đã push 7
+nhánh và tạo từng PR riêng theo task. Các thay đổi code đã commit từ lượt triển
+khai; không tạo commit rỗng. Chưa merge hoặc bật auto-merge.
+
+| Task  | PR                                       | Base để review                      |
+| ----- | ---------------------------------------- | ----------------------------------- |
+| S-101 | https://github.com/tvangx/VENTIX/pull/36 | main                                |
+| S-102 | https://github.com/tvangx/VENTIX/pull/37 | feat/identity-s101-schema           |
+| S-103 | https://github.com/tvangx/VENTIX/pull/38 | feat/identity-s102-auth             |
+| S-104 | https://github.com/tvangx/VENTIX/pull/39 | feat/identity-s103-google-oauth     |
+| S-105 | https://github.com/tvangx/VENTIX/pull/40 | feat/identity-s104-rbac-tenant      |
+| S-106 | https://github.com/tvangx/VENTIX/pull/41 | feat/identity-s105-organizer        |
+| S-107 | https://github.com/tvangx/VENTIX/pull/42 | docs/identity-s106-openapi-requests |
+
+Review/merge theo thứ tự và cập nhật base/đồng bộ nhánh phụ thuộc sau mỗi lần
+merge. CI là kết quả riêng trên GitHub, không suy từ các test local đã pass.
