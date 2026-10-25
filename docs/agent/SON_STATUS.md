@@ -12,4 +12,4 @@ In review chỉ có nghĩa cài đặt và kiểm thử local; Done chờ ngư�
 | S-104 | 1    | RBAC, tenant, Admin seed       | In review  | feat/identity-s104-rbac-tenant      | Integration 30 pass; role/tenant/revocation/Admin seed           |
 | S-105 | 1    | Organizer, duyệt, MinIO        | In review  | feat/identity-s105-organizer        | Unit 17, integration 38 pass; MinIO thật bị chặn Docker          |
 | S-106 | 1    | OpenAPI + request mẫu          | In review  | docs/identity-s106-openapi-requests | Export, contract test, TypeScript generation; Postman 18 request |
-| S-107 | 1    | Schema Event                   | Todo       | —                                   | Phụ thuộc T-102                                                  |
+| S-107 | 1    | Schema Event                   | In review  | feat/event-s107-schema              | Unit 4, integration 14 pass; FK/immutability/rollback            |
