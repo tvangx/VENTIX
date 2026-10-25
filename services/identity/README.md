@@ -69,3 +69,26 @@ Client dùng credentials/include khi gọi cookie API. Chỉ WEB_ORIGIN được
 Production bắt buộc JWT_PRIVATE_KEY_PEM là PKCS8 RSA ≥2048 bits. Dev/test không đặt biến sinh khóa tạm, restart làm access JWT cũ mất hiệu lực và key đăng ký cũ có thể trả 409 (fingerprint HMAC phụ thuộc khóa). Để dev ổn định, đặt khóa riêng trong `.env` không commit. JWKS hiện có một khóa; chưa có giai đoạn giữ đồng thời khóa cũ/mới khi xoay khóa.
 
 Argon2 0.41.1 được ghim vì hỗ trợ Node 20, giấy phép MIT, có native binary Windows/Linux. jose chuyển từ devDependency sang runtime dependency. Không thêm thư viện hashing khác.
+
+## S-103 — Google OAuth
+
+Cấu hình GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI trong `.env`.
+Google Cloud Console cần đăng ký redirect URI khớp chính xác (dev mặc định
+http://localhost:3001/v1/auth/google/callback, hoặc URL gateway tương ứng).
+Production bắt buộc HTTPS. Không có credentials thì Google start trả 503,
+các luồng email vẫn hoạt động.
+
+1. GET `/v1/auth/google/start` với credentials/include: nhận authorization_url và
+   cookie ventix_oauth HttpOnly. Trình duyệt chuyển đến URL Google.
+2. Google callback về service: kiểm tra state/cookie TTL 10 phút, consume một lần,
+   exchange code với PKCE S256, verify ID token RS256/issuer/audience/exp/nonce/email_verified.
+3. Đặt refresh cookie, redirect về WEB_ORIGIN/auth/callback?provider=google.
+   Frontend gọi POST auth/refresh để lấy access token vào bộ nhớ.
+
+Nếu email đã tồn tại chưa link: trả ACCOUNT_LINK_REQUIRED (409). Người dùng login
+bằng email trước, gọi GET `/v1/auth/google/link` với Bearer JWT rồi đi theo URL
+trả về để liên kết; email Google phải trùng tài khoản đó. Không tự gộp theo email.
+Record state chỉ lưu hash; không lưu Google access/refresh token. Dọn record state
+hết hạn là tác vụ vận hành định kỳ, không ảnh hưởng việc từ chối state hết hạn.
+
+Tài liệu đối chiếu: [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect).

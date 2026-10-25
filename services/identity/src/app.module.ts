@@ -14,6 +14,10 @@ import { AuthController, JwksController } from "./modules/auth/auth.controller";
 import { AuthRepository } from "./modules/auth/auth.repository";
 import { AuthService } from "./modules/auth/auth.service";
 import { IdempotencyService } from "./modules/auth/idempotency.service";
+import { GoogleController } from "./modules/auth/google.controller";
+import { GoogleProvider } from "./modules/auth/google.provider";
+import { GoogleRepository } from "./modules/auth/google.repository";
+import { GoogleService } from "./modules/auth/google.service";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -35,6 +39,7 @@ export class AppModule implements NestModule {
         WhoamiController,
         AuthController,
         JwksController,
+        GoogleController,
       ],
       providers: [
         { provide: ENV, useValue: env },
@@ -45,6 +50,9 @@ export class AppModule implements NestModule {
         AuthRepository,
         AuthService,
         IdempotencyService,
+        GoogleProvider,
+        GoogleRepository,
+        GoogleService,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],

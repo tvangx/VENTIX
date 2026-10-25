@@ -5,21 +5,22 @@ generator client {
 }
 
 model User {
-  id                 String         @id @default(uuid()) @db.Uuid
-  email              String         @unique @db.VarChar(254)
-  phone              String?        @db.VarChar(32)
-  passwordHash       String?        @map("password_hash") @db.VarChar(255)
-  status             String         @default("ACTIVE") @db.VarChar(24)
-  emailVerifiedAt    DateTime?      @map("email_verified_at") @db.Timestamptz(6)
-  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
-  version            Int            @default(0)
+  id                 String             @id @default(uuid()) @db.Uuid
+  email              String             @unique @db.VarChar(254)
+  phone              String?            @db.VarChar(32)
+  passwordHash       String?            @map("password_hash") @db.VarChar(255)
+  status             String             @default("ACTIVE") @db.VarChar(24)
+  emailVerifiedAt    DateTime?          @map("email_verified_at") @db.Timestamptz(6)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version            Int                @default(0)
   oauthAccounts      OauthAccount[]
   refreshTokens      RefreshToken[]
   userRoles          UserRole[]
   kycProfile         KycProfile?
-  organizers         Organizer[]    @relation("OrganizerOwner")
-  approvedOrganizers Organizer[]    @relation("OrganizerApprover")
+  organizers         Organizer[]        @relation("OrganizerOwner")
+  approvedOrganizers Organizer[]        @relation("OrganizerApprover")
+  googleStates       GoogleOauthState[]
 
   @@map("users")
 }
@@ -160,4 +161,18 @@ model IdempotencyRecord {
 
   @@unique([scope, key])
   @@map("idempotency_keys")
+}
+
+model GoogleOauthState {
+  id         String    @id @default(uuid()) @db.Uuid
+  stateHash  String    @unique @map("state_hash") @db.VarChar(64)
+  cookieHash String    @map("cookie_hash") @db.VarChar(64)
+  linkUserId String?   @map("link_user_id") @db.Uuid
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt     DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  linkUser   User?     @relation(fields: [linkUserId], references: [id], onDelete: Restrict)
+
+  @@index([expiresAt])
+  @@map("google_oauth_states")
 }

@@ -14,12 +14,33 @@ export const envSchema = z
     ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(900).default(900),
     REFRESH_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().max(2592000).default(604800),
     WEB_ORIGIN: z.string().url().default("http://localhost:5173"),
+    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+    GOOGLE_REDIRECT_URI: z.string().url().default("http://localhost:3001/v1/auth/google/callback"),
     /** Đặt biến này mới bật OpenTelemetry. */
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
     ...authEnvShape,
   })
   .superRefine((env, ctx) => {
     refineAuthEnv(env, ctx);
+    if (Boolean(env.GOOGLE_CLIENT_ID) !== Boolean(env.GOOGLE_CLIENT_SECRET)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["GOOGLE_CLIENT_ID"],
+        message: "Configure both Google client ID and secret",
+      });
+    }
+    if (
+      env.NODE_ENV === "production" &&
+      env.GOOGLE_CLIENT_ID &&
+      !env.GOOGLE_REDIRECT_URI.startsWith("https://")
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["GOOGLE_REDIRECT_URI"],
+        message: "Production Google callback requires HTTPS",
+      });
+    }
     if (env.NODE_ENV === "production" && !env.JWT_PRIVATE_KEY_PEM) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
