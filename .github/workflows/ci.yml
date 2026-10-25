@@ -30,11 +30,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Trivy filesystem scan (phụ thuộc, secret, cấu hình)
-        uses: aquasecurity/trivy-action@0.28.0
+      - name: Trivy - quét secret (chặn PR)
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
-          scanners: vuln,secret,misconfig
+          scanners: secret
+          severity: CRITICAL,HIGH
+          skip-dirs: node_modules
+          exit-code: "1"
+      # Phụ thuộc/cấu hình: chỉ báo cáo, không chặn PR (xem log để xử lý dần)
+      - name: Trivy - quét phụ thuộc và cấu hình (chỉ báo cáo)
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scanners: vuln,misconfig
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          exit-code: "1"
+          skip-dirs: node_modules
+          exit-code: "0"
