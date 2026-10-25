@@ -92,3 +92,21 @@ Record state chỉ lưu hash; không lưu Google access/refresh token. Dọn rec
 hết hạn là tác vụ vận hành định kỳ, không ảnh hưởng việc từ chối state hết hạn.
 
 Tài liệu đối chiếu: [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect).
+
+## S-104 — Quyền và tenant
+
+GET `/v1/auth/me` với Bearer token trả global roles và memberships còn hiệu lực.
+POST `/v1/auth/tenants/{organizerId}/token` trả access token mới có organizer_id
+và chỉ các role global + role thuộc organizer đã chọn. Organizer phải APPROVED.
+Token đăng nhập ban đầu không có scope ORGANIZER/STAFF; refresh trả lại token global,
+client chọn lại tenant sau khi refresh.
+
+GET `/v1/organizers/{organizerId}/context` yêu cầu role ORGANIZER hoặc STAFF, scope
+trùng path và membership hiện còn trong DB. User bị suspend hoặc quyền bị thu hồi
+không dùng lại token tenant cũ để truy cập được. Không có bypass tenant cho ADMIN;
+Admin dùng các API `/v1/admin/*` riêng.
+
+Bootstrap Admin: cấu hình ADMIN_EMAIL, ADMIN_PASSWORD (12–128 ký tự) trong `.env`,
+chạy `pnpm --filter @ticketing/identity seed` rồi
+`pnpm --filter @ticketing/identity seed:admin`. Không có default password.
+Chạy lại giữ mật khẩu hiện có, chỉ bảo đảm role ADMIN; không tái kích hoạt user suspend.

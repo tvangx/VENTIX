@@ -16,6 +16,8 @@ export const envSchema = z
     WEB_ORIGIN: z.string().url().default("http://localhost:5173"),
     GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+    ADMIN_EMAIL: z.string().trim().toLowerCase().email().optional(),
+    ADMIN_PASSWORD: z.string().min(12).max(128).optional(),
     GOOGLE_REDIRECT_URI: z.string().url().default("http://localhost:3001/v1/auth/google/callback"),
     /** Đặt biến này mới bật OpenTelemetry. */
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
