@@ -186,4 +186,18 @@ describe("S-105 organizer application API + PostgreSQL", () => {
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(400);
   });
+  it("bounds multipart bytes and fields before storage or metadata writes", async () => {
+    const user = await owner();
+    const app = await apply(user.token).expect(201);
+    await upload(app.body.id, user.token, randomUUID(), Buffer.alloc(1024 * 1024 + 1)).expect(413);
+    await request(http())
+      .post(`/v1/organizer-applications/${app.body.id}/documents`)
+      .set("Authorization", `Bearer ${user.token}`)
+      .set("Idempotency-Key", randomUUID())
+      .field("doc_type", "BUSINESS_LICENSE")
+      .field("extra", "field")
+      .attach("file", pdf, { filename: "license.pdf", contentType: "application/pdf" })
+      .expect(400);
+    expect(put).not.toHaveBeenCalled();
+  });
 });
