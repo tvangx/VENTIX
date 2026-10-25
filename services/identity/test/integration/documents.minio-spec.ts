@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { GenericContainer, StartedTestContainer, Wait } from "testcontainers";
-import { Client } from "minio";
+import { CreateBucketCommand, GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { envSchema } from "../../src/config/env.schema";
 import { DocumentsStorage } from "../../src/modules/organizers/documents.storage";
 
 describe("S-105 real MinIO private documents", () => {
   let container: StartedTestContainer;
-  let client: Client;
+  let client: S3Client;
   let storage: DocumentsStorage;
   beforeAll(async () => {
     container = await new GenericContainer("cgr.dev/chainguard/minio:latest")
@@ -20,14 +20,13 @@ describe("S-105 real MinIO private documents", () => {
       .start();
     const host = container.getHost(),
       port = container.getMappedPort(9000);
-    client = new Client({
-      endPoint: host,
-      port,
-      useSSL: false,
-      accessKey: "testaccess",
-      secretKey: "test-secret-for-minio",
+    client = new S3Client({
+      endpoint: `http://${host}:${port}`,
+      region: "us-east-1",
+      forcePathStyle: true,
+      credentials: { accessKeyId: "testaccess", secretAccessKey: "test-secret-for-minio" },
     });
-    await client.makeBucket("organizer-docs");
+    await client.send(new CreateBucketCommand({ Bucket: "organizer-docs" }));
     storage = new DocumentsStorage(
       envSchema.parse({
         DATABASE_URL: "postgresql://unused@localhost/test",
@@ -41,16 +40,16 @@ describe("S-105 real MinIO private documents", () => {
     );
   });
   afterAll(async () => {
+    client?.destroy();
+    storage?.onModuleDestroy();
     await container?.stop();
   });
   it("persists exact bytes privately and allows only signed attachment downloads", async () => {
     const key = `organizers/${randomUUID()}/license.pdf`;
     const buffer = Buffer.from("%PDF-1.7\nlicense-test\n%%EOF");
     await storage.put(key, { buffer, mimetype: "application/pdf", size: buffer.length });
-    const stream = await client.getObject("organizer-docs", key);
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-    expect(Buffer.concat(chunks)).toEqual(buffer);
+    const object = await client.send(new GetObjectCommand({ Bucket: "organizer-docs", Key: key }));
+    expect(Buffer.from(await object.Body!.transformToByteArray())).toEqual(buffer);
     const signed = await storage.download(key);
     const response = await fetch(signed);
     expect(response.status).toBe(200);
