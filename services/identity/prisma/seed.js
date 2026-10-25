@@ -1,3 +1,4 @@
+require("dotenv/config");
 const { PrismaClient } = require("../generated/client");
 
 const ROLES = ["USER", "ORGANIZER", "STAFF", "ADMIN"];
