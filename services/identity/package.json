@@ -19,7 +19,9 @@
     "test:int": "node scripts/prisma-generate.js && jest --config jest.int.config.js --runInBand",
     "test:conc": "node scripts/prisma-generate.js && jest --config jest.conc.config.js --runInBand --passWithNoTests",
     "openapi:export": "pnpm build && node dist/tools/export-openapi.js",
-    "prisma:migrate:create": "prisma migrate dev --create-only"
+    "prisma:migrate:create": "prisma migrate dev --create-only",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.7",
