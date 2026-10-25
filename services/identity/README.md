@@ -110,3 +110,35 @@ Bootstrap Admin: cấu hình ADMIN_EMAIL, ADMIN_PASSWORD (12–128 ký tự) tro
 chạy `pnpm --filter @ticketing/identity seed` rồi
 `pnpm --filter @ticketing/identity seed:admin`. Không có default password.
 Chạy lại giữ mật khẩu hiện có, chỉ bảo đảm role ADMIN; không tái kích hoạt user suspend.
+
+## S-105 — Hồ sơ Organizer và giấy phép
+
+- POST `/v1/organizer-applications` (Bearer + Idempotency-Key UUID): company_name,
+  tax_code tùy chọn; tạo PENDING và chưa cấp role.
+- GET `/v1/organizer-applications/{id}`: owner hoặc Admin xem hồ sơ/documents.
+- POST `/v1/organizer-applications/{id}/documents`: multipart file +
+  doc_type=BUSINESS_LICENSE, Bearer của owner + Idempotency-Key. Chỉ PENDING;
+  PDF/PNG/JPEG đúng magic/MIME, tối đa 1 MiB. Retry cùng key/file không upload trùng.
+- GET `/v1/organizer-applications/{id}/documents/{documentId}/download`: owner/Admin,
+  trả URL tải attachment có chữ ký, hiệu lực 60 giây. Bucket organizer-docs phải private.
+- GET `/v1/admin/organizer-applications?status=PENDING&limit=20&cursor={uuid}`:
+  Admin, next_cursor hoặc null, tối đa 100 dòng.
+- PATCH `/v1/admin/organizer-applications/{id}`: Admin, body decision
+  (APPROVED/REJECTED) và version. Chỉ PENDING đúng version được xử lý; approved
+  phải có giấy phép và cấp scope ORGANIZER trong cùng transaction. Hai request
+  đồng thời chỉ một thành công, request còn lại 409.
+
+MINIO_ENDPOINT, MINIO_BUCKET, MINIO_ACCESS_KEY, MINIO_SECRET_KEY cấu hình ở service.
+Dev values trong `.env.example` khớp compose; production cấp key riêng chỉ có
+quyền bucket organizer-docs. Thiếu cấu hình/lỗi storage trả 503, DB không có document
+giả. I/O bị hủy sau 5 giây; transaction tối đa 15 giây để bao gồm SDK retry/backoff.
+Upload thành công nhưng DB commit lỗi có thể để object mồ côi; retry cùng key dùng
+lại object key an toàn. Chưa có tác vụ dọn object mồ côi.
+
+ERD hiện chỉ cho một scope ORGANIZER/user; duyệt hồ sơ thứ hai không chuyển quyền
+khỏi hồ sơ trước mà trả ORGANIZER_SCOPE_CONFLICT. Chưa phát OrganizerApproved
+vì event-contracts hiện không có loại sự kiện Identity; thêm cần review contract riêng.
+
+`test:int` kiểm tra HTTP/DB với storage adapter giả, và hủy HTTP upstream bị treo.
+`test:storage` dùng MinIO thật qua Testcontainers, kiểm tra bytes và bucket private;
+chạy riêng vì cần Docker và image MinIO hạ tầng hiện có.

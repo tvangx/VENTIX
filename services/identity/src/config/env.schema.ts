@@ -18,6 +18,13 @@ export const envSchema = z
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
     ADMIN_EMAIL: z.string().trim().toLowerCase().email().optional(),
     ADMIN_PASSWORD: z.string().min(12).max(128).optional(),
+    MINIO_ENDPOINT: z.string().url().default("http://localhost:9000"),
+    MINIO_BUCKET: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/)
+      .default("organizer-docs"),
+    MINIO_ACCESS_KEY: z.string().min(1).optional(),
+    MINIO_SECRET_KEY: z.string().min(1).optional(),
     GOOGLE_REDIRECT_URI: z.string().url().default("http://localhost:3001/v1/auth/google/callback"),
     /** Đặt biến này mới bật OpenTelemetry. */
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
@@ -25,6 +32,13 @@ export const envSchema = z
   })
   .superRefine((env, ctx) => {
     refineAuthEnv(env, ctx);
+    if (Boolean(env.MINIO_ACCESS_KEY) !== Boolean(env.MINIO_SECRET_KEY)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["MINIO_ACCESS_KEY"],
+        message: "Configure both MinIO access key and secret key",
+      });
+    }
     if (Boolean(env.GOOGLE_CLIENT_ID) !== Boolean(env.GOOGLE_CLIENT_SECRET)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
