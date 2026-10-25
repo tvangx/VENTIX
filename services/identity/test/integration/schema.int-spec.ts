@@ -78,7 +78,7 @@ describe("S-101 identity schema on PostgreSQL", () => {
   });
 
   it("can roll back the schema in a fresh isolated database and redeploy", async () => {
-    const clean = await testDatabase();
+    const clean = await testDatabase({ initialOnly: true });
     try {
       await clean.pool.query(
         readFileSync(join(__dirname, "../../prisma/rollback/identity-init.sql"), "utf8"),
