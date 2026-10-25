@@ -15,6 +15,16 @@
                 }
               }
             }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         },
         "summary": "Process is up",
@@ -38,6 +48,16 @@
           },
           "503": {
             "description": "Database unreachable (problem+json, code NOT_READY)"
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         },
         "summary": "Ready to serve traffic (checks the database)",
@@ -61,6 +81,16 @@
           },
           "401": {
             "description": "Missing or invalid token (problem+json)"
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -71,22 +101,835 @@
         "summary": "Return the authenticated principal",
         "tags": ["whoami"]
       }
+    },
+    "/v1/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredUserDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đăng ký email, idempotent theo key",
+        "tags": ["auth"]
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "headers": {
+              "Set-Cookie": {
+                "description": "ventix_refresh, HttpOnly; SameSite=Lax; Secure ở production",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đăng nhập, đặt refresh cookie HttpOnly",
+        "tags": ["auth"]
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "headers": {
+              "Set-Cookie": {
+                "description": "Refresh cookie mới; cookie cũ bị thu hồi",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Xoay refresh token; reuse thu hồi cả family",
+        "tags": ["auth"]
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Family bị thu hồi, cookie bị xóa"
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "summary": "Thu hồi cả family, xóa cookie",
+        "tags": ["auth"]
+      }
+    },
+    "/.well-known/jwks.json": {
+      "get": {
+        "operationId": "JwksController_jwks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JwksDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Khóa công khai RSA để các service verify JWT",
+        "tags": ["auth"]
+      }
+    },
+    "/v1/auth/google/start": {
+      "get": {
+        "operationId": "GoogleController_start",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleStartDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Khởi tạo Google OAuth PKCE; trả URL và cookie state",
+        "tags": ["auth"]
+      }
+    },
+    "/v1/auth/google/link": {
+      "get": {
+        "operationId": "GoogleController_link",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleStartDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Liên kết Google với tài khoản đã đăng nhập",
+        "tags": ["auth"]
+      }
+    },
+    "/v1/auth/google/callback": {
+      "get": {
+        "operationId": "GoogleController_callback",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Refresh cookie và redirect về frontend, không có token trong URL",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Nhận code/state từ Google; đặt phiên rồi về frontend",
+        "tags": ["auth"]
+      }
+    },
+    "/v1/auth/me": {
+      "get": {
+        "operationId": "AccessController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Thông tin tài khoản và các scope được cấp",
+        "tags": ["identity"]
+      }
+    },
+    "/v1/auth/tenants/{organizerId}/token": {
+      "post": {
+        "operationId": "AccessController_token",
+        "parameters": [
+          {
+            "name": "organizerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Đổi sang access token cho đúng tenant",
+        "tags": ["identity"]
+      }
+    },
+    "/v1/organizers/{organizerId}/context": {
+      "get": {
+        "operationId": "TenantContextController_context",
+        "parameters": [
+          {
+            "name": "organizerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantContextDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Kiểm tra quyền làm việc trong organizer hiện tại",
+        "tags": ["identity"]
+      }
+    },
+    "/v1/organizer-applications": {
+      "post": {
+        "operationId": "OrganizersController_apply",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizerApplicationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationResponseDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Đăng ký hồ sơ Organizer, chưa cấp role",
+        "tags": ["organizer-applications"]
+      }
+    },
+    "/v1/organizer-applications/{organizerId}": {
+      "get": {
+        "operationId": "OrganizersController_get",
+        "parameters": [
+          {
+            "name": "organizerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationDetailDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Owner hoặc Admin xem hồ sơ và metadata giấy phép",
+        "tags": ["organizer-applications"]
+      }
+    },
+    "/v1/organizer-applications/{organizerId}/documents": {
+      "post": {
+        "operationId": "OrganizersController_upload",
+        "parameters": [
+          {
+            "name": "organizerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["doc_type", "file"],
+                "properties": {
+                  "doc_type": {
+                    "type": "string",
+                    "enum": ["BUSINESS_LICENSE"]
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Owner upload giấy phép, PDF/PNG/JPEG ≤1 MiB",
+        "tags": ["organizer-applications"]
+      }
+    },
+    "/v1/organizer-applications/{organizerId}/documents/{documentId}/download": {
+      "get": {
+        "operationId": "OrganizersController_download",
+        "parameters": [
+          {
+            "name": "organizerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDownloadDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Owner/Admin lấy link tải riêng, hiệu lực 60 giây",
+        "tags": ["organizer-applications"]
+      }
+    },
+    "/v1/admin/organizer-applications": {
+      "get": {
+        "operationId": "AdminOrganizersController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": ["PENDING", "APPROVED", "REJECTED"],
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationListDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Admin duyệt danh sách hồ sơ, phân trang cursor",
+        "tags": ["admin-organizers"]
+      }
+    },
+    "/v1/admin/organizer-applications/{organizerId}": {
+      "patch": {
+        "operationId": "AdminOrganizersController_decide",
+        "parameters": [
+          {
+            "name": "organizerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizerDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationResponseDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Lỗi RFC 7807. code phân biệt validation, quyền, xung đột và lỗi tạm thời.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Admin duyệt/từ chối PENDING, version bắt buộc",
+        "tags": ["admin-organizers"]
+      }
     }
   },
   "info": {
     "title": "identity service",
-    "description": "",
+    "description": "Identity tuần 1: email/Google auth, HttpOnly refresh cookie, RBAC/tenant và duyệt Organizer. Refresh cần credentials/include; access token chỉ giữ trong bộ nhớ.",
     "version": "1.0",
     "contact": {}
   },
   "tags": [],
-  "servers": [],
+  "servers": [
+    {
+      "url": "/",
+      "description": "Direct service"
+    },
+    {
+      "url": "/api/identity",
+      "description": "Kong gateway"
+    }
+  ],
   "components": {
     "securitySchemes": {
       "bearer": {
         "scheme": "bearer",
         "bearerFormat": "JWT",
         "type": "http"
+      },
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "ventix_refresh"
       }
     },
     "schemas": {
@@ -119,6 +962,367 @@
           }
         },
         "required": ["userId", "roles"]
+      },
+      "CredentialsDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "son@example.test",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128,
+            "writeOnly": true
+          }
+        },
+        "required": ["email", "password"]
+      },
+      "RegisteredUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "example": "son@example.test"
+          }
+        },
+        "required": ["id", "email"]
+      },
+      "AccessTokenDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "expires_in": {
+            "type": "number",
+            "example": 900
+          }
+        },
+        "required": ["access_token", "token_type", "expires_in"]
+      },
+      "RsaJwkDto": {
+        "type": "object",
+        "properties": {
+          "kty": {
+            "type": "string",
+            "example": "RSA"
+          },
+          "kid": {
+            "type": "string"
+          },
+          "alg": {
+            "type": "string",
+            "example": "RS256"
+          },
+          "use": {
+            "type": "string",
+            "example": "sig"
+          },
+          "n": {
+            "type": "string"
+          },
+          "e": {
+            "type": "string"
+          }
+        },
+        "required": ["kty", "kid", "alg", "use", "n", "e"]
+      },
+      "JwksDto": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RsaJwkDto"
+            }
+          }
+        },
+        "required": ["keys"]
+      },
+      "GoogleStartDto": {
+        "type": "object",
+        "properties": {
+          "authorization_url": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": ["authorization_url"]
+      },
+      "MembershipDto": {
+        "type": "object",
+        "properties": {
+          "organizer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["ORGANIZER", "STAFF"]
+          }
+        },
+        "required": ["organizer_id", "role"]
+      },
+      "MeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "memberships": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MembershipDto"
+            }
+          }
+        },
+        "required": ["id", "email", "roles", "memberships"]
+      },
+      "TenantContextDto": {
+        "type": "object",
+        "properties": {
+          "organizer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["organizer_id", "roles"]
+      },
+      "OrganizerApplicationDto": {
+        "type": "object",
+        "properties": {
+          "company_name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "tax_code": {
+            "type": "string",
+            "maxLength": 32
+          }
+        },
+        "required": ["company_name"]
+      },
+      "ApplicationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "owner_user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "company_name": {
+            "type": "string"
+          },
+          "tax_code": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "APPROVED", "REJECTED"]
+          },
+          "version": {
+            "type": "number",
+            "minimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "owner_user_id",
+          "company_name",
+          "tax_code",
+          "status",
+          "version",
+          "created_at",
+          "approved_at"
+        ]
+      },
+      "DocumentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "doc_type": {
+            "type": "string",
+            "enum": ["BUSINESS_LICENSE"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["id", "doc_type", "created_at"]
+      },
+      "ApplicationDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "owner_user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "company_name": {
+            "type": "string"
+          },
+          "tax_code": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "APPROVED", "REJECTED"]
+          },
+          "version": {
+            "type": "number",
+            "minimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "owner_user_id",
+          "company_name",
+          "tax_code",
+          "status",
+          "version",
+          "created_at",
+          "approved_at",
+          "documents"
+        ]
+      },
+      "DocumentDownloadDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expires_in": {
+            "type": "number",
+            "example": 60
+          }
+        },
+        "required": ["url", "expires_in"]
+      },
+      "Object": {
+        "type": "object",
+        "properties": {}
+      },
+      "ApplicationListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicationResponseDto"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": ["data", "next_cursor"]
+      },
+      "OrganizerDecisionDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": ["APPROVED", "REJECTED"]
+          },
+          "version": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": ["decision", "version"]
+      },
+      "Problem": {
+        "type": "object",
+        "required": ["type", "title", "status", "detail", "code", "request_id"],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "example": "INVALID_REFRESH_TOKEN"
+          },
+          "request_id": {
+            "type": "string",
+            "nullable": true
+          }
+        }
       }
     }
   }

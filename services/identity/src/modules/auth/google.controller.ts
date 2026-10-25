@@ -1,11 +1,19 @@
 import { Controller, Get, Inject, Query, Req, Res } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from "@nestjs/swagger";
 import { CurrentUser, Public } from "@ticketing/auth-guard";
 import type { AuthUser } from "@ticketing/auth-guard";
 import type { Request, Response } from "express";
 import { ENV } from "../../app.tokens";
 import type { Env } from "../../config/env.schema";
 import { GoogleService } from "./google.service";
+import { GoogleStartDto } from "./auth.responses";
 
 @ApiTags("auth")
 @Controller("auth/google")
@@ -27,6 +35,7 @@ export class GoogleController {
     return { authorization_url: result.authorization_url };
   }
   @Get("start")
+  @ApiOkResponse({ type: GoogleStartDto })
   @Public()
   @ApiOperation({ summary: "Khởi tạo Google OAuth PKCE; trả URL và cookie state" })
   start(@Res({ passthrough: true }) res: Response) {
@@ -34,6 +43,7 @@ export class GoogleController {
   }
 
   @Get("link")
+  @ApiOkResponse({ type: GoogleStartDto })
   @ApiBearerAuth()
   @ApiOperation({ summary: "Liên kết Google với tài khoản đã đăng nhập" })
   link(@CurrentUser() user: AuthUser, @Res({ passthrough: true }) res: Response) {
@@ -41,6 +51,13 @@ export class GoogleController {
   }
 
   @Get("callback")
+  @ApiQuery({ name: "state", required: true, type: String })
+  @ApiQuery({ name: "code", required: true, type: String })
+  @ApiResponse({
+    status: 302,
+    description: "Refresh cookie và redirect về frontend, không có token trong URL",
+    headers: { Location: { schema: { type: "string" } } },
+  })
   @Public()
   @ApiOperation({ summary: "Nhận code/state từ Google; đặt phiên rồi về frontend" })
   async callback(

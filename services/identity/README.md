@@ -142,3 +142,10 @@ vì event-contracts hiện không có loại sự kiện Identity; thêm cần r
 `test:int` kiểm tra HTTP/DB với storage adapter giả, và hủy HTTP upstream bị treo.
 `test:storage` dùng MinIO thật qua Testcontainers, kiểm tra bytes và bucket private;
 chạy riêng vì cần Docker và image MinIO hạ tầng hiện có.
+
+## S-106 — OpenAPI và request mẫu
+
+`pnpm --filter @ticketing/identity openapi:export` sinh spec từ app thật;
+`openapi.json` được commit để Vũ sinh client. Bộ Postman 18 request và environment
+trống mật khẩu nằm ở `docs/api/identity/`, cùng hướng dẫn cookie, tenant, Google
+callback và upload. Không cần DB để export OpenAPI.
