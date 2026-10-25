@@ -2,6 +2,9 @@
 
 Phạm vi: S-201–S-206. Người giao: Sơn. Bắt đầu ngày 2026-10-25.
 
+Review tài liệu: [draft PR #44](https://github.com/tvangx/VENTIX/pull/44),
+nhánh `feat/event-s201-crud`. PR chỉ công bố nhật ký và run report; chưa cài đặt CRUD.
+
 Nhật ký này giúp người và AI review truy ngược từ implementation về yêu cầu,
 nguồn tài liệu và quyết định trong chat. Run report của mỗi task phải liên kết
 đến các mục liên quan ở đây. Không tự sửa tài liệu gốc trên Drive.
