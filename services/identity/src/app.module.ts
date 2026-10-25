@@ -22,6 +22,13 @@ import { AccessController, TenantContextController } from "./modules/access/acce
 import { AccessRepository } from "./modules/access/access.repository";
 import { AccessService } from "./modules/access/access.service";
 import { TenantGuard } from "./modules/access/tenant.guard";
+import {
+  AdminOrganizersController,
+  OrganizersController,
+} from "./modules/organizers/organizers.controller";
+import { OrganizersRepository } from "./modules/organizers/organizers.repository";
+import { OrganizersService } from "./modules/organizers/organizers.service";
+import { DocumentsStorage } from "./modules/organizers/documents.storage";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -46,6 +53,8 @@ export class AppModule implements NestModule {
         GoogleController,
         AccessController,
         TenantContextController,
+        OrganizersController,
+        AdminOrganizersController,
       ],
       providers: [
         { provide: ENV, useValue: env },
@@ -62,6 +71,9 @@ export class AppModule implements NestModule {
         AccessRepository,
         AccessService,
         TenantGuard,
+        OrganizersRepository,
+        OrganizersService,
+        DocumentsStorage,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],
