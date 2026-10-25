@@ -5,6 +5,7 @@ import type { AuthUser } from "@ticketing/auth-guard";
 import { AccessTokenDto } from "../auth/auth.dto";
 import { AccessService } from "./access.service";
 import { TenantGuard } from "./tenant.guard";
+import { MeDto, TenantContextDto } from "../auth/auth.responses";
 
 @ApiTags("identity")
 @ApiBearerAuth()
@@ -12,6 +13,7 @@ import { TenantGuard } from "./tenant.guard";
 export class AccessController {
   constructor(private readonly access: AccessService) {}
   @Get("me")
+  @ApiOkResponse({ type: MeDto })
   @ApiOperation({ summary: "Thông tin tài khoản và các scope được cấp" })
   me(@CurrentUser() user: AuthUser) {
     return this.access.me(user.userId);
@@ -37,6 +39,7 @@ export class AccessController {
 export class TenantContextController {
   constructor(private readonly access: AccessService) {}
   @Get()
+  @ApiOkResponse({ type: TenantContextDto })
   @ApiOperation({ summary: "Kiểm tra quyền làm việc trong organizer hiện tại" })
   async context(
     @CurrentUser() user: AuthUser,

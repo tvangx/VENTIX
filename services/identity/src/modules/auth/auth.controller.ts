@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Headers, HttpCode, Inject, Post, Req, Res } from "@nestjs/common";
 import {
   ApiCreatedResponse,
+  ApiCookieAuth,
   ApiHeader,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -14,6 +16,7 @@ import type { Env } from "../../config/env.schema";
 import { AuthKeys } from "./auth-keys";
 import { AccessTokenDto, CredentialsDto, RegisteredUserDto } from "./auth.dto";
 import { AuthService } from "./auth.service";
+import { JwksDto } from "./auth.responses";
 
 @Public()
 @ApiTags("auth")
@@ -68,7 +71,15 @@ export class AuthController {
   @Post("login")
   @HttpCode(200)
   @ApiOperation({ summary: "Đăng nhập, đặt refresh cookie HttpOnly" })
-  @ApiOkResponse({ type: AccessTokenDto })
+  @ApiOkResponse({
+    type: AccessTokenDto,
+    headers: {
+      "Set-Cookie": {
+        description: "ventix_refresh, HttpOnly; SameSite=Lax; Secure ở production",
+        schema: { type: "string" },
+      },
+    },
+  })
   async login(
     @Body() dto: CredentialsDto,
     @Req() req: Request,
@@ -79,9 +90,18 @@ export class AuthController {
   }
 
   @Post("refresh")
+  @ApiCookieAuth()
   @HttpCode(200)
   @ApiOperation({ summary: "Xoay refresh token; reuse thu hồi cả family" })
-  @ApiOkResponse({ type: AccessTokenDto })
+  @ApiOkResponse({
+    type: AccessTokenDto,
+    headers: {
+      "Set-Cookie": {
+        description: "Refresh cookie mới; cookie cũ bị thu hồi",
+        schema: { type: "string" },
+      },
+    },
+  })
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     this.checkOrigin(req);
     try {
@@ -98,7 +118,9 @@ export class AuthController {
   }
 
   @Post("logout")
+  @ApiCookieAuth()
   @HttpCode(204)
+  @ApiNoContentResponse({ description: "Family bị thu hồi, cookie bị xóa" })
   @ApiOperation({ summary: "Thu hồi cả family, xóa cookie" })
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     this.checkOrigin(req);
@@ -118,6 +140,7 @@ export class AuthController {
 export class JwksController {
   constructor(private readonly keys: AuthKeys) {}
   @Get("jwks.json")
+  @ApiOkResponse({ type: JwksDto })
   @ApiOperation({ summary: "Khóa công khai RSA để các service verify JWT" })
   jwks() {
     return this.keys.jwks();
