@@ -12,7 +12,6 @@ import {
   UploadedFile,
   UseInterceptors,
 } from "@nestjs/common";
-import { FileInterceptor } from "@nestjs/platform-express";
 import {
   ApiBearerAuth,
   ApiBody,
@@ -24,7 +23,8 @@ import {
 import { CurrentUser, Roles } from "@ticketing/auth-guard";
 import type { AuthUser } from "@ticketing/auth-guard";
 import type { Response } from "express";
-import { LicenseFile, MAX_DOCUMENT_BYTES } from "./documents.storage";
+import { LicenseFile } from "./documents.storage";
+import { LicenseUploadInterceptor } from "./license-upload.interceptor";
 import {
   DocumentUploadDto,
   OrganizerApplicationDto,
@@ -75,9 +75,7 @@ export class OrganizersController {
       },
     },
   })
-  @UseInterceptors(
-    FileInterceptor("file", { limits: { fileSize: MAX_DOCUMENT_BYTES, files: 1, fields: 1 } }),
-  )
+  @UseInterceptors(LicenseUploadInterceptor)
   upload(
     @CurrentUser() user: AuthUser,
     @Param("organizerId", new ParseUUIDPipe()) id: string,

@@ -1,9 +1,7 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
 import { ProblemException } from "@ticketing/common";
-import { Client } from "minio";
-import { AsyncLocalStorage } from "node:async_hooks";
-import * as http from "node:http";
-import * as https from "node:https";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { ENV } from "../../app.tokens";
 import type { Env } from "../../config/env.schema";
 
@@ -34,34 +32,24 @@ export function licenseExtension(file?: LicenseFile): string {
 }
 
 @Injectable()
-export class DocumentsStorage {
-  private readonly client?: Client;
-  private readonly signals = new AsyncLocalStorage<AbortSignal>();
+export class DocumentsStorage implements OnModuleDestroy {
+  private readonly client?: S3Client;
   constructor(@Inject(ENV) private readonly env: Env) {
     if (env.MINIO_ACCESS_KEY && env.MINIO_SECRET_KEY) {
-      const endpoint = new URL(env.MINIO_ENDPOINT);
-      const transport = endpoint.protocol === "https:" ? https : http;
-      this.client = new Client({
-        endPoint: endpoint.hostname,
-        port: Number(endpoint.port || (endpoint.protocol === "https:" ? 443 : 80)),
-        useSSL: endpoint.protocol === "https:",
-        accessKey: env.MINIO_ACCESS_KEY,
-        secretKey: env.MINIO_SECRET_KEY,
-        // SDK chỉ dùng overload request(options, callback); signal hủy I/O cả khi SDK retry.
-        transport: {
-          request: ((
-            options: http.RequestOptions,
-            callback: (response: http.IncomingMessage) => void,
-          ) =>
-            transport.request(
-              { ...options, signal: this.signals.getStore() },
-              callback,
-            )) as typeof http.request,
-        },
+      this.client = new S3Client({
+        endpoint: env.MINIO_ENDPOINT,
+        region: "us-east-1",
+        forcePathStyle: true,
+        maxAttempts: 2,
+        requestChecksumCalculation: "WHEN_REQUIRED",
+        credentials: { accessKeyId: env.MINIO_ACCESS_KEY, secretAccessKey: env.MINIO_SECRET_KEY },
       });
     }
   }
-  private configured(): Client {
+  onModuleDestroy(): void {
+    this.client?.destroy();
+  }
+  private configured(): S3Client {
     if (!this.client)
       throw new ProblemException("STORAGE_NOT_CONFIGURED", 503, "Chưa cấu hình kho giấy phép");
     return this.client;
@@ -69,10 +57,15 @@ export class DocumentsStorage {
   async put(key: string, file: LicenseFile): Promise<void> {
     const client = this.configured();
     try {
-      await this.signals.run(AbortSignal.timeout(5000), () =>
-        client.putObject(this.env.MINIO_BUCKET, key, file.buffer, file.buffer.length, {
-          "Content-Type": file.mimetype,
+      await client.send(
+        new PutObjectCommand({
+          Bucket: this.env.MINIO_BUCKET,
+          Key: key,
+          Body: file.buffer,
+          ContentLength: file.buffer.length,
+          ContentType: file.mimetype,
         }),
+        { abortSignal: AbortSignal.timeout(5000) },
       );
     } catch {
       throw new ProblemException(
@@ -85,10 +78,14 @@ export class DocumentsStorage {
   async download(key: string): Promise<string> {
     const client = this.configured();
     try {
-      return await this.signals.run(AbortSignal.timeout(5000), () =>
-        client.presignedGetObject(this.env.MINIO_BUCKET, key, 60, {
-          "response-content-disposition": "attachment",
+      return await getSignedUrl(
+        client,
+        new GetObjectCommand({
+          Bucket: this.env.MINIO_BUCKET,
+          Key: key,
+          ResponseContentDisposition: "attachment",
         }),
+        { expiresIn: 60 },
       );
     } catch {
       throw new ProblemException("STORAGE_UNAVAILABLE", 503, "Không tạo được link tải giấy phép");
