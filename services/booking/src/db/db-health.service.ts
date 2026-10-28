@@ -3,10 +3,7 @@ import { Pool } from "pg";
 import { ENV } from "../app.tokens";
 import type { Env } from "../config/env.schema";
 
-/**
- * Kiểm tra DB cho /health/ready. Dùng `pg` trực tiếp vì Prisma 5 không generate được client
- * khi chưa có model; khi service có model đầu tiên, thêm PrismaService (docs/dev/new-service.md).
- */
+/** Health chỉ cần SELECT 1; Prisma client cho repository nằm trong generated/prisma. */
 @Injectable()
 export class DbHealthService implements OnModuleDestroy {
   private readonly pool: Pool;

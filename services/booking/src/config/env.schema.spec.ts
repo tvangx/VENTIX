@@ -2,7 +2,7 @@ import { loadEnv } from "@ticketing/common";
 import { envSchema } from "./env.schema";
 
 const base = {
-  DATABASE_URL: "postgresql://svc_user:svc_dev@localhost:5432/svc_db",
+  DATABASE_URL: "postgresql://booking_user:booking_dev@localhost:5432/booking_db",
   AUTH_ISSUER: "https://identity.test",
   AUTH_AUDIENCE: "ticketing-api",
   AUTH_JWKS_URI: "http://localhost:3001/.well-known/jwks.json",
@@ -20,6 +20,14 @@ describe("envSchema", () => {
 
   it("fails fast when DATABASE_URL is missing", () => {
     expect(() => loadEnv(envSchema, { ...base, DATABASE_URL: undefined })).toThrow(/DATABASE_URL/);
+  });
+
+  it.each([
+    "postgresql://postgres:test@localhost:5432/booking_db",
+    "postgresql://booking_user:test@localhost:5432/identity_db",
+    "https://booking_user:test@localhost/booking_db",
+  ])("rejects a database URL outside booking ownership: %s", (url) => {
+    expect(() => loadEnv(envSchema, { ...base, DATABASE_URL: url })).toThrow(/DATABASE_URL/);
   });
 
   it("requires JWKS or a public key", () => {
