@@ -3,6 +3,9 @@ dist/
 coverage/
 .turbo/
 .env
+.env.prod
+.env.prod.*
+!.env.prod.example
 *.log
 .DS_Store
 .idea/

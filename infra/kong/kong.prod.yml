@@ -1,0 +1,34 @@
+# T-207 chỉ bật hạ tầng. Không trỏ host.docker.internal hay upstream chưa có image.
+_format_version: "3.0"
+
+plugins:
+  - name: correlation-id
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+
+routes:
+  # Health công khai chỉ chứng minh gateway + đường Cloudflare, không phải health ứng dụng.
+  - name: infra-health
+    paths: ["~/health/infra$"]
+    methods: [GET]
+    plugins:
+      - name: request-termination
+        config:
+          status_code: 200
+          content_type: application/json
+          body: '{"status":"ok","scope":"infrastructure-only"}'
+
+  # Không có route nghiệp vụ ở T-207; giữ rào /internal khi thêm route sau này.
+  - name: block-internal
+    paths: ["~/.*internal"]
+    regex_priority: 1000
+    plugins:
+      - name: request-termination
+        config:
+          status_code: 404
+          message: Not found
+
+# Khi có image thật, thêm service URL http://<service>:<port>, không mở Kong Admin.
+# Giữ auth ở service (ADR-0004), không sửa hợp đồng ADR-0009/0010.
