@@ -10,7 +10,7 @@ async function main(): Promise<void> {
   const env = loadEnv(envSchema, {
     NODE_ENV: "test",
     PORT: "1",
-    DATABASE_URL: "postgresql://openapi:openapi@localhost:5432/openapi",
+    DATABASE_URL: "postgresql://booking_user:openapi@localhost:5432/booking_db",
     AUTH_ISSUER: "openapi-export",
     AUTH_AUDIENCE: "openapi-export",
     AUTH_JWKS_URI: "http://localhost/jwks.json",

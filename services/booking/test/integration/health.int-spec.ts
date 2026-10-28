@@ -7,7 +7,7 @@ import request from "supertest";
 import { createApp } from "../../src/bootstrap";
 import { envSchema } from "../../src/config/env.schema";
 
-describe("service template (integration, Postgres via Testcontainers)", () => {
+describe("booking scaffold (integration, Postgres via Testcontainers)", () => {
   let pg: StartedPostgreSqlContainer;
   let app: INestApplication;
   let privateKey: KeyLike;
@@ -23,7 +23,10 @@ describe("service template (integration, Postgres via Testcontainers)", () => {
       .sign(privateKey);
 
   beforeAll(async () => {
-    pg = await new PostgreSqlContainer("postgres:16").start();
+    pg = await new PostgreSqlContainer("postgres:16")
+      .withUsername("booking_user")
+      .withDatabase("booking_db")
+      .start();
     const pair = await generateKeyPair("RS256");
     privateKey = pair.privateKey;
     const env = loadEnv(envSchema, {
