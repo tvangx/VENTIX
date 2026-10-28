@@ -8,9 +8,9 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | T-101  | 1    | Monorepo                                                            | —                          | Done       | —   | Phase 0                                                |
 | T-102  | 1    | Template NestJS service                                             | T-101                      | Done       |     | Chặn Sơn/Vũ; PR chưa mở (xem runs/T-102.md)            |
 | T-301a | 1    | Chốt hợp đồng saga (event-contracts, ADR-0009/0010, OpenAPI nội bộ) | T-107                      | Done       |     | Đã cài đặt sẵn; Tuấn review + commit; không giao agent |
-| T-103  | 1    | outbox-inbox                                                        | T-102                      | In review  |     | Mã lõi, 2 người đọc; PR chưa mở                        |
+| T-103  | 1    | outbox-inbox                                                        | T-102                      | Done       |     | Mã lõi, 2 người đọc; PR chưa mở                        |
 | T-104  | 1    | Hạ tầng compose                                                     | T-101                      | Done       | —   | Phase 0 (đã vá Git Bash)                               |
-| T-105  | 1    | CI GitHub Actions                                                   | T-102                      | In review  |     | Chưa chạy trên GitHub                                  |
+| T-105  | 1    | CI GitHub Actions                                                   | T-102                      | Done       |     | Chưa chạy trên GitHub                                  |
 | T-106  | 1    | VNPay sandbox + cloudflared + đo RAM                                | —                          | Human      |     |                                                        |
 | T-107  | 1    | Workshop xác nhận hợp đồng                                          | —                          | Human      |     | Quyết định đã chốt; chỉ cần Sơn/Vũ xác nhận            |
 | T-201  | 1    | Schema booking_db                                                   | T-102, T-103               | In review  | #45 | Mã lõi (unique index)                                  |
