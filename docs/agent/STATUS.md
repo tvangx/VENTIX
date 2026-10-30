@@ -15,7 +15,7 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | T-107  | 1    | Workshop xác nhận hợp đồng                                          | —                          | Human      |     | Quyết định đã chốt; chỉ cần Sơn/Vũ xác nhận            |
 | T-201  | 1    | Schema booking_db                                                   | T-102, T-103               | In review  | #45 | Mã lõi (unique index)                                  |
 | T-207  | 1    | VPS + deploy thử                                                    | —                          | In review  | #47 | Agent: file prod; Tuấn: VPS/domain/secrets             |
-| T-202  | 2    | Lua giữ ghế + /holds                                                | T-201                      | Todo       |     | Mã lõi                                                 |
+| T-202  | 2    | Lua giữ ghế + /holds                                                | T-201                      | In review  | #48 | Mã lõi; cần 2 người đọc                                |
 | T-206  | 2    | Hoàn thiện Kong (+ chặn /internal)                                  | T-104, T-202               | Todo       |     |                                                        |
 | T-203  | 2    | Consumer event + rehydrate                                          | T-103, T-201, S-203        | Todo       |     |                                                        |
 | T-204  | 2    | Seat status + SSE + sweeper                                         | T-202                      | Todo       |     |                                                        |
