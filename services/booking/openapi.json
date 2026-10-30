@@ -71,6 +71,173 @@
         "summary": "Return the authenticated principal",
         "tags": ["whoami"]
       }
+    },
+    "/v1/holds": {
+      "post": {
+        "operationId": "SeatHoldController_hold",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Holds are idempotent by user/event/seat. Every successful repeat renews TTL, including requests with the same header; no cached response is replayed.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHoldDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (application/problem+json)"
+          },
+          "401": {
+            "description": "Missing or invalid JWT (application/problem+json)"
+          },
+          "403": {
+            "description": "ADMISSION_REQUIRED (application/problem+json)"
+          },
+          "404": {
+            "description": "EVENT_NOT_ON_SALE (application/problem+json)"
+          },
+          "409": {
+            "description": "SEAT_UNAVAILABLE with seat_id (application/problem+json)"
+          },
+          "422": {
+            "description": "HOLD_LIMIT_EXCEEDED (application/problem+json)"
+          },
+          "503": {
+            "description": "EVENT_NOT_READY or SEAT_HOLD_UNAVAILABLE; Retry-After: 1 (application/problem+json)",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "example": 1
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Atomically hold all requested seats; repeated requests renew their TTL",
+        "tags": ["holds"]
+      },
+      "get": {
+        "operationId": "SeatHoldController_current",
+        "parameters": [
+          {
+            "name": "event_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentHoldResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (application/problem+json)"
+          },
+          "401": {
+            "description": "Missing or invalid JWT (application/problem+json)"
+          },
+          "503": {
+            "description": "EVENT_NOT_READY or SEAT_HOLD_UNAVAILABLE; Retry-After: 1 (application/problem+json)",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "example": 1
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read active seats held by the current user in one event",
+        "tags": ["holds"]
+      },
+      "delete": {
+        "operationId": "SeatHoldController_release",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleaseHoldDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid input (application/problem+json)"
+          },
+          "401": {
+            "description": "Missing or invalid JWT (application/problem+json)"
+          },
+          "503": {
+            "description": "EVENT_NOT_READY or SEAT_HOLD_UNAVAILABLE; Retry-After: 1 (application/problem+json)",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "example": 1
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Release specified seats, or all seats held by the current user in one event",
+        "tags": ["holds"]
+      }
     }
   },
   "info": {
@@ -119,6 +286,83 @@
           }
         },
         "required": ["userId", "roles"]
+      },
+      "CreateHoldDto": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seat_ids": {
+            "minItems": 1,
+            "maxItems": 1000,
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": ["event_id", "seat_ids"]
+      },
+      "HoldResponseDto": {
+        "type": "object",
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "seat_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": ["expires_at", "seat_ids"]
+      },
+      "CurrentHoldResponseDto": {
+        "type": "object",
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Earliest seat expiry; null when no active hold exists"
+          },
+          "seat_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": ["expires_at", "seat_ids"]
+      },
+      "ReleaseHoldDto": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seat_ids": {
+            "minItems": 1,
+            "maxItems": 1000,
+            "uniqueItems": true,
+            "description": "Omit to release all seats held by the current user in this event",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": ["event_id"]
       }
     }
   }

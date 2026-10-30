@@ -9,6 +9,24 @@ export const envSchema = z
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
+    REDIS_URL: z
+      .string()
+      .url()
+      .refine(
+        (value) => ["redis:", "rediss:"].includes(new URL(value).protocol),
+        "REDIS_URL must use redis or rediss",
+      )
+      .default("redis://localhost:6379"),
+    HOLD_TTL_SECONDS: z.coerce.number().int().positive().max(86400).default(600),
+    HOLD_MAX_SEATS: z.coerce.number().int().positive().max(1000).default(6),
+    ADMISSION_REQUIRED: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
+    HOLDLOG_ENABLED: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
     DATABASE_URL: z
       .string()
       .url()

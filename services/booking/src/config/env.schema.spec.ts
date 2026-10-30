@@ -16,6 +16,11 @@ describe("envSchema", () => {
     expect(env.NODE_ENV).toBe("development");
     expect(env.LOG_LEVEL).toBe("info");
     expect(env.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
+    expect(env.REDIS_URL).toBe("redis://localhost:6379");
+    expect(env.HOLD_TTL_SECONDS).toBe(600);
+    expect(env.HOLD_MAX_SEATS).toBe(6);
+    expect(env.ADMISSION_REQUIRED).toBe(false);
+    expect(env.HOLDLOG_ENABLED).toBe(false);
   });
 
   it("fails fast when DATABASE_URL is missing", () => {
@@ -45,5 +50,25 @@ describe("envSchema", () => {
         AUTH_JWKS_URI: undefined,
       }),
     ).toThrow(/AUTH_PUBLIC_KEY_PEM/);
+  });
+
+  it("parses boolean strings without treating false as truthy", () => {
+    expect(
+      loadEnv(envSchema, { ...base, ADMISSION_REQUIRED: "true", HOLDLOG_ENABLED: "true" }),
+    ).toMatchObject({ ADMISSION_REQUIRED: true, HOLDLOG_ENABLED: true });
+  });
+
+  it.each([
+    { HOLD_TTL_SECONDS: "0" },
+    { HOLD_TTL_SECONDS: "1.5" },
+    { HOLD_TTL_SECONDS: "86401" },
+    { HOLD_MAX_SEATS: "0" },
+    { HOLD_MAX_SEATS: "1001" },
+    { HOLD_MAX_SEATS: "NaN" },
+    { ADMISSION_REQUIRED: "yes" },
+    { HOLDLOG_ENABLED: "1" },
+    { REDIS_URL: "https://localhost" },
+  ])("rejects invalid hold configuration %j", (config) => {
+    expect(() => loadEnv(envSchema, { ...base, ...config })).toThrow();
   });
 });
