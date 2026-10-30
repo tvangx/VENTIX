@@ -1,6 +1,6 @@
-# Booking service — T-201
+# Booking service — T-201 / T-202
 
-Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; chưa triển khai Lua, holds, checkout hoặc consumer Kafka. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
+Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds. Chưa triển khai checkout, consumer Kafka, rehydrate hoặc sweeper. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
 
 ## Chạy local
 
@@ -63,3 +63,41 @@ pnpm format:check && pnpm build
 ```
 
 Integration/concurrency cần Docker, dùng image `postgres:16` đã có trong template; role bootstrap chỉ khởi tạo container test, mọi migration/SQL kiểm chứng schema chạy bằng booking_user NOSUPERUSER NOCREATEDB. Test tự tạo DB rỗng và áp dụng migration bằng Prisma, không dùng DB local. Concurrency chạy 50 insert: đúng 1 thành công, 49 lỗi 23505. Chi tiết số liệu: [run report T-201](../../docs/agent/runs/T-201.md).
+
+## Giữ ghế (T-202)
+
+**Hold chỉ nằm ở Redis. Mất Redis thì user phải giữ lại ghế (chấp nhận).** Hold không tạo order hoặc ghi seat_allocations. Chốt chống oversell trong DB đã có partial unique index của T-201; đường checkout áp dụng index ở T-301. Rehydrate allocation/order thuộc T-203, không tái tạo hold thuần Redis.
+
+Mọi endpoint xác thực JWT RS256; chủ hold chỉ lấy từ JWT, không nhận user_id từ request. API lỗi trả application/problem+json có request_id. Ví dụ (JWT từ identity, ID UUID thật của snapshot/ghế):
+
+```http
+POST /v1/holds
+Authorization: Bearer <JWT>
+Content-Type: application/json
+
+{"event_id":"<event UUID>","seat_ids":["<seat UUID>"]}
+```
+
+- POST thành công: `201 {expires_at, seat_ids}` (expires_at ISO UTC). Cả batch thành công hoặc không ghi gì. Ghế đã SOLD hoặc của chủ khác: `409 SEAT_UNAVAILABLE {seat_id}`; vượt tổng số ghế của user/event: `422 HOLD_LIMIT_EXCEEDED`.
+- Giữ lại cùng ghế bởi cùng user trả 201 và gia hạn TTL, không tăng số ghế. Idempotency dựa trên user/event/seat; header Idempotency-Key được chấp nhận nhưng không cache/replay response cũ vì yêu cầu gia hạn TTL. Không dùng bảng idempotency_keys của checkout cho hold Redis.
+- `GET /v1/holds?event_id=<UUID>`: `200 {expires_at, seat_ids}`; không có hold trả `{expires_at:null,seat_ids:[]}`. Lọc ghế hết hạn hoặc đã đổi chủ ngay trong Lua. Nếu các ghế có hạn khác nhau, expires_at là hạn sớm nhất.
+- `DELETE /v1/holds` nhận JSON `{event_id,seat_ids?}`, trả 204. Bỏ seat_ids để nhả toàn bộ ghế của user trong event; có seat_ids để nhả một phần. Chỉ xóa ghế còn mang đúng holderTag của JWT, gọi lặp an toàn. GET/DELETE vẫn dùng được khi event đóng bán/chưa pricing_ready để khách xem/nhả hold cũ.
+- Input phải là UUID, danh sách ghế không rỗng/không trùng, tối đa 1000 phần tử. HOLD_MAX_SEATS quyết định giới hạn thực tế trong Lua, bao gồm những ghế đã giữ trước đó.
+
+Đường POST chỉ đọc event_snapshots trong booking_db, không gọi event-service. Snapshot cho bán ở trạng thái APPROVED hoặc PUBLISHED; sale_window chứa `{starts_at,ends_at}` hoặc mảng các phase có hai trường này (UTC ISO-8601, cùng tên trường sale_phases trong event-contracts). Cửa sổ bán bao gồm starts_at, không bao gồm ends_at. Snapshot thiếu, trạng thái khác, cửa sổ sai/chưa mở/đã đóng: `404 EVENT_NOT_ON_SALE`. Snapshot chưa pricing_ready: `503 EVENT_NOT_READY` và `Retry-After: 1`. T-202 dùng snapshot dựng sẵn trong test; nạp snapshot/pricing thuộc T-203/T-203b.
+
+| Biến               | Mặc định               | Ý nghĩa                                                           |
+| ------------------ | ---------------------- | ----------------------------------------------------------------- |
+| REDIS_URL          | redis://localhost:6379 | Chỉ nhận redis:// hoặc rediss://                                  |
+| HOLD_TTL_SECONDS   | 600                    | Số nguyên 1–86400 giây                                            |
+| HOLD_MAX_SEATS     | 6                      | Số nguyên 1–1000 ghế/user/event                                   |
+| ADMISSION_REQUIRED | false                  | Tới T-304; bật true hiện từ chối POST bằng 403 ADMISSION_REQUIRED |
+| HOLDLOG_ENABLED    | false                  | Chỉ bật trong test T-205 để ghi Stream mỗi lần hold thành công    |
+
+Redis không sẵn sàng hoặc script lỗi: `503 SEAT_HOLD_UNAVAILABLE`, `Retry-After: 1`; không log URL Redis/token/body. Redis dùng noeviction theo ADR-0002. Sau timeout kết quả có thể chưa xác định; client thử lại cùng ghế an toàn nhờ ownership check.
+
+Key cùng hash tag `{evt:<eventId>}`: `seat:{evt:E}:<seatId>` = `H:<userId>` có TTL hoặc `S` không TTL; `hold:{evt:E}:<userId>` là Set có TTL; `hexp:{evt:E}` là ZSET member seatId/score expiry ms; `sold:{evt:E}` là Set do luồng bán quản lý (T-202 không sửa). Pub/Sub `delta:{evt:E}` phát `H:<seatId>` khi giữ và `A:<seatId>` khi nhả đúng chủ; `S:` thuộc luồng bán. Stream `holdlog:{evt:E}` chỉ tạo khi bật HOLDLOG_ENABLED, chứa holder, seat_ids JSON và expires_at ms, chỉ dùng kiểm chứng, không bật production.
+
+Lua nằm trong `src/seat-hold/lua`, nạp bằng ioredis defineCommand (EVALSHA, fallback EVAL), được copy vào dist khi build. Kiểm tra xung đột/giới hạn/kiểu metadata trước khi ghi. Gia hạn một phần có thể khiến hold set chứa seat đã hết hạn: Lua chỉ đếm ghế còn thực sự thuộc user; dọn thành viên cũ sau khi batch được chấp nhận. Request bị từ chối không cleanup hay gia hạn bất kỳ key nào. Không KEYS/SCAN; đọc danh sách bằng hold set. Index hexp và Stream là metadata event, không đặt TTL theo từng user; thông báo hết hạn qua sweeper thuộc T-204.
+
+Metrics có `seat_hold_requests_total{outcome="success|conflict|limit"}` và histogram HTTP hiện có; không dùng event/user/seat làm label. Integration dùng PostgreSQL + Redis `redis:7.4-alpine` Testcontainers (cùng tag hạ tầng dev), kiểm chứng qua HTTP/JWT và Pub/Sub/Stream thật. Concurrency dùng 100 kết nối Redis đã đồng bộ trước khi gửi; API test thêm 100 user HTTP khi Redis client vừa khởi tạo. Kết quả thật: [run report T-202](../../docs/agent/runs/T-202.md).

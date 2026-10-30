@@ -8,6 +8,10 @@ import { DbModule } from "./db/db-health.service";
 import { HealthController } from "./health/health.controller";
 import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
+import { EventSnapshotRepository } from "./seat-hold/event-snapshot.repository";
+import { SeatHoldController } from "./seat-hold/seat-hold.controller";
+import { SeatHoldService } from "./seat-hold/seat-hold.service";
+import { SeatHoldRedisClient } from "./seat-hold/seat-hold-redis";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -23,11 +27,14 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController],
+      controllers: [HealthController, MetricsController, WhoamiController, SeatHoldController],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        EventSnapshotRepository,
+        SeatHoldRedisClient,
+        SeatHoldService,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],
