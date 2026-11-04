@@ -1,0 +1,238 @@
+[
+  {
+    "id": "30000000-0000-4000-8000-000000000001",
+    "organizer_id": "10000000-0000-4000-8000-000000000001",
+    "venue_id": "20000000-0000-4000-8000-000000000001",
+    "slug": "song-am-live-2026",
+    "title": "Sóng Âm Live Concert 2026",
+    "description": "Đêm nhạc pop lớn nhất cuối năm với dàn nghệ sĩ trẻ, sân khấu 360 độ và hệ thống ánh sáng laser. Sự kiện mở bán theo hàng chờ, mỗi tài khoản đã xác minh danh tính được mua giới hạn số vé.",
+    "banner_key": "seed/banners/song-am-live-2026.jpg",
+    "status": "PUBLISHED",
+    "start_at": "2026-12-19T12:00:00Z",
+    "end_at": "2026-12-19T15:30:00Z",
+    "version": 1,
+    "ticket_classes": [
+      {
+        "id": "31000000-0000-4000-8000-000000000011",
+        "name": "SVIP",
+        "price_vnd": 3500000,
+        "capacity": 500,
+        "kind": "SEATED"
+      },
+      {
+        "id": "31000000-0000-4000-8000-000000000012",
+        "name": "VIP",
+        "price_vnd": 2500000,
+        "capacity": 1500,
+        "kind": "SEATED"
+      },
+      {
+        "id": "31000000-0000-4000-8000-000000000013",
+        "name": "Standard",
+        "price_vnd": 1500000,
+        "capacity": 4000,
+        "kind": "SEATED"
+      },
+      {
+        "id": "31000000-0000-4000-8000-000000000014",
+        "name": "Economy",
+        "price_vnd": 800000,
+        "capacity": 4000,
+        "kind": "SEATED"
+      }
+    ],
+    "sale_phases": [
+      {
+        "id": "32000000-0000-4000-8000-000000000011",
+        "name": "Mở bán sớm",
+        "starts_at": "2026-11-14T03:00:00Z",
+        "ends_at": "2026-11-15T03:00:00Z",
+        "queue_enabled": true,
+        "admit_rate": 200,
+        "per_user_limit": 2,
+        "require_kyc": true
+      },
+      {
+        "id": "32000000-0000-4000-8000-000000000012",
+        "name": "Mở bán chính thức",
+        "starts_at": "2026-11-16T03:00:00Z",
+        "ends_at": "2026-12-19T10:00:00Z",
+        "queue_enabled": true,
+        "admit_rate": 300,
+        "per_user_limit": 4,
+        "require_kyc": true
+      }
+    ]
+  },
+  {
+    "id": "30000000-0000-4000-8000-000000000002",
+    "organizer_id": "10000000-0000-4000-8000-000000000002",
+    "venue_id": "20000000-0000-4000-8000-000000000002",
+    "slug": "gio-mua-festival-2027",
+    "title": "Lễ hội Âm nhạc Gió Mùa 2027",
+    "description": "Hai ngày lễ hội âm nhạc ngoài trời bên bờ sông với ba sân khấu indie, rock và điện tử, khu ẩm thực và khu cắm trại. Vé đứng tự do, không chọn chỗ.",
+    "banner_key": "seed/banners/gio-mua-festival-2027.jpg",
+    "status": "PUBLISHED",
+    "start_at": "2027-01-09T09:00:00Z",
+    "end_at": "2027-01-10T16:00:00Z",
+    "version": 1,
+    "ticket_classes": [
+      {
+        "id": "31000000-0000-4000-8000-000000000021",
+        "name": "Vé 2 ngày",
+        "price_vnd": 1200000,
+        "capacity": 6000,
+        "kind": "GA"
+      },
+      {
+        "id": "31000000-0000-4000-8000-000000000022",
+        "name": "Vé 2 ngày VIP",
+        "price_vnd": 2800000,
+        "capacity": 1000,
+        "kind": "GA"
+      }
+    ],
+    "sale_phases": [
+      {
+        "id": "32000000-0000-4000-8000-000000000021",
+        "name": "Mở bán",
+        "starts_at": "2026-11-01T03:00:00Z",
+        "ends_at": "2027-01-08T16:00:00Z",
+        "queue_enabled": false,
+        "admit_rate": 100,
+        "per_user_limit": 6,
+        "require_kyc": false
+      }
+    ]
+  },
+  {
+    "id": "30000000-0000-4000-8000-000000000003",
+    "organizer_id": "10000000-0000-4000-8000-000000000001",
+    "venue_id": "20000000-0000-4000-8000-000000000003",
+    "slug": "giao-huong-mua-xuan-2027",
+    "title": "Hòa nhạc Giao hưởng Mùa Xuân",
+    "description": "Dàn nhạc giao hưởng trình diễn các tác phẩm cổ điển và hòa tấu dân ca Việt Nam chào xuân. Khán phòng nhỏ, ghế ngồi đánh số theo hạng A, B, C.",
+    "banner_key": "seed/banners/giao-huong-mua-xuan-2027.jpg",
+    "status": "PUBLISHED",
+    "start_at": "2027-02-20T12:30:00Z",
+    "end_at": "2027-02-20T14:30:00Z",
+    "version": 1,
+    "ticket_classes": [
+      {
+        "id": "31000000-0000-4000-8000-000000000031",
+        "name": "Hạng A",
+        "price_vnd": 1800000,
+        "capacity": 120,
+        "kind": "SEATED"
+      },
+      {
+        "id": "31000000-0000-4000-8000-000000000032",
+        "name": "Hạng B",
+        "price_vnd": 1200000,
+        "capacity": 200,
+        "kind": "SEATED"
+      },
+      {
+        "id": "31000000-0000-4000-8000-000000000033",
+        "name": "Hạng C",
+        "price_vnd": 600000,
+        "capacity": 180,
+        "kind": "SEATED"
+      }
+    ],
+    "sale_phases": [
+      {
+        "id": "32000000-0000-4000-8000-000000000031",
+        "name": "Mở bán",
+        "starts_at": "2026-12-01T03:00:00Z",
+        "ends_at": "2027-02-20T10:00:00Z",
+        "queue_enabled": false,
+        "admit_rate": 50,
+        "per_user_limit": 6,
+        "require_kyc": false
+      }
+    ]
+  },
+  {
+    "id": "30000000-0000-4000-8000-000000000004",
+    "organizer_id": "10000000-0000-4000-8000-000000000002",
+    "venue_id": "20000000-0000-4000-8000-000000000004",
+    "slug": "kich-chuyen-tau-dem",
+    "title": "Kịch: Chuyến Tàu Đêm",
+    "description": "Vở kịch tâm lý về một đêm trên chuyến tàu Bắc - Nam, nơi những người lạ tình cờ chia sẻ câu chuyện đời mình. Thời lượng 120 phút, không phù hợp cho trẻ dưới 13 tuổi.",
+    "banner_key": "seed/banners/chuyen-tau-dem.jpg",
+    "status": "PUBLISHED",
+    "start_at": "2026-12-05T12:00:00Z",
+    "end_at": "2026-12-05T14:00:00Z",
+    "version": 1,
+    "ticket_classes": [
+      {
+        "id": "31000000-0000-4000-8000-000000000041",
+        "name": "Hàng đầu",
+        "price_vnd": 550000,
+        "capacity": 60,
+        "kind": "SEATED"
+      },
+      {
+        "id": "31000000-0000-4000-8000-000000000042",
+        "name": "Thường",
+        "price_vnd": 350000,
+        "capacity": 240,
+        "kind": "SEATED"
+      }
+    ],
+    "sale_phases": [
+      {
+        "id": "32000000-0000-4000-8000-000000000041",
+        "name": "Mở bán",
+        "starts_at": "2026-10-20T03:00:00Z",
+        "ends_at": "2026-12-05T10:00:00Z",
+        "queue_enabled": false,
+        "admit_rate": 50,
+        "per_user_limit": 6,
+        "require_kyc": false
+      }
+    ]
+  },
+  {
+    "id": "30000000-0000-4000-8000-000000000005",
+    "organizer_id": "10000000-0000-4000-8000-000000000001",
+    "venue_id": "20000000-0000-4000-8000-000000000001",
+    "slug": "neon-pulse-2027",
+    "title": "Neon Pulse EDM Night 2027",
+    "description": "Đêm nhạc điện tử với các DJ trong nước và quốc tế, khu đứng sát sân khấu và khu bàn VIP. Sự kiện đang chờ Admin duyệt trước khi công bố.",
+    "banner_key": "seed/banners/neon-pulse-2027.jpg",
+    "status": "PENDING",
+    "start_at": "2027-03-13T13:00:00Z",
+    "end_at": "2027-03-13T17:00:00Z",
+    "version": 1,
+    "ticket_classes": [
+      {
+        "id": "31000000-0000-4000-8000-000000000051",
+        "name": "Standing",
+        "price_vnd": 900000,
+        "capacity": 5000,
+        "kind": "GA"
+      },
+      {
+        "id": "31000000-0000-4000-8000-000000000052",
+        "name": "Bàn VIP",
+        "price_vnd": 4000000,
+        "capacity": 200,
+        "kind": "SEATED"
+      }
+    ],
+    "sale_phases": [
+      {
+        "id": "32000000-0000-4000-8000-000000000051",
+        "name": "Mở bán",
+        "starts_at": "2027-01-15T03:00:00Z",
+        "ends_at": "2027-03-13T11:00:00Z",
+        "queue_enabled": true,
+        "admit_rate": 200,
+        "per_user_limit": 4,
+        "require_kyc": true
+      }
+    ]
+  }
+]
