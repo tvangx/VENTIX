@@ -1,0 +1,26 @@
+[
+  {
+    "id": "20000000-0000-4000-8000-000000000001",
+    "name": "Nhà thi đấu Ánh Sao",
+    "address": "Quận 10, TP. Hồ Chí Minh",
+    "capacity": 12000
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000002",
+    "name": "Công viên Bờ Sông Gió Mùa",
+    "address": "TP. Thủ Đức, TP. Hồ Chí Minh",
+    "capacity": 20000
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000003",
+    "name": "Nhà hát Giao hưởng Hồ Tây",
+    "address": "Quận Tây Hồ, Hà Nội",
+    "capacity": 500
+  },
+  {
+    "id": "20000000-0000-4000-8000-000000000004",
+    "name": "Sân khấu Kịch Phố Cổ",
+    "address": "Quận Hoàn Kiếm, Hà Nội",
+    "capacity": 300
+  }
+]
