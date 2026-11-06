@@ -1,6 +1,6 @@
-# Booking service — T-201 / T-202
+# Booking service — T-201 / T-202 / T-203
 
-Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds. Chưa triển khai checkout, consumer Kafka, rehydrate hoặc sweeper. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
+Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis. Chưa triển khai checkout hoặc sweeper. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
 
 ## Chạy local
 
@@ -14,6 +14,54 @@ pnpm --filter @ticketing/booking dev
 ```
 
 Prisma CLI đọc `.env` trong thư mục service. Không commit `.env`. `DATABASE_URL` phải trỏ tới `booking_db` bằng `booking_user`; env schema từ chối user/DB khác. Không dùng user `postgres`, không FK hoặc JOIN sang DB service khác.
+
+## Consumer lifecycle và rehydrate (T-203)
+
+Consumer dùng `createInboxConsumer`, group mặc định `booking-event-lifecycle`, Inbox consumer name cố định `booking-event-lifecycle`.
+Đọc `event.lifecycle` từ đầu cho group mới; Inbox, snapshot và stock cùng một transaction.
+Chỉ nhận **lifecycle v2**, xem [ADR-0011](../../docs/adr/0011-versioned-event-lifecycle.md).
+V1 thiếu payload/version nên đi `event.lifecycle.dlq` ngay, không ghi Inbox; không suy đoán hoặc gọi DB event-service.
+Sơn cần chuyển producer sang v2 và phát lại snapshot/cancellation v2 hợp lệ trước khi dùng consumer này trên dữ liệu thật.
+
+Snapshot chỉ thay đổi khi event_version tăng; bản cũ/bằng phiên bản không sửa stock.
+`total=GREATEST(capacity,sold)` bảo toàn vé đã bán. Cancel đặt CANCELLED và pricing_ready=false;
+cancel đến trước approval tạo tombstone để chặn approval cũ. `seat_map_version` lưu từ snapshot v2,
+map thay đổi đặt pricing_ready=false; consumer không bao giờ đặt cờ true (T-203b phụ trách).
+Updated giữ map cũ thì giữ giá trị pricing_ready hiện tại.
+
+Startup đọc allocation từ booking_db, phân trang 500 dòng theo UUID:
+
+- SOLD → `seat:{evt:<id>}:<seatId>=S`, thêm vào `sold:{evt:<id>}`.
+- HELD chỉ khôi phục khi order PENDING/AWAITING_PAYMENT chưa hết hạn, value `H:<userId>`;
+  `PXAT` đúng hạn DB, tạo hold set cùng TTL và hexp để các thao tác T-202 đọc được dữ liệu đã khôi phục.
+- Lua kiểm tra kiểu metadata trước khi ghi; `SET NX` không ghi đè ghế/TTL/metadata đã có.
+  Có thể chạy lại hoặc chạy nhiều replica. Không dùng KEYS/SCAN. Hold chỉ có trong Redis không được phục hồi.
+
+`/health/ready` trả 503 đến khi rehydrate và consumer khởi động xong, sau đó kiểm tra DB như trước.
+Nếu startup lỗi, readiness giữ 503; khắc phục DB/Redis/Kafka rồi restart booking để chạy lại.
+Shutdown chờ job/consumer dừng trước khi đóng kết nối. Log startup có số allocation dựng lại và trace_id/request_id.
+
+Env mới trong `.env.example` và schema: `KAFKA_BROKERS` (danh sách host:port phân cách dấu phẩy),
+`EVENT_CONSUMER_GROUP_ID`, `EVENT_CONSUMER_ENABLED=true`, `REHYDRATE_ENABLED=true`.
+Chỉ tắt rehydrate khi đã xác nhận Redis đủ dữ liệu, hoặc trong test chỉ kiểm tra DB/OpenAPI.
+Sau Redis mất dữ liệu cần restart booking; task này không tự khôi phục khi Redis lỗi giữa lúc process đang chạy.
+Với replica còn phục vụ traffic, NX ưu tiên giá trị Redis đã có; unique index PostgreSQL vẫn là chốt chống bán trùng.
+
+### Dữ liệu giả khi chưa có S-203
+
+Từ root, build contracts rồi chạy script (chỉ dữ liệu giả local):
+
+```bash
+pnpm --filter @ticketing/event-contracts build
+pnpm --filter @ticketing/booking event:fake
+```
+
+Lệnh thứ hai biên dịch strict `scripts/publish-fake-event.ts` vào dist rồi chạy trên Node 20.
+Script dùng newMessage/parseMessage, version=2, key=event_id và acks=all; đây là công cụ dev được giao,
+không phải producer nghiệp vụ. ID mặc định ngẫu nhiên và được in ra để kiểm tra;
+có thể đặt `FAKE_EVENT_ID`, `FAKE_ORGANIZER_ID`, `FAKE_CLASS_ID`, `FAKE_EVENT_VERSION`, `FAKE_SEAT_MAP_VERSION`
+qua environment theo ví dụ `.env.example`. Script không tự đọc `.env` và không bật pricing_ready.
+Không FLUSHALL Redis dev; test rehydrate tự dùng container Redis riêng, xóa rồi restart app và đối chiếu DB.
 
 ## Schema và ràng buộc
 

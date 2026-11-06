@@ -21,6 +21,9 @@ describe("envSchema", () => {
     expect(env.HOLD_MAX_SEATS).toBe(6);
     expect(env.ADMISSION_REQUIRED).toBe(false);
     expect(env.HOLDLOG_ENABLED).toBe(false);
+    expect(env.REHYDRATE_ENABLED).toBe(true);
+    expect(env.EVENT_CONSUMER_ENABLED).toBe(true);
+    expect(env.KAFKA_BROKERS).toEqual(["localhost:9092"]);
   });
 
   it("fails fast when DATABASE_URL is missing", () => {
@@ -68,6 +71,11 @@ describe("envSchema", () => {
     { ADMISSION_REQUIRED: "yes" },
     { HOLDLOG_ENABLED: "1" },
     { REDIS_URL: "https://localhost" },
+    { REHYDRATE_ENABLED: "yes" },
+    { EVENT_CONSUMER_ENABLED: "1" },
+    { KAFKA_BROKERS: "" },
+    { KAFKA_BROKERS: "localhost:9092," },
+    { EVENT_CONSUMER_GROUP_ID: "" },
   ])("rejects invalid hold configuration %j", (config) => {
     expect(() => loadEnv(envSchema, { ...base, ...config })).toThrow();
   });

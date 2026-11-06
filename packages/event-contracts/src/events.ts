@@ -9,7 +9,7 @@ const vnd = z.number().int().nonnegative(); // VND, không số thực
 const qty = z.number().int().positive();
 
 // ===================== event.lifecycle =====================
-export const EventApproved = envelope(
+export const EventApprovedV1 = envelope(
   "EventApproved",
   z.object({
     event_id: id,
@@ -40,15 +40,33 @@ export const EventApproved = envelope(
   }),
 );
 
-export const EventUpdated = envelope(
+export const EventUpdatedV1 = envelope(
   "EventUpdated",
   z.object({ event_id: id, organizer_id: id, event_version: z.number().int() }),
 );
 
-export const EventCancelled = envelope(
+export const EventCancelledV1 = envelope(
   "EventCancelled",
   z.object({ event_id: id, organizer_id: id, reason: z.string() }),
 );
+
+// T-203: v1 vẫn đọc được; v2 mang đủ dữ liệu để dựng snapshot không gọi event-service.
+const lifecycleSnapshot = EventApprovedV1.shape.data.extend({
+  event_version: z.number().int().nonnegative(),
+  seat_map_version: z.number().int().nonnegative(),
+});
+export const EventApprovedV2 = envelope("EventApproved", lifecycleSnapshot, 2);
+export const EventUpdatedV2 = envelope("EventUpdated", lifecycleSnapshot, 2);
+export const EventCancelledV2 = envelope(
+  "EventCancelled",
+  EventCancelledV1.shape.data.extend({
+    event_version: z.number().int().nonnegative(),
+  }),
+  2,
+);
+export const EventApproved = z.union([EventApprovedV1, EventApprovedV2]);
+export const EventUpdated = z.union([EventUpdatedV1, EventUpdatedV2]);
+export const EventCancelled = z.union([EventCancelledV1, EventCancelledV2]);
 
 // ===================== booking.orders =====================
 // item_type: TICKET_SEAT => ref_id là seat_id, quantity = 1 · TICKET_GA => ref_id là ticket_class_id
