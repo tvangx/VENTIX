@@ -3,7 +3,7 @@ export MSYS_NO_PATHCONV=1
 
 COMPOSE = docker compose --env-file .env -f infra/compose/docker-compose.yml
 
-.PHONY: help env up down reset ps logs tools verify psql redis-cli kong-reload kong-routes
+.PHONY: help env up down reset ps logs tools verify psql redis-cli kong-reload kong-loadtest kong-routes
 
 help: ## Liệt kê lệnh
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-14s %s\n",$$1,$$2}'
@@ -42,6 +42,9 @@ redis-cli: ## Vào redis-cli
 
 kong-reload: ## Nạp lại kong.yml (DB-less)
 	$(COMPOSE) restart kong
+
+kong-loadtest: ## Nạp hạn mức nới cho load test LOCAL; khôi phục bằng make kong-reload
+	@curl --fail-with-body --silent --show-error --max-time 30 --request POST http://localhost:8001/config --form config=@infra/kong/kong.loadtest.yml > /dev/null
 
 kong-routes: ## Xem route Kong đang nạp
 	@curl -s localhost:8001/routes | head -c 2000; echo
