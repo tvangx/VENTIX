@@ -1,6 +1,6 @@
-# Booking service — T-201 / T-202 / T-203
+# Booking service — T-201 / T-202 / T-203 / T-204
 
-Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis. Chưa triển khai checkout hoặc sweeper. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
+Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis; T-204 thêm trạng thái ghế, SSE và sweeper hold. Chưa triển khai checkout hoặc sweeper order. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
 
 ## Chạy local
 
@@ -62,6 +62,53 @@ không phải producer nghiệp vụ. ID mặc định ngẫu nhiên và đượ
 có thể đặt `FAKE_EVENT_ID`, `FAKE_ORGANIZER_ID`, `FAKE_CLASS_ID`, `FAKE_EVENT_VERSION`, `FAKE_SEAT_MAP_VERSION`
 qua environment theo ví dụ `.env.example`. Script không tự đọc `.env` và không bật pricing_ready.
 Không FLUSHALL Redis dev; test rehydrate tự dùng container Redis riêng, xóa rồi restart app và đối chiếu DB.
+
+## Trạng thái ghế realtime (T-204)
+
+- `GET /v1/events/:id/seat-status` trả `{ sold: string[], held: string[], as_of: ISO-8601 UTC }`.
+  Lua đọc `SMEMBERS sold:{evt:<id>}` và `ZRANGEBYSCORE hexp:{evt:<id>} now +inf` trong cùng snapshot;
+  thời gian lấy từ Redis TIME. Không đọc từng seat key, không KEYS/SCAN. Event chưa có dữ liệu trả mảng rỗng.
+- `GET /v1/events/:id/seat-stream` trả `text/event-stream`, đầu tiên `event: snapshot` có cùng payload,
+  sau đó `event: delta`, data là mảng ngắn như `["H:<seatId>","A:<seatId>","S:<seatId>"]`.
+  Mỗi 500 ms chỉ gửi trạng thái cuối cùng của mỗi ghế thay đổi; không gửi lô rỗng hay toàn map.
+  H = held, A = available, S = sold; luồng bán phát S thuộc task checkout sau này.
+- Hai endpoint dùng JWT bearer của service; event UUID được validate và chuyển về chữ thường.
+  SSE từ chối `403 ADMISSION_REQUIRED` khi bật Waiting Room, giống holds, đến khi T-304 có guard admission.
+  FE dùng fetch streaming hỗ trợ header Authorization; không truyền token qua query string.
+  Qua Kong dùng `/api/booking/v1/events/:id/seat-status` hoặc `seat-stream`.
+- Một kết nối Redis Pub/Sub dùng chung cho mỗi replica subscribe `delta:{evt:*}`. Snapshot Lua phát marker
+  nội bộ cùng kênh; server bỏ delta trước marker và giữ delta sau marker ngay cả khi snapshot đang chờ trả về.
+  Client nhận snapshot trước khi nhận delta. Không hỗ trợ replay `Last-Event-ID`: mỗi lần reconnect thay trạng thái
+  bằng snapshot mới. Mất Pub/Sub thì server đóng SSE, client cần reconnect với backoff.
+- Heartbeat comment mỗi 15 giây; response tắt cache và proxy buffering. Khi socket backpressure hoặc buffer
+  vượt 10.000 ghế thay đổi/client, đóng stream để client reconnect lấy snapshot; không tích lũy vô hạn.
+  Đóng tab/client hoặc shutdown sẽ gỡ listener và dọn kết nối.
+- Sweeper chạy mỗi giây, không chạy chồng tick. Phân trang `event_snapshots` của booking_db theo event_id
+  (100 event/trang), nên vẫn dọn event không có client SSE. Mỗi Lua xử lý tối đa 500 ghế đến hạn bằng
+  `ZRANGEBYSCORE -inf now`; drain tối đa 20 batch/event/tick để không làm đói các event khác.
+  Backlog lớn hơn 10.000 ghế/event có thể cần nhiều tick.
+- Chỉ khi seat key đã vắng và `ZREM` thành công mới `PUBLISH A:<seatId>`, cùng Lua nguyên tử: nhiều replica
+  không phát trùng. Không xóa seat key; TTL tự xóa. Index cũ nhưng key còn TTL được sửa score theo PTTL;
+  key SOLD không TTL chỉ được dọn index, không phát A. Không đụng DB allocation hoặc phát sự kiện Kafka.
+  Nếu event chưa tồn tại trong read-model thì sweeper không biết event đó; giữ ghế bình thường đã yêu cầu snapshot.
+- Lỗi Redis trước khi mở SSE trả `503 SEAT_STATUS_UNAVAILABLE`, problem+json và `Retry-After: 1`.
+  Log sweep lỗi có request_id/trace_id; metrics: `seat_stream_connections`, `seat_delta_batches_total`,
+  `seat_expired_holds_total`, `seat_status_failures_total{operation}`. Không dùng event/user ID làm metric label.
+
+Ví dụ (biến môi trường chứa token và event ID của phiên local):
+
+```bash
+curl -N -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "http://localhost:3003/v1/events/$EVENT_ID/seat-stream"
+```
+
+Test `seat-status-api.int-spec.ts` chạy 2 app booking thật, POST hold qua HTTP, đọc SSE H trong ≤1 giây,
+đợi TTL và quan sát raw Pub/Sub chỉ có 1 A. `seat-expiry.conc-spec.ts` chạy 50 sweeper đồng thời trên 2
+kết nối Redis thật, đối chiếu 100 ghế hết hạn không trùng. Unit test kiểm tra marker snapshot/delta, batching,
+client disconnect, backpressure, buffer cap, heartbeat và phân trang/drain sweeper.
+
+Giới hạn: Pub/Sub là best effort. Nếu process/Redis chết sau ZREM nhưng trước khi client nhận delta,
+client phải lấy snapshot mới; TTL và trạng thái thực của ghế không phụ thuộc thông báo này.
 
 ## Schema và ràng buộc
 

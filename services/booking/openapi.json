@@ -238,6 +238,98 @@
         "summary": "Release specified seats, or all seats held by the current user in one event",
         "tags": ["holds"]
       }
+    },
+    "/v1/events/{id}/seat-status": {
+      "get": {
+        "operationId": "SeatStatusController_snapshot",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeatStatusDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid event UUID (application/problem+json)"
+          },
+          "401": {
+            "description": "Missing or invalid JWT (application/problem+json)"
+          },
+          "503": {
+            "description": "SEAT_STATUS_UNAVAILABLE; Retry-After: 1 (application/problem+json)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read sold and active held seat IDs from Redis indexes",
+        "tags": ["seat-status"]
+      }
+    },
+    "/v1/events/{id}/seat-stream": {
+      "get": {
+        "description": "event: snapshot has {sold,held,as_of}; event: delta has a JSON string array such as [\"H:<seatId>\",\"A:<seatId>\",\"S:<seatId>\"]. Last state per seat wins within a batch. No replay/Last-Event-ID support. Requires Authorization bearer header.",
+        "operationId": "SeatStatusController_stream",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid event UUID (application/problem+json)"
+          },
+          "401": {
+            "description": "Missing or invalid JWT (application/problem+json)"
+          },
+          "403": {
+            "description": "ADMISSION_REQUIRED while waiting room is enabled (application/problem+json)"
+          },
+          "503": {
+            "description": "SEAT_STATUS_UNAVAILABLE; Retry-After: 1 (application/problem+json)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Initial snapshot then seat deltas batched every 500 ms; reconnect for a fresh snapshot",
+        "tags": ["seat-status"]
+      }
     }
   },
   "info": {
@@ -363,6 +455,30 @@
           }
         },
         "required": ["event_id"]
+      },
+      "SeatStatusDto": {
+        "type": "object",
+        "properties": {
+          "sold": {
+            "description": "Sold seat IDs",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "held": {
+            "description": "Active held seat IDs",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["sold", "held", "as_of"]
       }
     }
   }

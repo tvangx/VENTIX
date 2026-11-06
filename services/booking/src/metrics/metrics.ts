@@ -2,11 +2,32 @@ import { Controller, Get, Injectable, NestMiddleware, Res } from "@nestjs/common
 import { ApiExcludeController } from "@nestjs/swagger";
 import { Public } from "@ticketing/auth-guard";
 import type { NextFunction, Request, Response } from "express";
-import { Counter, Histogram, Registry, collectDefaultMetrics } from "prom-client";
+import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from "prom-client";
 
 @Injectable()
 export class MetricsService {
   readonly registry = new Registry();
+  readonly seatStreams = new Gauge({
+    name: "seat_stream_connections",
+    help: "Active seat SSE connections",
+    registers: [this.registry],
+  });
+  readonly seatDeltaBatches = new Counter({
+    name: "seat_delta_batches_total",
+    help: "Seat delta batches delivered",
+    registers: [this.registry],
+  });
+  readonly seatExpired = new Counter({
+    name: "seat_expired_holds_total",
+    help: "Expired holds announced by this replica",
+    registers: [this.registry],
+  });
+  readonly seatStatusFailures = new Counter({
+    name: "seat_status_failures_total",
+    help: "Seat status failures",
+    labelNames: ["operation"] as const,
+    registers: [this.registry],
+  });
   readonly httpDuration: Histogram<"method" | "route" | "status">;
   readonly seatHoldOutcomes = new Counter({
     name: "seat_hold_requests_total",

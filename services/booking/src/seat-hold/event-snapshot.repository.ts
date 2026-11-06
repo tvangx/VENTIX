@@ -31,6 +31,14 @@ export class EventSnapshotRepository implements OnModuleDestroy {
     return result.rows[0];
   }
 
+  async eventIdsAfter(cursor: string): Promise<string[]> {
+    const result = await this.pool.query<{ event_id: string }>(
+      "SELECT event_id FROM event_snapshots WHERE event_id > $1::uuid ORDER BY event_id LIMIT 100",
+      [cursor],
+    );
+    return result.rows.map((row) => row.event_id);
+  }
+
   async onModuleDestroy(): Promise<void> {
     await this.pool.end();
   }

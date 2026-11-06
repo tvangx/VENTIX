@@ -15,6 +15,8 @@ import { SeatHoldRedisClient } from "./seat-hold/seat-hold-redis";
 import { EventLifecycleService } from "./messaging/event-lifecycle.service";
 import { BookingStartupService } from "./rehydrate/booking-startup.service";
 import { SeatRehydrateService } from "./rehydrate/seat-rehydrate.service";
+import { SeatStatusController } from "./seat-status/seat-status.controller";
+import { SeatStatusService } from "./seat-status/seat-status.service";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -30,7 +32,13 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController, SeatHoldController],
+      controllers: [
+        HealthController,
+        MetricsController,
+        WhoamiController,
+        SeatHoldController,
+        SeatStatusController,
+      ],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
@@ -38,6 +46,7 @@ export class AppModule implements NestModule {
         EventSnapshotRepository,
         SeatHoldRedisClient,
         SeatHoldService,
+        SeatStatusService,
         EventLifecycleService,
         SeatRehydrateService,
         BookingStartupService,
