@@ -330,6 +330,84 @@
         "summary": "Initial snapshot then seat deltas batched every 500 ms; reconnect for a fresh snapshot",
         "tags": ["seat-status"]
       }
+    },
+    "/v1/checkout": {
+      "post": {
+        "operationId": "CheckoutController_checkout",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or missing Idempotency-Key"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "ADMISSION_REQUIRED"
+          },
+          "409": {
+            "description": "EVENT_NOT_ON_SALE, HOLD_NOT_FOUND, SEAT_UNAVAILABLE, TICKET_UNAVAILABLE"
+          },
+          "422": {
+            "description": "VOUCHER_NOT_SUPPORTED, IDEMPOTENCY_KEY_REUSED, INVALID_TICKET_CLASS"
+          },
+          "503": {
+            "description": "EVENT_NOT_READY, MERCH_UNAVAILABLE, SEAT_HOLD_UNAVAILABLE",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "example": 1
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Convert held seats and GA/merch items into an order at server prices",
+        "tags": ["checkout"]
+      }
     }
   },
   "info": {
@@ -479,6 +557,106 @@
           }
         },
         "required": ["sold", "held", "as_of"]
+      },
+      "GaItemDto": {
+        "type": "object",
+        "properties": {
+          "ticket_class_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": ["ticket_class_id", "quantity"]
+      },
+      "MerchItemDto": {
+        "type": "object",
+        "properties": {
+          "sku_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": ["sku_id", "quantity"]
+      },
+      "CheckoutDto": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seat_ids": {
+            "maxItems": 1000,
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "ga_items": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GaItemDto"
+            }
+          },
+          "merch_items": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MerchItemDto"
+            }
+          },
+          "voucher_code": {
+            "type": "string"
+          }
+        },
+        "required": ["event_id", "seat_ids", "ga_items", "merch_items"]
+      },
+      "CheckoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "AWAITING_PAYMENT"]
+          },
+          "ticket_amount_vnd": {
+            "type": "number"
+          },
+          "merch_amount_vnd": {
+            "type": "number"
+          },
+          "total_amount_vnd": {
+            "type": "number"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "order_id",
+          "status",
+          "ticket_amount_vnd",
+          "merch_amount_vnd",
+          "total_amount_vnd",
+          "expires_at"
+        ]
       }
     }
   }

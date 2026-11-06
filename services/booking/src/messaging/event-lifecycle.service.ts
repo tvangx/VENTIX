@@ -1,20 +1,30 @@
 import { Inject, Injectable, OnApplicationShutdown } from "@nestjs/common";
 import { Logger } from "@ticketing/common";
 import { Topics } from "@ticketing/event-contracts";
-import { createInboxConsumer, InboxConsumer, pgDatabase } from "@ticketing/outbox-inbox";
+import {
+  createInboxConsumer,
+  InboxConsumer,
+  pgDatabase,
+  OutboxRelay,
+} from "@ticketing/outbox-inbox";
 import { Kafka, logLevel } from "kafkajs";
 import { Pool } from "pg";
 import { ENV, LOGGER } from "../app.tokens";
 import { Env } from "../config/env.schema";
 import { handleEventLifecycle } from "./event-lifecycle.handler";
+import { stockHandler } from "./stock.handler";
+import { CheckoutService } from "../checkout/checkout.service";
 
 @Injectable()
 export class EventLifecycleService implements OnApplicationShutdown {
   private readonly pool: Pool;
   private consumer?: InboxConsumer;
+  private stock?: InboxConsumer;
+  private relay?: OutboxRelay;
   constructor(
     @Inject(ENV) private readonly env: Env,
     @Inject(LOGGER) private readonly logger: Logger,
+    @Inject(CheckoutService) private readonly checkout: Pick<CheckoutService, "release">,
   ) {
     this.pool = new Pool({
       connectionString: env.DATABASE_URL,
@@ -51,9 +61,23 @@ export class EventLifecycleService implements OnApplicationShutdown {
       },
     });
     await this.consumer.start();
+    this.stock = createInboxConsumer({
+      kafka,
+      groupId: "booking-checkout-stock",
+      consumerName: "booking-checkout-stock",
+      topics: [Topics.MERCH_STOCK],
+      db: pgDatabase(this.pool),
+      logger: this.logger,
+      handler: stockHandler((user, event, seats) => this.checkout.release(user, event, seats)),
+    });
+    await this.stock.start();
+    this.relay = new OutboxRelay({ kafka, db: pgDatabase(this.pool), logger: this.logger });
+    await this.relay.start();
   }
   async stop(): Promise<void> {
     await this.consumer?.stop();
+    await this.stock?.stop();
+    await this.relay?.stop();
   }
   async onApplicationShutdown(): Promise<void> {
     await this.pool.end();

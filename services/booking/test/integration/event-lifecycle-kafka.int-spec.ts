@@ -26,6 +26,7 @@ describe("production event lifecycle consumer (real Kafka + PostgreSQL)", () => 
         AUTH_JWKS_URI: "http://localhost/jwks",
       }),
       createLogger("test", { level: "silent" }),
+      { release: async () => undefined },
     );
     await consumer.start();
   });

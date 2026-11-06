@@ -20,6 +20,7 @@ for _, id in ipairs(ids) do
 end
 for _, id in ipairs(owned) do
   redis.call('DEL', 'seat:' .. slot .. ':' .. id)
+  redis.call('DEL', 'checkout:' .. slot .. ':' .. id)
   redis.call('SREM', KEYS[1], id)
   redis.call('ZREM', expiryKey, id)
   redis.call('PUBLISH', channel, 'A:' .. id)

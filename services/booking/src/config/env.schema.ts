@@ -27,6 +27,17 @@ export const envSchema = z
       }, "EVENT_INTERNAL_URL must use HTTP(S) without credentials")
       .default("http://localhost:3002"),
     INTERNAL_API_KEY: z.string().min(1),
+    ORDER_PAYMENT_WINDOW_SECONDS: z.coerce.number().int().positive().max(86400).default(900),
+    ORDER_EXPIRY_GRACE_SECONDS: z.coerce.number().int().nonnegative().max(3600).default(30),
+    MERCH_INTERNAL_URL: z
+      .string()
+      .url()
+      .refine((value) => {
+        const url = new URL(value);
+        return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password;
+      }, "MERCH_INTERNAL_URL must use HTTP(S) without credentials")
+      .default("http://localhost:3007"),
+    MERCH_QUOTE_TIMEOUT_MS: z.coerce.number().int().positive().max(10000).default(800),
     EVENT_CONSUMER_ENABLED: z
       .enum(["true", "false"])
       .default("true")
