@@ -19,6 +19,7 @@
     "test:int": "node scripts/prisma-generate.js && jest --config jest.int.config.js --runInBand",
     "test:conc": "node scripts/prisma-generate.js && jest --config jest.conc.config.js --runInBand --passWithNoTests",
     "openapi:export": "pnpm build && node dist/tools/export-openapi.js",
+    "event:fake": "tsc --strict --skipLibCheck --esModuleInterop --module commonjs --target ES2022 --types node --outDir dist/tools ../../scripts/publish-fake-event.ts && node dist/tools/publish-fake-event.js",
     "prisma:migrate:create": "prisma migrate dev --create-only"
   },
   "dependencies": {
@@ -33,11 +34,14 @@
     "@prisma/client": "^5.22.0",
     "@ticketing/auth-guard": "workspace:*",
     "@ticketing/common": "workspace:*",
+    "@ticketing/event-contracts": "workspace:*",
+    "@ticketing/outbox-inbox": "workspace:*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "dotenv": "^16.4.5",
     "helmet": "^8.0.0",
     "ioredis": "5.11.1",
+    "kafkajs": "^2.2.4",
     "pg": "^8.13.1",
     "prisma": "^5.22.0",
     "prom-client": "^15.1.3",

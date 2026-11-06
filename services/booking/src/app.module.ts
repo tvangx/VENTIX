@@ -12,6 +12,9 @@ import { EventSnapshotRepository } from "./seat-hold/event-snapshot.repository";
 import { SeatHoldController } from "./seat-hold/seat-hold.controller";
 import { SeatHoldService } from "./seat-hold/seat-hold.service";
 import { SeatHoldRedisClient } from "./seat-hold/seat-hold-redis";
+import { EventLifecycleService } from "./messaging/event-lifecycle.service";
+import { BookingStartupService } from "./rehydrate/booking-startup.service";
+import { SeatRehydrateService } from "./rehydrate/seat-rehydrate.service";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -35,6 +38,9 @@ export class AppModule implements NestModule {
         EventSnapshotRepository,
         SeatHoldRedisClient,
         SeatHoldService,
+        EventLifecycleService,
+        SeatRehydrateService,
+        BookingStartupService,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],

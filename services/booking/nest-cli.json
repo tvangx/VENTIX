@@ -5,7 +5,7 @@
   "compilerOptions": {
     "tsConfigPath": "tsconfig.build.json",
     "deleteOutDir": true,
-    "assets": ["seat-hold/lua/*.lua"],
+    "assets": ["seat-hold/lua/*.lua", "rehydrate/lua/*.lua"],
     "watchAssets": true
   }
 }

@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
+import { Inject, Injectable, OnApplicationShutdown } from "@nestjs/common";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import Redis from "ioredis";
@@ -24,7 +24,7 @@ export function registerSeatHoldCommands(redis: Redis, holdlogEnabled: boolean):
 }
 
 @Injectable()
-export class SeatHoldRedisClient implements OnModuleDestroy {
+export class SeatHoldRedisClient implements OnApplicationShutdown {
   readonly redis: SeatHoldRedis;
   private connecting?: Promise<void>;
 
@@ -54,7 +54,7 @@ export class SeatHoldRedisClient implements OnModuleDestroy {
     return this.redis;
   }
 
-  onModuleDestroy(): void {
+  onApplicationShutdown(): void {
     this.redis.disconnect();
   }
 }

@@ -447,6 +447,12 @@ importers:
       '@ticketing/common':
         specifier: workspace:*
         version: link:../../packages/common
+      '@ticketing/event-contracts':
+        specifier: workspace:*
+        version: link:../../packages/event-contracts
+      '@ticketing/outbox-inbox':
+        specifier: workspace:*
+        version: link:../../packages/outbox-inbox
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -462,6 +468,9 @@ importers:
       ioredis:
         specifier: 5.11.1
         version: 5.11.1
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.1
         version: 8.23.1

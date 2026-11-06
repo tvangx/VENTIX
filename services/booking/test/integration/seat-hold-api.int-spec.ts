@@ -45,6 +45,7 @@ describe("/v1/holds (HTTP, JWT, PostgreSQL and Redis)", () => {
   const env = (admission = "false") =>
     loadEnv(envSchema, {
       NODE_ENV: "test",
+      EVENT_CONSUMER_ENABLED: "false", // suite HTTP giữ ghế không chạy broker
       DATABASE_URL: db.pool.options.connectionString,
       REDIS_URL: cache.url,
       HOLD_TTL_SECONDS: "2",

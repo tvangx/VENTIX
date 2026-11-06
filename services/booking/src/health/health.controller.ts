@@ -9,6 +9,7 @@ import {
 import { Public } from "@ticketing/auth-guard";
 import { ProblemException } from "@ticketing/common";
 import { DbHealthService } from "../db/db-health.service";
+import { BookingStartupService } from "../rehydrate/booking-startup.service";
 
 class HealthResponse {
   @ApiProperty({ example: "ok" })
@@ -21,7 +22,10 @@ const READY_TIMEOUT_MS = 2000;
 @Public()
 @Controller("health")
 export class HealthController {
-  constructor(private readonly db: DbHealthService) {}
+  constructor(
+    private readonly db: DbHealthService,
+    private readonly startup: BookingStartupService,
+  ) {}
 
   @Get("live")
   @ApiOperation({ summary: "Process is up" })
@@ -39,6 +43,7 @@ export class HealthController {
   async ready(): Promise<HealthResponse> {
     let timer: NodeJS.Timeout | undefined;
     try {
+      if (!this.startup.ready) throw new Error("Booking initialization incomplete");
       await Promise.race([
         this.db.ping(),
         new Promise<never>((_, reject) => {

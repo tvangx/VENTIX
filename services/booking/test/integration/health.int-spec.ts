@@ -31,6 +31,8 @@ describe("booking scaffold (integration, Postgres via Testcontainers)", () => {
     privateKey = pair.privateKey;
     const env = loadEnv(envSchema, {
       NODE_ENV: "test",
+      REHYDRATE_ENABLED: "false", // scaffold chỉ kiểm tra Postgres chưa migration
+      EVENT_CONSUMER_ENABLED: "false",
       PORT: "3999", // app không listen trong test; chỉ cần giá trị hợp lệ
       DATABASE_URL: pg.getConnectionUri(),
       AUTH_ISSUER: "https://identity.test",

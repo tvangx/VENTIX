@@ -5,6 +5,23 @@ import { DEFAULT_PORT } from "../service.constants";
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    KAFKA_BROKERS: z
+      .string()
+      .default("localhost:9092")
+      .transform((value) => value.split(",").map((broker) => broker.trim()))
+      .refine(
+        (brokers) => brokers.length > 0 && brokers.every((broker) => /^[^\s:,]+:\d+$/.test(broker)),
+        "KAFKA_BROKERS must contain host:port entries",
+      ),
+    EVENT_CONSUMER_GROUP_ID: z.string().min(1).default("booking-event-lifecycle"),
+    EVENT_CONSUMER_ENABLED: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
+    REHYDRATE_ENABLED: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
     PORT: z.coerce.number().int().positive().default(DEFAULT_PORT),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
