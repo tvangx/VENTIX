@@ -1,6 +1,24 @@
 # Booking service — T-201 / T-202 / T-203 / T-204
 
-Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis; T-204 thêm trạng thái ghế, SSE và sweeper hold. Chưa triển khai checkout hoặc sweeper order. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
+Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis; T-203b thêm prefetch seat pricing; T-204 thêm trạng thái ghế, SSE và sweeper hold. Chưa triển khai checkout hoặc sweeper order. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
+
+## Prefetch seat pricing (T-203b)
+
+`EVENT_INTERNAL_URL` trỏ trực tiếp tới event-service trong mạng nội bộ (dev: `http://localhost:3002`), không qua Kong. `INTERNAL_API_KEY` bắt buộc, phải trùng khóa của S-206; không dùng khóa mẫu ở production. Client gửi `X-Internal-Key`, pin `seat_map_version`, phân trang cursor với limit 1000. Timeout 2 giây bao gồm đọc body, tối đa 3 lần thử với backoff 100/200 ms; chỉ retry lỗi mạng, timeout, HTTP 429/5xx. Không theo redirect để tránh chuyển khóa sang host khác.
+
+Worker chạy cùng lifecycle consumer (`EVENT_CONSUMER_ENABLED=true`), quét snapshot APPROVED chưa ready mỗi giây, tối đa 100 snapshot/trang. Snapshot chưa ready là hàng đợi bền vững sau Inbox commit: crash/restart hoặc S-206 chưa sẵn sàng sẽ tự thử lại, không cần replay Kafka. Event lỗi không chặn event khác trong cùng lượt quét. Metric `seat_pricing_jobs_total{outcome="success|failure"}` và log chứa event/version, request_id/trace_id, không chứa khóa hoặc body lỗi.
+
+Worker tải trang ngoài transaction, kiểm tra event/version, cursor lặp và ghế trùng. Sau đó khóa snapshot, kiểm tra lại version/status/readiness, validate hạng vé và upsert từng batch 1000 ghế cùng `pricing_ready=true` trong một transaction. Lỗi giữa chừng không công bố dữ liệu dở; chạy lại tải từ trang đầu. Job cũ bị bỏ qua nếu snapshot đã sang map mới hoặc bị hủy. Lifecycle có map version thấp hơn snapshot bị bỏ qua, kể cả khi event_version cao hơn. Version 0 (không seat map) không gọi seat API.
+
+POST `/holds` dùng kiểm tra readiness cục bộ và trả `503 EVENT_NOT_READY`, `Retry-After: 1`. T-301 phải dùng `requirePricingReady` trước tạo order, trả cùng header và lọc `seat_pricing.seat_map_version = event_snapshots.seat_map_version` khi tính giá; các ghế thuộc map cũ không còn trong map mới vẫn có thể nằm trong bảng. `/checkout` chưa tồn tại nên chưa có kiểm chứng HTTP checkout trong T-203b.
+
+Dev khi chưa có S-206: chuẩn bị snapshot bằng `event:fake`, file JSON chứa mảng `[{"seat_id":"<uuid>","ticket_class_id":"<uuid trong snapshot>"}]`. Truyền cấu hình booking hợp lệ từ `.env.example` qua environment, thêm `SEED_EVENT_ID`, `SEED_SEAT_MAP_VERSION`, `SEED_SEATS_FILE` (đường dẫn tính từ `services/booking`), rồi chạy:
+
+```bash
+pnpm --filter @ticketing/booking pricing:seed
+```
+
+Script không tự đọc `.env`, không tạo/sửa snapshot, không chạy ở production; dùng cùng pipeline atomic/version guard. Snapshot đã ready, thiếu, bị hủy hoặc khác version sẽ được bỏ qua. Để worker gọi client thật khi Sơn chưa xong S-206, test integration dùng server HTTP giả theo `docs/api/internal/seat-classes.yaml`.
 
 ## Chạy local
 

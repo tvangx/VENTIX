@@ -4,6 +4,7 @@ import { BookingStartupService } from "./booking-startup.service";
 
 describe("startup readiness gate", () => {
   const env = envSchema.parse({
+    INTERNAL_API_KEY: "synthetic-test-key",
     DATABASE_URL: "postgresql://booking_user:test@localhost/booking_db",
     AUTH_ISSUER: "test",
     AUTH_AUDIENCE: "test",

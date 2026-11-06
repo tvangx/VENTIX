@@ -17,6 +17,7 @@ import { BookingStartupService } from "./rehydrate/booking-startup.service";
 import { SeatRehydrateService } from "./rehydrate/seat-rehydrate.service";
 import { SeatStatusController } from "./seat-status/seat-status.controller";
 import { SeatStatusService } from "./seat-status/seat-status.service";
+import { SeatPricingWorker } from "./seat-pricing/seat-pricing-worker.service";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -48,6 +49,7 @@ export class AppModule implements NestModule {
         SeatHoldService,
         SeatStatusService,
         EventLifecycleService,
+        SeatPricingWorker,
         SeatRehydrateService,
         BookingStartupService,
       ],

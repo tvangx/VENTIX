@@ -32,6 +32,7 @@ describe("Redis rehydrate before readiness (PostgreSQL + Redis + HTTP)", () => {
     app = await createApp(
       envSchema.parse({
         NODE_ENV: "test",
+        INTERNAL_API_KEY: "synthetic-test-key",
         DATABASE_URL: db.pool.options.connectionString,
         REDIS_URL: cache.url,
         EVENT_CONSUMER_ENABLED: "false",

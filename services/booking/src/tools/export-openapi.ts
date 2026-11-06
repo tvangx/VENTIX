@@ -12,6 +12,7 @@ async function main(): Promise<void> {
     REHYDRATE_ENABLED: "false",
     EVENT_CONSUMER_ENABLED: "false",
     PORT: "1",
+    INTERNAL_API_KEY: "synthetic-test-key",
     DATABASE_URL: "postgresql://booking_user:openapi@localhost:5432/booking_db",
     AUTH_ISSUER: "openapi-export",
     AUTH_AUDIENCE: "openapi-export",

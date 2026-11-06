@@ -27,6 +27,7 @@ describe("seat status HTTP and two SSE replicas", () => {
   const env = (admission = "false") =>
     loadEnv(envSchema, {
       NODE_ENV: "test",
+      INTERNAL_API_KEY: "synthetic-test-key",
       DATABASE_URL: db.pool.options.connectionString,
       REDIS_URL: cache.url,
       EVENT_CONSUMER_ENABLED: "false",

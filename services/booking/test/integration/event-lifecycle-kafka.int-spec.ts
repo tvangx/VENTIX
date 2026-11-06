@@ -18,6 +18,7 @@ describe("production event lifecycle consumer (real Kafka + PostgreSQL)", () => 
     broker = await startBookingKafka();
     consumer = new EventLifecycleService(
       envSchema.parse({
+        INTERNAL_API_KEY: "synthetic-test-key",
         DATABASE_URL: db.pool.options.connectionString,
         KAFKA_BROKERS: broker.brokers.join(","),
         AUTH_ISSUER: "test",
