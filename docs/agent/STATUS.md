@@ -18,7 +18,7 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | T-202  | 2    | Lua giữ ghế + /holds                                                | T-201                      | Done       | #48 | Mã lõi; cần 2 người đọc                                |
 | T-206  | 2    | Hoàn thiện Kong (+ chặn /internal)                                  | T-104, T-202               | In review  | #50 | Kong 3.8.0: 95 checks đạt; xem runs/T-206.md              |
 | T-203  | 2    | Consumer event + rehydrate                                          | T-103, T-201, S-203        | Done  | #51 | CONTRACT CHANGE lifecycle v2; cần 2 người đọc           |
-| T-204  | 2    | Seat status + SSE + sweeper                                         | T-202                      | Todo       |     |                                                        |
+| T-204  | 2    | Seat status + SSE + sweeper                                         | T-202                      | In review  | #52 | H tối đa 309 ms; 126 test pass; cần 2 người đọc Lua |
 | T-205  | 2    | k6 S1 + verify oversell                                             | T-202                      | Todo       |     | Cổng G1                                                |
 | T-203b | 2    | Prefetch seat_pricing                                               | T-203, S-206               | Todo       |     | Chờ Sơn S-206 (hoặc dùng server giả)                   |
 | T-301  | 3    | Checkout API                                                        | T-202, T-301a, T-203b      | Todo       |     | Mã lõi                                                 |
