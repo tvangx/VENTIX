@@ -1,0 +1,128 @@
+# Kong DB-less LOAD TEST LOCAL ONLY. Nạp: make kong-loadtest; khôi phục: make kong-reload
+# Dev: các service chạy trên máy host (pnpm dev) nên upstream là host.docker.internal:<port>.
+# Quy ước cổng: identity 3001, event 3002, booking 3003, payment 3004, ticket 3005,
+#               resale 3006, merch 3007, notification 3008, finance 3009.
+#
+# LƯU Ý JWT: Kong OSS không tự lấy JWKS. Phase 0: Kong lo routing, CORS, rate limit, request-id;
+# việc VERIFY JWT do auth-guard dùng chung trong từng service (xem docs/adr/0004).
+_format_version: "3.0"
+
+plugins:
+  - name: correlation-id
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+  - name: cors
+    config:
+      origins: ["http://localhost:5173", "http://localhost:5174"]
+      methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+      headers: [Authorization, Content-Type, Idempotency-Key, X-Request-Id]
+      exposed_headers: [X-Request-Id]
+      credentials: true
+      max_age: 3600
+
+routes:
+  # Không gắn service: không thể forward internal sang upstream.
+  # Không giới hạn method/host để tránh route public thắng nhờ nhiều tiêu chí hơn.
+  - name: block-internal
+    paths: ["~/(?i:api/[^/]+/v1/internal)"]
+    regex_priority: 1000
+    plugins:
+      - name: request-termination
+        config:
+          status_code: 404
+          content_type: application/json
+          body: '{"message":"Not found"}'
+      # CORS mặc định kết thúc OPTIONS trước request-termination; internal phải tới 404.
+      - name: cors
+        config:
+          preflight_continue: true
+
+services:
+  - name: identity-service
+    url: http://host.docker.internal:3001
+    routes:
+      - { name: identity, paths: ["/api/identity"], strip_path: true }
+    plugins:
+      - &public-body-limit
+        name: request-size-limiting
+        config: { allowed_payload_size: 2 }
+      - name: rate-limiting
+        config: { minute: 600000, policy: local, limit_by: ip }
+
+  - name: event-service
+    url: http://host.docker.internal:3002
+    # Đặt guard trên service public để internal luôn kết thúc 404, kể cả khi
+    # client đã hết quota hoặc gửi body quá lớn (plugin termination chạy sau).
+    plugins: &public-plugins
+      - *public-body-limit
+      - name: rate-limiting
+        config: { minute: 600000, policy: local, limit_by: ip }
+    routes:
+      - { name: event, paths: ["/api/event"], strip_path: true }
+
+  - name: booking-service
+    url: http://host.docker.internal:3003
+    plugins: *public-plugins
+    routes:
+      - { name: booking, paths: ["/api/booking"], strip_path: true }
+      # Lookahead chỉ match/strip /api/booking, giữ nguyên /v1/... cho upstream.
+      # Có boundary để /holds-other không dùng nhầm quota holds.
+      - name: booking-holds
+        paths: ["~/api/booking(?=(?i:/v1/holds)(?:/|$))"]
+        regex_priority: 100
+        strip_path: true
+        plugins:
+          - name: rate-limiting
+            config: { minute: 600000, policy: local, limit_by: ip }
+      - name: booking-checkout
+        paths: ["~/api/booking(?=(?i:/v1/checkout)(?:/|$))"]
+        regex_priority: 100
+        strip_path: true
+        plugins:
+          - name: rate-limiting
+            config: { minute: 600000, policy: local, limit_by: ip }
+      - name: booking-queue-join
+        paths: ["~/api/booking(?=(?i:/v1/queue/join)(?:/|$))"]
+        regex_priority: 100
+        strip_path: true
+        plugins:
+          - name: rate-limiting
+            config: { minute: 600000, policy: local, limit_by: ip }
+
+  - name: payment-service
+    url: http://host.docker.internal:3004
+    plugins: *public-plugins
+    routes:
+      - { name: payment, paths: ["/api/payment"], strip_path: true }
+
+  - name: ticket-service
+    url: http://host.docker.internal:3005
+    plugins: *public-plugins
+    routes:
+      - { name: ticket, paths: ["/api/ticket"], strip_path: true }
+
+  - name: resale-service
+    url: http://host.docker.internal:3006
+    plugins: *public-plugins
+    routes:
+      - { name: resale, paths: ["/api/resale"], strip_path: true }
+
+  - name: merch-service
+    url: http://host.docker.internal:3007
+    plugins: *public-plugins
+    routes:
+      - { name: merch, paths: ["/api/merch"], strip_path: true }
+
+  - name: notification-service
+    url: http://host.docker.internal:3008
+    plugins: *public-plugins
+    routes:
+      - { name: notification, paths: ["/api/notification"], strip_path: true }
+
+  - name: finance-service
+    url: http://host.docker.internal:3009
+    plugins: *public-plugins
+    routes:
+      - { name: finance, paths: ["/api/finance"], strip_path: true }
