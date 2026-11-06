@@ -20,7 +20,7 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | T-203  | 2    | Consumer event + rehydrate                                          | T-103, T-201, S-203        | Done  | #51 | CONTRACT CHANGE lifecycle v2; cần 2 người đọc           |
 | T-204  | 2    | Seat status + SSE + sweeper                                         | T-202                      | In review  | #52 | H tối đa 309 ms; 126 test pass; cần 2 người đọc Lua |
 | T-205  | 2    | k6 S1 + verify oversell                                             | T-202                      | In review  | #53 | Verifier 0; S1 5k lỗi kết nối; chưa nghiệm thu G1        |
-| T-203b | 2    | Prefetch seat_pricing                                               | T-203, S-206               | Doing      |     | Client thật + server giả; xem runs/T-203b.md             |
+| T-203b | 2    | Prefetch seat_pricing                                               | T-203, S-206               | In review  | #54 | 104 integration test pass; cần 2 người đọc; xem runs/T-203b.md |
 | T-301  | 3    | Checkout API                                                        | T-202, T-301a, T-203b      | Todo       |     | Mã lõi                                                 |
 | T-302  | 3    | payment-service + adapter                                           | T-103, T-301a              | Todo       |     | Cần VNPay sandbox                                      |
 | T-303  | 3    | IPN idempotent + sweeper + bù trừ                                   | T-301, T-302               | Todo       |     | Mã lõi                                                 |
