@@ -20,6 +20,7 @@
     "test:conc": "node scripts/prisma-generate.js && jest --config jest.conc.config.js --runInBand --passWithNoTests",
     "openapi:export": "pnpm build && node dist/tools/export-openapi.js",
     "event:fake": "tsc --strict --skipLibCheck --esModuleInterop --module commonjs --target ES2022 --types node --outDir dist/tools ../../scripts/publish-fake-event.ts && node dist/tools/publish-fake-event.js",
+    "pricing:seed": "pnpm build && tsc --strict --skipLibCheck --module commonjs --target ES2022 --types node --outDir dist/tools ../../scripts/seed-seat-pricing.ts && node dist/tools/seed-seat-pricing.js",
     "prisma:migrate:create": "prisma migrate dev --create-only"
   },
   "dependencies": {

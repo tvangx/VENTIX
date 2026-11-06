@@ -14,6 +14,19 @@ export const envSchema = z
         "KAFKA_BROKERS must contain host:port entries",
       ),
     EVENT_CONSUMER_GROUP_ID: z.string().min(1).default("booking-event-lifecycle"),
+    EVENT_INTERNAL_URL: z
+      .string()
+      .url()
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password;
+        } catch {
+          return false;
+        }
+      }, "EVENT_INTERNAL_URL must use HTTP(S) without credentials")
+      .default("http://localhost:3002"),
+    INTERNAL_API_KEY: z.string().min(1),
     EVENT_CONSUMER_ENABLED: z
       .enum(["true", "false"])
       .default("true")
@@ -66,3 +79,9 @@ export const envSchema = z
   .superRefine((env, ctx) => refineAuthEnv(env, ctx));
 
 export type Env = z.infer<typeof envSchema>;
+
+export const seatPricingSeedSchema = z.object({
+  SEED_EVENT_ID: z.string().uuid(),
+  SEED_SEAT_MAP_VERSION: z.coerce.number().int().positive(),
+  SEED_SEATS_FILE: z.string().min(1),
+});

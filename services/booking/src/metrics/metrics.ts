@@ -7,6 +7,12 @@ import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from "prom
 @Injectable()
 export class MetricsService {
   readonly registry = new Registry();
+  readonly seatPricingJobs = new Counter({
+    name: "seat_pricing_jobs_total",
+    help: "Seat pricing prefetch outcomes",
+    labelNames: ["outcome"] as const,
+    registers: [this.registry],
+  });
   readonly seatStreams = new Gauge({
     name: "seat_stream_connections",
     help: "Active seat SSE connections",

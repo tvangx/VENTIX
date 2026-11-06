@@ -31,6 +31,7 @@ export const handleEventLifecycle: InboxHandler = async (exec, message) => {
          THEN false ELSE event_snapshots.pricing_ready END,
        synced_at = now()
      WHERE event_snapshots.event_version < EXCLUDED.event_version
+       AND ($8 OR event_snapshots.seat_map_version <= EXCLUDED.seat_map_version)
        AND event_snapshots.organizer_id = EXCLUDED.organizer_id
      RETURNING event_id`,
     [

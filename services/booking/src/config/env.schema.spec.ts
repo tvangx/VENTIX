@@ -2,6 +2,7 @@ import { loadEnv } from "@ticketing/common";
 import { envSchema } from "./env.schema";
 
 const base = {
+  INTERNAL_API_KEY: "synthetic-test-key",
   DATABASE_URL: "postgresql://booking_user:booking_dev@localhost:5432/booking_db",
   AUTH_ISSUER: "https://identity.test",
   AUTH_AUDIENCE: "ticketing-api",
@@ -29,6 +30,21 @@ describe("envSchema", () => {
   it("fails fast when DATABASE_URL is missing", () => {
     expect(() => loadEnv(envSchema, { ...base, DATABASE_URL: undefined })).toThrow(/DATABASE_URL/);
   });
+
+  it.each([undefined, ""])("requires an internal API key (%s)", (key) => {
+    expect(() => loadEnv(envSchema, { ...base, INTERNAL_API_KEY: key })).toThrow(
+      /INTERNAL_API_KEY/,
+    );
+  });
+
+  it.each(["ftp://localhost", "http://user:password@localhost", "invalid"])(
+    "rejects unsafe internal URL %s",
+    (url) => {
+      expect(() => loadEnv(envSchema, { ...base, EVENT_INTERNAL_URL: url })).toThrow(
+        /EVENT_INTERNAL_URL/,
+      );
+    },
+  );
 
   it.each([
     "postgresql://postgres:test@localhost:5432/booking_db",

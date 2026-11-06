@@ -34,6 +34,7 @@ describe("booking scaffold (integration, Postgres via Testcontainers)", () => {
       REHYDRATE_ENABLED: "false", // scaffold chỉ kiểm tra Postgres chưa migration
       EVENT_CONSUMER_ENABLED: "false",
       PORT: "3999", // app không listen trong test; chỉ cần giá trị hợp lệ
+      INTERNAL_API_KEY: "synthetic-test-key",
       DATABASE_URL: pg.getConnectionUri(),
       AUTH_ISSUER: "https://identity.test",
       AUTH_AUDIENCE: "ticketing-api",

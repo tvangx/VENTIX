@@ -5,6 +5,7 @@ import { ENV } from "../app.tokens";
 import type { Env } from "../config/env.schema";
 import { MetricsService } from "../metrics/metrics";
 import { EventSnapshotRepository } from "./event-snapshot.repository";
+import { requirePricingReady } from "../seat-pricing/pricing-readiness";
 import {
   CreateHoldDto,
   CurrentHoldResponseDto,
@@ -68,9 +69,7 @@ export class SeatHoldService {
     ) {
       throw new ProblemException("EVENT_NOT_ON_SALE", 404, "Event is not currently on sale");
     }
-    if (!snapshot.pricing_ready) {
-      throw new ProblemException("EVENT_NOT_READY", 503, "Event pricing is not ready; retry later");
-    }
+    requirePricingReady(snapshot);
     let expiresAt = 0;
     const result = await this.redisCall((redis) => {
       // Đợi kết nối xong mới tính expiry, tránh hexp sớm hơn TTL vì cold connection.
