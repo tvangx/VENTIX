@@ -1,6 +1,60 @@
-# Booking service — T-201 / T-202 / T-203 / T-204
+# Booking service — T-201 / T-202 / T-203 / T-204 / T-301
 
-Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis; T-203b thêm prefetch seat pricing; T-204 thêm trạng thái ghế, SSE và sweeper hold. Chưa triển khai checkout hoặc sweeper order. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
+Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis; T-203b thêm prefetch seat pricing; T-204 thêm trạng thái ghế, SSE và sweeper hold. T-301 thêm checkout và stock saga; sweeper order/payment thuộc T-303. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
+
+## Checkout và stock saga (T-301)
+
+`POST /v1/checkout` yêu cầu JWT và `Idempotency-Key` (1–200 ký tự ASCII hiển thị, không khoảng trắng). Body:
+
+```json
+{
+  "event_id": "<event UUID>",
+  "seat_ids": ["<seat UUID>"],
+  "ga_items": [{ "ticket_class_id": "<GA class UUID>", "quantity": 2 }],
+  "merch_items": [{ "sku_id": "<SKU UUID>", "quantity": 1 }]
+}
+```
+
+Có ít nhất một item. Mảng bỏ qua mặc định rỗng; mỗi mảng tối đa 1000 phần tử, không trùng ID, quantity nguyên 1–1000. Không nhận giá/user_id/combo từ client. `voucher_code` có giá trị trả `422 VOUCHER_NOT_SUPPORTED`. Trước T-304 giữ `ADMISSION_REQUIRED=false`; bật true từ chối checkout bằng `403 ADMISSION_REQUIRED`.
+
+Response 201 gồm order_id, status, ticket_amount_vnd, merch_amount_vnd, total_amount_vnd, expires_at. Cùng key/user/hash trả lại response lúc tạo, kể cả sau khi trạng thái đổi; khác user/hash trả `422 IDEMPOTENCY_KEY_REUSED`. Hash chuẩn hóa thứ tự các mảng. Key có phạm vi toàn bảng theo schema T-201. Advisory lock theo key giữ tới commit; response, order và outbox ghi cùng transaction. Checkout khác key của cùng user/event cũng được tuần tự hóa để cleanup không tranh nhau.
+
+Snapshot phải APPROVED/PUBLISHED và trong sale_window; không đạt trả `409 EVENT_NOT_ON_SALE`. Chưa pricing_ready trả `503 EVENT_NOT_READY`, `Retry-After: 1`. Giá vé chỉ đọc booking_db, lọc seat_pricing đúng seat_map_version; không gọi event-service. Shared lock snapshot ngăn lifecycle thay giá/phiên bản giữa transaction.
+
+Lua kiểm tra tất cả seat key và hold membership trước mọi ghi; sai chủ/thiếu hold trả `409 HOLD_NOT_FOUND`. Gia hạn một lần tới payment window. Marker `checkout:{evt:E}:<seatId>` lưu chủ/deadline, có TTL cùng ghế; retry sau rollback giữ deadline đầu tiên, không gia hạn thêm. Release đúng chủ dọn marker. Transaction tạo PENDING, items, allocations HELD, reserve stock GA bằng UPDATE có điều kiện, OrderCreated và response idempotency. Ghế đánh số bảo vệ bằng uq_seat_active; GA dùng counter (kiến trúc mục 3.5). Không merch thì chuyển AWAITING_PAYMENT và ghi OrderAwaitingPayment trong cùng transaction. Unique conflict rollback, nhả hold đúng chủ, trả 409 SEAT_UNAVAILABLE. Redis lỗi trả 503 SEAT_HOLD_UNAVAILABLE. Mọi 503 checkout có Retry-After: 1.
+
+MerchQuotePort chỉ được gọi nếu có merch_items. Client HTTP thật POST trực tiếp MERCH_INTERNAL_URL/v1/internal/quotes với X-Internal-Key, không theo redirect. Timeout mặc định 800 ms bao gồm body, 1 retry; opossum mở mạch sau tối thiểu 5 request với tỷ lệ lỗi ≥50%, thử lại sau 10 giây. Kiểm tra SKU/quantity, số nguyên an toàn, tổng tiền và từ chối combo trong quote. Lỗi/mạch mở trả 503 MERCH_UNAVAILABLE. Order chỉ có vé không gọi client, kể cả khi mạch đang mở.
+
+Consumer booking-checkout-stock đọc merch.stock qua Inbox. StockReserved khớp đủ các dòng merch chuyển PENDING → AWAITING_PAYMENT và outbox; duplicate/stale bỏ qua. Reserved sau hạn không mở thanh toán. StockRejected cho PENDING/AWAITING_PAYMENT chuyển CANCELLED, trả GA, RELEASED allocations, nhả Redis và ghi OrderCancelled với reason STOCK_REJECTED. Cleanup Redis trước commit: lỗi thì rollback DB/Inbox để retry; nếu commit thất bại sau cleanup, allocation DB vẫn chặn oversell. Schema/reservations sai đi DLQ qua thư viện Inbox. Stock consumer và OutboxRelay khởi động/dừng cùng lifecycle. EVENT_CONSUMER_ENABLED=false chỉ dùng test HTTP/OpenAPI, cũng tắt stock/relay. Giới hạn relay hiện có: chạy một relay cho booking_db để bảo toàn thứ tự key.
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant B as Booking
+  participant D as booking_db
+  participant M as Merch
+  participant K as Kafka
+  C->>B: checkout + Idempotency-Key
+  opt Có merch
+    B->>M: quote (800ms, retry 1)
+    M-->>B: Giá SKU
+  end
+  B->>B: Lua verify/extend holds
+  B->>D: TX order + items + allocation + GA + outbox + idempotency
+  B-->>C: 201 PENDING hoặc AWAITING_PAYMENT
+  D-->>K: OrderCreated qua relay
+  opt Có merch
+    K->>M: OrderCreated
+    M-->>K: StockReserved hoặc StockRejected
+    K->>B: Inbox + conditional transition
+    B->>D: TX state + outbox (+ compensation nếu rejected)
+  end
+  D-->>K: OrderAwaitingPayment hoặc OrderCancelled qua relay
+```
+
+Env: ORDER_PAYMENT_WINDOW_SECONDS=900, ORDER_EXPIRY_GRACE_SECONDS=30 (dành cho T-303), MERCH_INTERNAL_URL=http://localhost:3007, MERCH_QUOTE_TIMEOUT_MS=800. INTERNAL_API_KEY đã có từ T-203b. Không migration mới. Khi S-206 chưa có, dùng pricing:seed bên dưới trên snapshot giả local; integration dùng container và HTTP server giả, không sửa DB service khác.
+
+Kiểm chứng: [run report T-301](../../docs/agent/runs/T-301.md). PaymentSucceeded/Failed, order sweeper, sell_seats, voucher/combo và Waiting Room ngoài phạm vi.
 
 ## Prefetch seat pricing (T-203b)
 
@@ -10,7 +64,7 @@ Worker chạy cùng lifecycle consumer (`EVENT_CONSUMER_ENABLED=true`), quét sn
 
 Worker tải trang ngoài transaction, kiểm tra event/version, cursor lặp và ghế trùng. Sau đó khóa snapshot, kiểm tra lại version/status/readiness, validate hạng vé và upsert từng batch 1000 ghế cùng `pricing_ready=true` trong một transaction. Lỗi giữa chừng không công bố dữ liệu dở; chạy lại tải từ trang đầu. Job cũ bị bỏ qua nếu snapshot đã sang map mới hoặc bị hủy. Lifecycle có map version thấp hơn snapshot bị bỏ qua, kể cả khi event_version cao hơn. Version 0 (không seat map) không gọi seat API.
 
-POST `/holds` dùng kiểm tra readiness cục bộ và trả `503 EVENT_NOT_READY`, `Retry-After: 1`. T-301 phải dùng `requirePricingReady` trước tạo order, trả cùng header và lọc `seat_pricing.seat_map_version = event_snapshots.seat_map_version` khi tính giá; các ghế thuộc map cũ không còn trong map mới vẫn có thể nằm trong bảng. `/checkout` chưa tồn tại nên chưa có kiểm chứng HTTP checkout trong T-203b.
+POST `/holds` dùng kiểm tra readiness cục bộ và trả `503 EVENT_NOT_READY`, `Retry-After: 1`. Checkout kiểm tra readiness trước tạo order, trả cùng header và lọc `seat_pricing.seat_map_version = event_snapshots.seat_map_version` khi tính giá; các ghế thuộc map cũ không còn trong map mới vẫn có thể nằm trong bảng. Kiểm chứng HTTP checkout nằm trong T-301.
 
 Dev khi chưa có S-206: chuẩn bị snapshot bằng `event:fake`, file JSON chứa mảng `[{"seat_id":"<uuid>","ticket_class_id":"<uuid trong snapshot>"}]`. Truyền cấu hình booking hợp lệ từ `.env.example` qua environment, thêm `SEED_EVENT_ID`, `SEED_SEAT_MAP_VERSION`, `SEED_SEATS_FILE` (đường dẫn tính từ `services/booking`), rồi chạy:
 

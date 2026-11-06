@@ -25,6 +25,10 @@ describe("envSchema", () => {
     expect(env.REHYDRATE_ENABLED).toBe(true);
     expect(env.EVENT_CONSUMER_ENABLED).toBe(true);
     expect(env.KAFKA_BROKERS).toEqual(["localhost:9092"]);
+    expect(env.ORDER_PAYMENT_WINDOW_SECONDS).toBe(900);
+    expect(env.ORDER_EXPIRY_GRACE_SECONDS).toBe(30);
+    expect(env.MERCH_QUOTE_TIMEOUT_MS).toBe(800);
+    expect(env.MERCH_INTERNAL_URL).toBe("http://localhost:3007");
   });
 
   it("fails fast when DATABASE_URL is missing", () => {
@@ -92,6 +96,11 @@ describe("envSchema", () => {
     { KAFKA_BROKERS: "" },
     { KAFKA_BROKERS: "localhost:9092," },
     { EVENT_CONSUMER_GROUP_ID: "" },
+    { ORDER_PAYMENT_WINDOW_SECONDS: "0" },
+    { ORDER_EXPIRY_GRACE_SECONDS: "-1" },
+    { MERCH_QUOTE_TIMEOUT_MS: "0" },
+    { MERCH_INTERNAL_URL: "ftp://localhost" },
+    { MERCH_INTERNAL_URL: "http://user:password@localhost" },
   ])("rejects invalid hold configuration %j", (config) => {
     expect(() => loadEnv(envSchema, { ...base, ...config })).toThrow();
   });

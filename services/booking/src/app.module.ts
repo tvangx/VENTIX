@@ -18,6 +18,10 @@ import { SeatRehydrateService } from "./rehydrate/seat-rehydrate.service";
 import { SeatStatusController } from "./seat-status/seat-status.controller";
 import { SeatStatusService } from "./seat-status/seat-status.service";
 import { SeatPricingWorker } from "./seat-pricing/seat-pricing-worker.service";
+import { CheckoutController } from "./checkout/checkout.controller";
+import { CheckoutRepository } from "./checkout/checkout.repository";
+import { CheckoutService } from "./checkout/checkout.service";
+import { MERCH_QUOTE, MerchQuoteClient } from "./clients/merch-quote.client";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -39,11 +43,23 @@ export class AppModule implements NestModule {
         WhoamiController,
         SeatHoldController,
         SeatStatusController,
+        CheckoutController,
       ],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        CheckoutRepository,
+        CheckoutService,
+        {
+          provide: MERCH_QUOTE,
+          useFactory: () =>
+            new MerchQuoteClient(
+              env.MERCH_INTERNAL_URL,
+              env.INTERNAL_API_KEY,
+              env.MERCH_QUOTE_TIMEOUT_MS,
+            ),
+        },
         EventSnapshotRepository,
         SeatHoldRedisClient,
         SeatHoldService,
