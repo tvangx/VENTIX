@@ -9,6 +9,7 @@ import { SERVICE_NAME } from "../service.constants";
 async function main(): Promise<void> {
   const env = loadEnv(envSchema, {
     NODE_ENV: "test",
+    PAYMENT_WORKERS_ENABLED: "false",
     PORT: "1",
     DATABASE_URL: "postgresql://openapi:openapi@localhost:5432/openapi",
     AUTH_ISSUER: "openapi-export",

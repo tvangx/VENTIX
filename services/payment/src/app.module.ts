@@ -1,3 +1,7 @@
+import { PaymentController } from "./modules/payments/payment.controller";
+import { PaymentRepository } from "./modules/payments/payment.repository";
+import { PaymentService } from "./modules/payments/payment.service";
+import { PaymentWorker } from "./messaging/payment-worker";
 import { DynamicModule, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { AuthModule } from "@ticketing/auth-guard";
 import { Logger, RequestIdMiddleware } from "@ticketing/common";
@@ -23,11 +27,14 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController],
+      controllers: [HealthController, MetricsController, WhoamiController, PaymentController],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        PaymentRepository,
+        PaymentService,
+        PaymentWorker,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],

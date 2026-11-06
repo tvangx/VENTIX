@@ -71,6 +71,334 @@
         "summary": "Return the authenticated principal",
         "tags": ["whoami"]
       }
+    },
+    "/v1/payments": {
+      "post": {
+        "operationId": "PaymentController_create",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body or Idempotency-Key"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "PAYMENT_FORBIDDEN"
+          },
+          "409": {
+            "description": "ORDER_NOT_READY, PAYABLE_EXPIRED, PAYMENT_ALREADY_ACTIVE",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "example": 1
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "IDEMPOTENCY_KEY_REUSED, INVALID_PAYMENT_AMOUNT"
+          },
+          "503": {
+            "description": "PROVIDER_UNAVAILABLE"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create or replay a payment link for an owned payable order",
+        "tags": ["payments"]
+      }
+    },
+    "/v1/payments/vnpay/ipn": {
+      "get": {
+        "operationId": "PaymentController_ipn",
+        "parameters": [
+          {
+            "name": "vnp_TmnCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_Amount",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_BankCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_OrderInfo",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_TransactionNo",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_ResponseCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_TransactionStatus",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_TxnRef",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_SecureHash",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_PayDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_BankTranNo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_CardType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_SecureHashType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpnResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "VNPay server callback; signature checked before processing",
+        "tags": ["payments"]
+      }
+    },
+    "/v1/payments/vnpay/return": {
+      "get": {
+        "operationId": "PaymentController_returnUrl",
+        "parameters": [
+          {
+            "name": "vnp_TmnCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_Amount",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_BankCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_OrderInfo",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_TransactionNo",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_ResponseCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_TransactionStatus",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_TxnRef",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_SecureHash",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_PayDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_BankTranNo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_CardType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vnp_SecureHashType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verify browser return for display only; does not change payment state",
+        "tags": ["payments"]
+      }
     }
   },
   "info": {
@@ -119,6 +447,55 @@
           }
         },
         "required": ["userId", "roles"]
+      },
+      "PaymentDto": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider": {
+            "type": "string",
+            "enum": ["VNPAY", "MOCK"]
+          }
+        },
+        "required": ["order_id", "provider"]
+      },
+      "PaymentResponse": {
+        "type": "object",
+        "properties": {
+          "redirect_url": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": ["redirect_url"]
+      },
+      "IpnResponse": {
+        "type": "object",
+        "properties": {
+          "RspCode": {
+            "type": "string",
+            "enum": ["97", "99", "00", "01", "02", "04"]
+          },
+          "Message": {
+            "type": "string"
+          }
+        },
+        "required": ["RspCode", "Message"]
+      },
+      "ReturnResponse": {
+        "type": "object",
+        "properties": {
+          "signature_valid": {
+            "type": "boolean"
+          },
+          "provider_succeeded": {
+            "type": "boolean"
+          }
+        },
+        "required": ["signature_valid", "provider_succeeded"]
       }
     }
   }

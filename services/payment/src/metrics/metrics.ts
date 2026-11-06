@@ -2,15 +2,22 @@ import { Controller, Get, Injectable, NestMiddleware, Res } from "@nestjs/common
 import { ApiExcludeController } from "@nestjs/swagger";
 import { Public } from "@ticketing/auth-guard";
 import type { NextFunction, Request, Response } from "express";
-import { Histogram, Registry, collectDefaultMetrics } from "prom-client";
+import { Counter, Histogram, Registry, collectDefaultMetrics } from "prom-client";
 
 @Injectable()
 export class MetricsService {
   readonly registry = new Registry();
+  readonly paymentResults: Counter<"provider" | "code">;
   readonly httpDuration: Histogram<"method" | "route" | "status">;
 
   constructor() {
     collectDefaultMetrics({ register: this.registry });
+    this.paymentResults = new Counter({
+      name: "payment_callback_total",
+      help: "Payment callback outcomes",
+      labelNames: ["provider", "code"],
+      registers: [this.registry],
+    });
     this.httpDuration = new Histogram({
       name: "http_request_duration_seconds",
       help: "HTTP request duration in seconds",

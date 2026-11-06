@@ -22,7 +22,7 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | T-205  | 2    | k6 S1 + verify oversell                                             | T-202                      | In review  | #53 | Verifier 0; S1 5k lỗi kết nối; chưa nghiệm thu G1        |
 | T-203b | 2    | Prefetch seat_pricing                                               | T-203, S-206               | In review  | #54 | 104 integration test pass; cần 2 người đọc; xem runs/T-203b.md |
 | T-301  | 3    | Checkout API                                                        | T-202, T-301a, T-203b      | In review  | #55 | Mã lõi                                                 |
-| T-302  | 3    | payment-service + adapter                                           | T-103, T-301a              | Todo       |     | Cần VNPay sandbox                                      |
+| T-302  | 3    | payment-service + adapter                                           | T-103, T-301a              | Doing      |     | Cần VNPay sandbox                                      |
 | T-303  | 3    | IPN idempotent + sweeper + bù trừ                                   | T-301, T-302               | Todo       |     | Mã lõi                                                 |
 | T-304  | 3    | Waiting Room                                                        | T-202, T-206               | Todo       |     | Cuối tuần 3, được trượt sang T4                        |
 | T-401  | 4    | Refund, hoàn lô, tự hoàn tiền (LATE_PAYMENT, EventCancelled)        | T-302, T-303               | Todo       |     | Hoàn tiền = tiền thật, 2 người đọc                     |

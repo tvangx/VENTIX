@@ -28,6 +28,7 @@ describe("service template (integration, Postgres via Testcontainers)", () => {
     privateKey = pair.privateKey;
     const env = loadEnv(envSchema, {
       NODE_ENV: "test",
+      PAYMENT_WORKERS_ENABLED: "false",
       PORT: "3999", // app không listen trong test; chỉ cần giá trị hợp lệ
       DATABASE_URL: pg.getConnectionUri(),
       AUTH_ISSUER: "https://identity.test",

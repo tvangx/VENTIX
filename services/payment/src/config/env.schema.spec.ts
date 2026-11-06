@@ -39,3 +39,20 @@ describe("envSchema", () => {
     ).toThrow(/AUTH_PUBLIC_KEY_PEM/);
   });
 });
+
+describe("payment configuration", () => {
+  it("allows mock-only with empty VNPay secrets and rejects missing credentials when enabled", () => {
+    expect(loadEnv(envSchema, base).VNPAY_ENABLED).toBe(false);
+    expect(() => loadEnv(envSchema, { ...base, VNPAY_ENABLED: "true" })).toThrow(
+      /VNPAY_HASH_SECRET/,
+    );
+  });
+  it.each([
+    { MOCK_DELAY_MS: "100", MOCK_MAX_DELAY_MS: "99" },
+    { MOCK_SUCCESS_RATE: "1.1" },
+    { MOCK_DUPLICATE_IPN: "yes" },
+    { VNPAY_RETURN_URL: "invalid" },
+  ])("rejects invalid configuration %o", (patch) => {
+    expect(() => loadEnv(envSchema, { ...base, ...patch })).toThrow();
+  });
+});
