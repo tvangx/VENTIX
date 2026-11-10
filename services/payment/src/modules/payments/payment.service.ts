@@ -6,7 +6,7 @@ import { OutboxService } from "@ticketing/outbox-inbox";
 import { uuidv7 } from "uuidv7";
 import { ENV, LOGGER } from "../../app.tokens";
 import { Env } from "../../config/env.schema";
-import { PaymentRepository, PaymentTransaction } from "./payment.repository";
+import { PaymentPurpose, PaymentRepository, PaymentTransaction } from "./payment.repository";
 import { MockAdapter } from "./mock-adapter";
 import { VnpayAdapter } from "./vnpay-adapter";
 import { MetricsService } from "../../metrics/metrics";
@@ -51,6 +51,7 @@ export class PaymentService {
     provider: Provider,
     ip: string,
     traceId: string,
+    purpose: PaymentPurpose = "ORDER",
   ): Promise<{ redirect_url: string }> {
     if (!key || key.length > 200 || !/^[\x21-\x7e]+$/.test(key))
       throw new ProblemException(
@@ -59,7 +60,10 @@ export class PaymentService {
         "Idempotency-Key is required (1-200 visible ASCII characters)",
       );
     const hash = createHash("sha256")
-      .update(JSON.stringify({ user, orderId, provider }))
+      // Giữ fingerprint ORDER cũ để replay các payment đã tạo trước T-405.
+      .update(
+        JSON.stringify({ user, orderId, provider, ...(purpose === "RESALE" ? { purpose } : {}) }),
+      )
       .digest("hex");
     return this.repo.db.transaction(async (exec) => {
       const tx = new PaymentTransaction(exec);
@@ -74,7 +78,7 @@ export class PaymentService {
           );
         return { redirect_url: old.redirect_url };
       }
-      const payable = await tx.payable(orderId);
+      const payable = await tx.payable(orderId, purpose);
       const dbNow = await tx.now();
       if (!payable)
         throw new ProblemException("ORDER_NOT_READY", 409, "Order is not ready for payment");
@@ -82,7 +86,7 @@ export class PaymentService {
         throw new ProblemException("PAYMENT_FORBIDDEN", 403, "Order belongs to another user");
       if (payable.status !== "READY" || payable.expires_at <= dbNow)
         throw new ProblemException("PAYABLE_EXPIRED", 409, "Payment window has closed");
-      if (await tx.hasActive(orderId))
+      if (await tx.hasActive(orderId, purpose))
         throw new ProblemException(
           "PAYMENT_ALREADY_ACTIVE",
           409,
@@ -112,6 +116,7 @@ export class PaymentService {
       await tx.insert({
         id,
         order: orderId,
+        purpose,
         user,
         payable,
         provider,
@@ -135,7 +140,11 @@ export class PaymentService {
       const txnId = `${provider}:${data.providerTxnId === "0" ? `${p.id}:0` : data.providerTxnId}`;
       if (!(await tx.record(p, data, txnId))) return "99";
       await tx.transition(p, data);
-      const base = { payment_id: p.id, purpose: p.purpose, order_id: p.ref_id };
+      const base = {
+        payment_id: p.id,
+        purpose: p.purpose,
+        ...(p.purpose === "RESALE" ? { resale_order_id: p.ref_id } : { order_id: p.ref_id }),
+      };
       const message = data.succeeded
         ? newMessage(
             "PaymentSucceeded",

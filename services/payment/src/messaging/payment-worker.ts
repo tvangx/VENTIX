@@ -50,7 +50,7 @@ export class PaymentWorker implements OnApplicationBootstrap, BeforeApplicationS
       kafka,
       groupId: "payment-payables",
       consumerName: "payment-payables",
-      topics: [Topics.BOOKING_ORDERS],
+      topics: [Topics.BOOKING_ORDERS, Topics.RESALE_EVENTS],
       db: this.repo.db,
       logger: this.logger,
       handler: payableHandler,

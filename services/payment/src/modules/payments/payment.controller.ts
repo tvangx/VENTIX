@@ -11,16 +11,20 @@ import {
 } from "@nestjs/common";
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiCreatedResponse,
+  ApiExtraModels,
   ApiHeader,
   ApiOperation,
   ApiProperty,
+  ApiPropertyOptional,
   ApiQuery,
   ApiResponse,
   ApiTags,
+  getSchemaPath,
 } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsIn, IsUUID } from "class-validator";
+import { IsIn, IsUUID, ValidateIf } from "class-validator";
 import { AuthUser, CurrentUser, Public } from "@ticketing/auth-guard";
 import { ProblemException, requestContext } from "@ticketing/common";
 import { Request, Response } from "express";
@@ -44,12 +48,31 @@ function VnpayQuery(): MethodDecorator {
   );
 }
 class PaymentDto {
-  @ApiProperty({ format: "uuid" })
+  @ApiPropertyOptional({
+    format: "uuid",
+    description: "Exactly one of order_id or resale_order_id",
+  })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === "string" ? value.toLowerCase() : value,
   )
+  @ValidateIf(
+    (input: PaymentDto, value: unknown) =>
+      value !== undefined && input.resale_order_id === undefined,
+  )
   @IsUUID()
-  order_id!: string;
+  order_id?: string;
+  @ApiPropertyOptional({
+    format: "uuid",
+    description: "Exactly one of order_id or resale_order_id",
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === "string" ? value.toLowerCase() : value,
+  )
+  @ValidateIf(
+    (input: PaymentDto, value: unknown) => value !== undefined && input.order_id === undefined,
+  )
+  @IsUUID()
+  resale_order_id?: string;
   @ApiProperty({ enum: ["VNPAY", "MOCK"] }) @IsIn(["VNPAY", "MOCK"]) provider!: "VNPAY" | "MOCK";
 }
 class PaymentResponse {
@@ -70,6 +93,15 @@ const trace = () =>
 export class PaymentController {
   constructor(private readonly payments: PaymentService) {}
   @Post()
+  @ApiExtraModels(PaymentDto)
+  @ApiBody({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(PaymentDto) },
+        { oneOf: [{ required: ["order_id"] }, { required: ["resale_order_id"] }] },
+      ],
+    },
+  })
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create or replay a payment link for an owned payable order" })
   @ApiHeader({ name: "Idempotency-Key", required: true })
@@ -82,7 +114,10 @@ export class PaymentController {
     description: "ORDER_NOT_READY, PAYABLE_EXPIRED, PAYMENT_ALREADY_ACTIVE",
     headers: { "Retry-After": { schema: { type: "integer", example: 1 } } },
   })
-  @ApiResponse({ status: 422, description: "IDEMPOTENCY_KEY_REUSED, INVALID_PAYMENT_AMOUNT" })
+  @ApiResponse({
+    status: 422,
+    description: "INVALID_PAYMENT_REFERENCE, IDEMPOTENCY_KEY_REUSED, INVALID_PAYMENT_AMOUNT",
+  })
   @ApiResponse({ status: 503, description: "PROVIDER_UNAVAILABLE" })
   async create(
     @CurrentUser() user: AuthUser,
@@ -91,14 +126,21 @@ export class PaymentController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<PaymentResponse> {
+    if ((input.order_id !== undefined) === (input.resale_order_id !== undefined))
+      throw new ProblemException(
+        "INVALID_PAYMENT_REFERENCE",
+        422,
+        "Provide exactly one of order_id or resale_order_id",
+      );
     try {
       return await this.payments.create(
         user.userId.toLowerCase(),
         key,
-        input.order_id,
+        (input.order_id ?? input.resale_order_id)!,
         input.provider,
         req.socket.remoteAddress?.replace(/^::ffff:/, "") ?? "127.0.0.1",
         trace(),
+        input.resale_order_id !== undefined ? "RESALE" : "ORDER",
       );
     } catch (error) {
       if (error instanceof ProblemException && error.code === "ORDER_NOT_READY")
