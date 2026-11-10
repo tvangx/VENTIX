@@ -139,8 +139,8 @@ importers:
         specifier: ^3.7.0
         version: 3.7.0
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
       zustand:
         specifier: ^5.0.16
         version: 5.0.16(@types/react@18.3.31)(react@18.3.1)
@@ -200,8 +200,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@types/express':
         specifier: ^4.17.21
@@ -234,8 +234,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@types/express':
         specifier: ^4.17.21
@@ -259,8 +259,8 @@ importers:
         specifier: ^1.0.2
         version: 1.2.1
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^20.16.0
@@ -369,8 +369,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.7
@@ -493,8 +493,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.7
@@ -599,8 +599,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.7
@@ -714,8 +714,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.7
@@ -820,8 +820,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.7
@@ -926,8 +926,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.7
@@ -1032,8 +1032,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.7
@@ -1150,8 +1150,8 @@ importers:
         specifier: ^1.0.2
         version: 1.2.1
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.7
@@ -1256,8 +1256,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.7
@@ -1362,8 +1362,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.7
@@ -2222,6 +2222,7 @@ packages:
   '@opentelemetry/propagator-jaeger@1.27.0':
     resolution: {integrity: sha512-EI1bbK0wn0yIuKlc2Qv2LKBRw6LiUWevrjCF80fn/rlaB+7StAi8Y5s8DBqAYNpY7v1q86+NjU18v7hj2ejU3A==}
     engines: {node: '>=14'}
+    deprecated: Package no longer supported. See https://github.com/open-telemetry/opentelemetry-js/pull/7077
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
@@ -2252,12 +2253,14 @@ packages:
   '@opentelemetry/sdk-trace-base@1.27.0':
     resolution: {integrity: sha512-btz6XTQzwsyJjombpeqCX6LhiMQYpzt2pIYNPnw0IPO/3AhT6yjnf8Mnv3ZC2A4eRYOjqrg+bfaXg9XHDRJDWQ==}
     engines: {node: '>=14'}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
   '@opentelemetry/sdk-trace-node@1.27.0':
     resolution: {integrity: sha512-dWZp/dVGdUEfRBjBq2BgNuBlFqHCxyyMc8FsN0NX15X07mxSUO0SZRLyK/fdAVrde8nqFI/FEdMH4rgU9fqJfQ==}
     engines: {node: '>=14'}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
@@ -6356,6 +6359,9 @@ packages:
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
   zustand@5.0.16:
     resolution: {integrity: sha512-Uv7e327ihlCfayfja3hDc0M64Upev1LWBKpRobdK4NyovDDPeeX4imWXc/wzC1yc6fkYPoAY/ncKVPAs2jrtQw==}
@@ -11692,6 +11698,8 @@ snapshots:
       zod: 3.25.76
 
   zod@3.25.76: {}
+
+  zod@4.6.7: {}
 
   zustand@5.0.16(@types/react@18.3.31)(react@18.3.1):
     optionalDependencies:
