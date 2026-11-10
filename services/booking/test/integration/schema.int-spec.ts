@@ -47,6 +47,7 @@ describe("booking schema (Postgres constraints)", () => {
       "event_snapshots",
       "idempotency_keys",
       "order_items",
+      "order_saga_work",
       "orders",
       "outbox_events",
       "processed_events",
@@ -56,6 +57,32 @@ describe("booking schema (Postgres constraints)", () => {
       "voucher_redemptions",
       "vouchers",
     ]);
+  });
+
+  it("constrains durable saga work and keeps an index for active order expiry", async () => {
+    const id = await order();
+    const insert = (kind: string, payload: string) =>
+      db.pool.query(
+        "INSERT INTO order_saga_work(id,order_id,kind,payload) VALUES($1,$2,$3,$4::jsonb)",
+        [randomUUID(), id, kind, payload],
+      );
+    await expect(insert("UNKNOWN", "{}")).rejects.toMatchObject({
+      code: "23514",
+      constraint: "ck_order_saga_work_kind",
+    });
+    await expect(insert("SELL", "[]")).rejects.toMatchObject({
+      code: "23514",
+      constraint: "ck_order_saga_work_payload",
+    });
+    await expect(insert("SELL", "{}")).resolves.toMatchObject({ rowCount: 1 });
+    const index = (
+      await db.pool.query(
+        "SELECT indexdef FROM pg_indexes WHERE indexname='ix_orders_expiry_active'",
+      )
+    ).rows[0].indexdef;
+    expect(index).toContain("WHERE");
+    expect(index).toContain("PENDING");
+    expect(index).toContain("AWAITING_PAYMENT");
   });
 
   it("rejects a second HELD allocation with 23505 and allows reuse after RELEASED", async () => {

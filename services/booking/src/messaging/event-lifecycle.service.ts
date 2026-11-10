@@ -13,18 +13,18 @@ import { ENV, LOGGER } from "../app.tokens";
 import { Env } from "../config/env.schema";
 import { handleEventLifecycle } from "./event-lifecycle.handler";
 import { stockHandler } from "./stock.handler";
-import { CheckoutService } from "../checkout/checkout.service";
+import { paymentHandler } from "./payment.handler";
 
 @Injectable()
 export class EventLifecycleService implements OnApplicationShutdown {
   private readonly pool: Pool;
   private consumer?: InboxConsumer;
   private stock?: InboxConsumer;
+  private payment?: InboxConsumer;
   private relay?: OutboxRelay;
   constructor(
     @Inject(ENV) private readonly env: Env,
     @Inject(LOGGER) private readonly logger: Logger,
-    @Inject(CheckoutService) private readonly checkout: Pick<CheckoutService, "release">,
   ) {
     this.pool = new Pool({
       connectionString: env.DATABASE_URL,
@@ -68,15 +68,37 @@ export class EventLifecycleService implements OnApplicationShutdown {
       topics: [Topics.MERCH_STOCK],
       db: pgDatabase(this.pool),
       logger: this.logger,
-      handler: stockHandler((user, event, seats) => this.checkout.release(user, event, seats)),
+      handler: stockHandler(),
     });
     await this.stock.start();
+    this.payment = createInboxConsumer({
+      kafka,
+      groupId: "booking-payment-saga",
+      consumerName: "booking-payment-saga",
+      topics: [Topics.PAYMENT_EVENTS],
+      db: pgDatabase(this.pool),
+      logger: this.logger,
+      handler: async (exec, message) => {
+        await paymentHandler(exec, message);
+        this.logger.info(
+          {
+            request_id: message.message_id,
+            trace_id: message.trace_id,
+            message_id: message.message_id,
+            type: message.type,
+          },
+          "booking: payment saga applied or duplicate",
+        );
+      },
+    });
+    await this.payment.start();
     this.relay = new OutboxRelay({ kafka, db: pgDatabase(this.pool), logger: this.logger });
     await this.relay.start();
   }
   async stop(): Promise<void> {
     await this.consumer?.stop();
     await this.stock?.stop();
+    await this.payment?.stop();
     await this.relay?.stop();
   }
   async onApplicationShutdown(): Promise<void> {

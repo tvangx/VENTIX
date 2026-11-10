@@ -1,6 +1,6 @@
-# Booking service — T-201 / T-202 / T-203 / T-204 / T-301
+# Booking service — T-201 / T-202 / T-203 / T-204 / T-301 / T-303
 
-Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis; T-203b thêm prefetch seat pricing; T-204 thêm trạng thái ghế, SSE và sweeper hold. T-301 thêm checkout và stock saga; sweeper order/payment thuộc T-303. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
+Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis; T-203b thêm prefetch seat pricing; T-204 thêm trạng thái ghế, SSE và sweeper hold. T-301 thêm checkout và stock saga; T-303 thêm saga thanh toán và sweeper order. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
 
 ## Checkout và stock saga (T-301)
 
@@ -25,7 +25,7 @@ Lua kiểm tra tất cả seat key và hold membership trước mọi ghi; sai c
 
 MerchQuotePort chỉ được gọi nếu có merch_items. Client HTTP thật POST trực tiếp MERCH_INTERNAL_URL/v1/internal/quotes với X-Internal-Key, không theo redirect. Timeout mặc định 800 ms bao gồm body, 1 retry; opossum mở mạch sau tối thiểu 5 request với tỷ lệ lỗi ≥50%, thử lại sau 10 giây. Kiểm tra SKU/quantity, số nguyên an toàn, tổng tiền và từ chối combo trong quote. Lỗi/mạch mở trả 503 MERCH_UNAVAILABLE. Order chỉ có vé không gọi client, kể cả khi mạch đang mở.
 
-Consumer booking-checkout-stock đọc merch.stock qua Inbox. StockReserved khớp đủ các dòng merch chuyển PENDING → AWAITING_PAYMENT và outbox; duplicate/stale bỏ qua. Reserved sau hạn không mở thanh toán. StockRejected cho PENDING/AWAITING_PAYMENT chuyển CANCELLED, trả GA, RELEASED allocations, nhả Redis và ghi OrderCancelled với reason STOCK_REJECTED. Cleanup Redis trước commit: lỗi thì rollback DB/Inbox để retry; nếu commit thất bại sau cleanup, allocation DB vẫn chặn oversell. Schema/reservations sai đi DLQ qua thư viện Inbox. Stock consumer và OutboxRelay khởi động/dừng cùng lifecycle. EVENT_CONSUMER_ENABLED=false chỉ dùng test HTTP/OpenAPI, cũng tắt stock/relay. Giới hạn relay hiện có: chạy một relay cho booking_db để bảo toàn thứ tự key.
+Consumer booking-checkout-stock đọc merch.stock qua Inbox. StockReserved khớp đủ các dòng merch chuyển PENDING → AWAITING_PAYMENT và outbox; duplicate/stale bỏ qua. Reserved sau hạn không mở thanh toán. StockRejected cho PENDING/AWAITING_PAYMENT chuyển CANCELLED, trả GA, RELEASED allocations, ghi công việc nhả Redis và OrderCancelled với reason STOCK_REJECTED trong cùng transaction. Từ T-303, cleanup Redis chạy sau commit qua hàng công việc bền vững; lỗi giữ công việc để retry. Schema/reservations sai đi DLQ qua thư viện Inbox. Stock/payment consumer và OutboxRelay khởi động/dừng cùng lifecycle. EVENT_CONSUMER_ENABLED=false chỉ dùng test HTTP/OpenAPI, cũng tắt stock/payment/relay và worker saga. Giới hạn relay hiện có: chạy một relay cho booking_db để bảo toàn thứ tự key.
 
 ```mermaid
 sequenceDiagram
@@ -52,9 +52,9 @@ sequenceDiagram
   D-->>K: OrderAwaitingPayment hoặc OrderCancelled qua relay
 ```
 
-Env: ORDER_PAYMENT_WINDOW_SECONDS=900, ORDER_EXPIRY_GRACE_SECONDS=30 (dành cho T-303), MERCH_INTERNAL_URL=http://localhost:3007, MERCH_QUOTE_TIMEOUT_MS=800. INTERNAL_API_KEY đã có từ T-203b. Không migration mới. Khi S-206 chưa có, dùng pricing:seed bên dưới trên snapshot giả local; integration dùng container và HTTP server giả, không sửa DB service khác.
+Env: ORDER_PAYMENT_WINDOW_SECONDS=900, ORDER_EXPIRY_GRACE_SECONDS=30, MERCH_INTERNAL_URL=http://localhost:3007, MERCH_QUOTE_TIMEOUT_MS=800. INTERNAL_API_KEY đã có từ T-203b. T-301 không thêm migration; migration của T-303 mô tả bên dưới. Khi S-206 chưa có, dùng pricing:seed bên dưới trên snapshot giả local; integration dùng container và HTTP server giả, không sửa DB service khác.
 
-Kiểm chứng: [run report T-301](../../docs/agent/runs/T-301.md). PaymentSucceeded/Failed, order sweeper, sell_seats, voucher/combo và Waiting Room ngoài phạm vi.
+Kiểm chứng checkout: [run report T-301](../../docs/agent/runs/T-301.md); thanh toán/sweeper: [run report T-303](../../docs/agent/runs/T-303.md). Voucher/combo và Waiting Room chưa thuộc phạm vi đã triển khai.
 
 ## Prefetch seat pricing (T-203b)
 
@@ -184,19 +184,20 @@ client phải lấy snapshot mới; TTL và trạng thái thực của ghế kh�
 
 ## Schema và ràng buộc
 
-| Bảng                  | Vai trò / khóa                                                                                        |
-| --------------------- | ----------------------------------------------------------------------------------------------------- |
-| `orders`              | UUID, tiền bigint VND, idempotency key unique, timestamps và version                                  |
-| `order_items`         | FK order; CHECK chỉ `TICKET_SEAT`, `TICKET_GA`, `MERCH`                                               |
-| `seat_allocations`    | FK order; CHECK `HELD`, `SOLD`, `RELEASED`; unique theo event/seat khi active                         |
-| `ticket_class_stock`  | PK `class_id`; CHECK `0 <= sold <= total`                                                             |
-| `event_snapshots`     | PK `event_id`; event/seat-map version, ticket_classes/sale_window JSONB; pricing_ready mặc định false |
-| `seat_pricing`        | PK `(event_id, seat_id)`; index `(event_id, seat_map_version)`                                        |
-| `vouchers`            | UUID, code unique, discount/max uses/expiry; chưa có API voucher                                      |
-| `voucher_redemptions` | PK `(voucher_id, order_id)`, FK nội bộ tới voucher/order                                              |
-| `idempotency_keys`    | PK key, user_id, request_hash, response JSONB, created_at                                             |
-| `outbox_events`       | SQL dùng chung; index chưa publish theo created_at                                                    |
-| `processed_events`    | SQL dùng chung; PK `(message_id, consumer)`                                                           |
+| Bảng                  | Vai trò / khóa                                                                                                             |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `orders`              | UUID, tiền bigint VND, idempotency key unique, timestamps và version                                                       |
+| `order_items`         | FK order; CHECK chỉ `TICKET_SEAT`, `TICKET_GA`, `MERCH`                                                                    |
+| `seat_allocations`    | FK order; CHECK `HELD`, `SOLD`, `RELEASED`; unique theo event/seat khi active                                              |
+| `ticket_class_stock`  | PK `class_id`; CHECK `0 <= sold <= total`                                                                                  |
+| `event_snapshots`     | PK `event_id`; event/seat-map version, ticket_classes/sale_window JSONB; pricing_ready mặc định false                      |
+| `seat_pricing`        | PK `(event_id, seat_id)`; index `(event_id, seat_map_version)`                                                             |
+| `vouchers`            | UUID, code unique, discount/max uses/expiry; chưa có API voucher                                                           |
+| `voucher_redemptions` | PK `(voucher_id, order_id)`, FK nội bộ tới voucher/order                                                                   |
+| `idempotency_keys`    | PK key, user_id, request_hash, response JSONB, created_at                                                                  |
+| `outbox_events`       | SQL dùng chung; index chưa publish theo created_at                                                                         |
+| `processed_events`    | SQL dùng chung; PK `(message_id, consumer)`                                                                                |
+| `order_saga_work`     | UUID, order_id (tham chiếu logic nội bộ), kind CHECK PAYMENT/SELL/RELEASE, payload JSONB object, created_at; xóa sau xử lý |
 
 Khóa tự nhiên/khóa kép giữ theo ERD; không thêm UUID id thay thế cho các khóa này. ID UUID do ứng dụng cấp (UUIDv7 theo kiến trúc). Bảng nghiệp vụ có created_at; order/allocation/stock/voucher có updated_at + version. Với raw SQL, bên ghi phải tự tăng version và cập nhật updated_at; `@updatedAt` chỉ do Prisma Client xử lý.
 
@@ -205,6 +206,69 @@ Khóa tự nhiên/khóa kép giữ theo ERD; không thêm UUID id thay thế cho
 ERD kiến trúc §5.3 còn liệt kê COMBO. Tuấn đã xác nhận dùng CHECK T-201 loại COMBO, giữ nguyên ERD trong task này. `REFUND_REQUIRED` được cho phép theo ADR-0009; CHECK kiểm tra tập trạng thái, logic chuyển trạng thái có điều kiện thuộc các task saga sau.
 
 Client sinh riêng ở `generated/prisma` (không commit, tránh ghi đè client của service khác).
+
+## Saga thanh toán và hết hạn (T-303)
+
+Consumer `booking-payment-saga` đọc `payment.events` qua Inbox. Thanh toán đúng số tiền
+chuyển `AWAITING_PAYMENT → CONFIRMED`, allocations `HELD → SOLD`, ghi `OrderConfirmed`
+đủ items/payment_id/tiền vé và merch trong cùng transaction. `PaymentFailed` chỉ được
+ghi nhận trong Inbox; không hủy order, khách có thể thanh toán lại (ADR-0009 D7).
+Order đã EXPIRED/FAILED/CANCELLED nhận thanh toán thành công chuyển REFUND_REQUIRED,
+phát `OrderCancelled{LATE_PAYMENT}`; `RefundCompleted` chuyển sang REFUNDED.
+Tự hoàn tiền phía payment thuộc T-401.
+
+`order_saga_work` lưu PaymentSucceeded đến khi order còn PENDING cùng transaction Inbox.
+Worker áp dụng khi StockReserved chuyển order sang AWAITING_PAYMENT; nếu order đã hết
+hạn/bị hủy thì chuyển REFUND_REQUIRED. Không phụ thuộc thời gian retry Kafka hay RAM.
+
+```mermaid
+sequenceDiagram
+  participant K as Kafka
+  participant B as Booking Inbox
+  participant D as booking_db
+  participant W as Saga worker
+  participant R as Redis
+  K->>B: PaymentSucceeded
+  alt Order PENDING
+    B->>D: TX Inbox + PAYMENT work
+    K->>B: StockReserved
+    B->>D: TX AWAITING_PAYMENT + outbox
+    W->>D: TX PAYMENT work → CONFIRMED/SOLD + SELL work + OrderConfirmed
+  else Order AWAITING_PAYMENT
+    B->>D: TX Inbox + CONFIRMED/SOLD + SELL work + OrderConfirmed
+  else Order EXPIRED/FAILED/CANCELLED
+    B->>D: TX Inbox + REFUND_REQUIRED + OrderCancelled LATE_PAYMENT
+  end
+  W->>D: Khóa order và đọc công việc đã commit
+  W->>R: Lua SELL hoặc RELEASE (có thể retry)
+  W->>D: Xóa công việc, commit
+  D-->>K: Outbox relay
+```
+
+Worker chạy mỗi giây sau khi startup/rehydrate sẵn sàng, bật cùng
+`EVENT_CONSUMER_ENABLED`. Sweeper lấy tối đa 100 order PENDING/AWAITING_PAYMENT quá
+`expires_at + ORDER_EXPIRY_GRACE_SECONDS` (mặc định 30 giây), dùng
+`FOR UPDATE SKIP LOCKED`. EXPIRED, RELEASED, trả GA và Outbox OrderExpired là một
+transaction; merch release tồn kho qua sự kiện, booking không truy cập DB merch.
+
+Cập nhật Redis được lưu bền vững trong `order_saga_work` cùng transaction DB và áp
+dụng sau commit bằng Lua `saga_seats.lua`: SELL ghi S không TTL, sold set, dọn
+hold/hexp/checkout và publish S; RELEASE kiểm tra holder và deadline checkout.
+Khóa user/event và kiểm tra allocation mới ngăn cleanup trễ nhả ghế của order mới,
+kể cả cùng người dùng và cùng deadline. PostgreSQL luôn là nguồn sự thật; Redis có
+thể chậm một vài lượt worker. Lỗi Redis giữ công việc để retry sau restart.
+
+Migration `20261110062146_order_saga_work` được tạo bằng `migrate dev --create-only`
+trên PostgreSQL Testcontainers tạm rồi sửa SQL thêm CHECK và partial expiry index.
+Áp dụng bằng `pnpm --filter @ticketing/booking exec prisma migrate deploy`; không reset DB.
+Rollback ứng dụng giữ schema/hàng công việc, không xóa công việc chưa xử lý.
+
+Theo dõi `booking_orders_expired_total`, `booking_order_saga_work_total{outcome}`
+và log có order_id/request_id/trace_id. Chẩn đoán backlog bằng:
+
+```sql
+SELECT kind, count(*), min(created_at) FROM order_saga_work GROUP BY kind;
+```
 
 ## Migration tiếp theo và rollback
 

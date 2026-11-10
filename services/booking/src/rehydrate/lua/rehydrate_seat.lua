@@ -13,12 +13,16 @@ if ARGV[1] == 'SOLD' then
 end
 checkType(KEYS[3], 'set')
 checkType(KEYS[4], 'zset')
+local marker = string.gsub(KEYS[1], '^seat:', 'checkout:')
+checkType(marker, 'string')
 local time = redis.call('TIME')
 local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
 local expires = tonumber(ARGV[4])
 if expires <= now then return 0 end
 -- PXAT giữ đúng hạn DB kể cả khi xử lý trang kéo dài.
 if not redis.call('SET', KEYS[1], ARGV[3], 'PXAT', expires, 'NX') then return 0 end
+-- Khôi phục fence của order để cleanup sau restart vẫn chỉ nhả đúng hold.
+redis.call('SET', marker, ARGV[3] .. ':' .. ARGV[4], 'PXAT', expires)
 redis.call('SADD', KEYS[3], ARGV[2])
 if redis.call('PEXPIRETIME', KEYS[3]) < expires then redis.call('PEXPIREAT', KEYS[3], expires) end
 redis.call('ZADD', KEYS[4], expires, ARGV[2])

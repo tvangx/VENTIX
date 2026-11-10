@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
+import { Inject, Injectable, OnApplicationShutdown } from "@nestjs/common";
 import { Pool } from "pg";
 import { Database, pgDatabase, SqlExecutor } from "@ticketing/outbox-inbox";
 import { randomUUID } from "node:crypto";
@@ -8,7 +8,7 @@ import { ENV } from "../app.tokens";
 import { Env } from "../config/env.schema";
 
 @Injectable()
-export class CheckoutRepository implements OnModuleDestroy {
+export class CheckoutRepository implements OnApplicationShutdown {
   readonly pool: Pool;
   readonly db: Database;
   constructor(@Inject(ENV) env: Env) {
@@ -21,7 +21,7 @@ export class CheckoutRepository implements OnModuleDestroy {
     this.pool.on("error", () => undefined);
     this.db = pgDatabase(this.pool);
   }
-  async onModuleDestroy(): Promise<void> {
+  async onApplicationShutdown(): Promise<void> {
     await this.pool.end();
   }
 }
