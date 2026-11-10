@@ -1,6 +1,50 @@
-# Booking service — T-201 / T-202 / T-203 / T-204 / T-301 / T-303
+# Booking service — T-201 / T-202 / T-203 / T-204 / T-301 / T-303 / T-304
 
 Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis; T-203b thêm prefetch seat pricing; T-204 thêm trạng thái ghế, SSE và sweeper hold. T-301 thêm checkout và stock saga; T-303 thêm saga thanh toán và sweeper order. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
+
+## Waiting Room (T-304)
+
+Mặc định `ADMISSION_REQUIRED=true`. Với sale phase đang hoạt động có `queue_enabled=true`, client dùng JWT đăng nhập RS256 để gọi `POST /v1/queue/join {event_id}`, rồi mở `GET /v1/queue/status?event_id=<UUID>` bằng SSE có header Authorization. Không gửi token trong URL; trình duyệt dùng fetch streaming để gửi header.
+
+Join trả 201 với `status`, `position` (ZRANK, bắt đầu từ 0), `estimated_wait_sec`; idempotent theo user/event, không phụ thuộc Idempotency-Key. Join lặp không đổi score hay gia hạn admission. Sequence Redis tạo FIFO kể cả nhiều user đến cùng mili giây. Status không tự join. SSE phát `event: status` mỗi giây khi waiting; trạng thái admitted/disabled/not_joined là terminal, server đóng kết nối. Sau khi đã gửi headers, lỗi được phát bằng `event: error {code}` rồi đóng; client reconnect có backoff. Server đóng client chậm khi write buffer đầy, giới hạn số stream mỗi replica và dọn timer khi disconnect/shutdown.
+
+```json
+{
+  "status": "admitted",
+  "position": null,
+  "estimated_wait_sec": 0,
+  "admission_token": "<JWT>",
+  "expires_at": "<UTC ISO-8601>"
+}
+```
+
+Client gửi `X-Admission-Token` cùng Authorization khi `POST /v1/holds`, `POST /v1/checkout` và `GET /v1/events/:id/seat-stream`. GET/DELETE holds vẫn cho đọc/nhả hold cũ. Phase `queue_enabled=false` bỏ qua guard; cờ ADMISSION_REQUIRED=false là bypass toàn cục có chủ ý. Snapshot thiếu cấu hình phase hợp lệ không được tự coi là queue-disabled. Không đổi Kafka contract, schema DB hoặc API nội bộ của service khác.
+
+Token HS256 chỉ dùng riêng cho admission, claims `sub`, `evt`, `jti`, `iat`, `exp`, issuer `booking-admission`, audience `booking`. Guard chỉ nhận HS256, kiểm tra đúng user/event, thời hạn 5–10 phút và grant còn hiệu lực trong Redis với cùng jti/iat/exp. Thiếu/hết hạn/sai token trả 403 ADMISSION_REQUIRED. Redis lỗi trả 503 QUEUE_UNAVAILABLE; đường POST có Retry-After: 1. Reconnect phát lại token từ cùng grant, không gia hạn TTL. Redis mất dữ liệu thì queue/admission mất theo, token cũ không vượt guard; khách phải join lại. Order/allocation và chốt chống oversell vẫn nằm trong PostgreSQL.
+
+Worker đọc `sale_phases` đã đồng bộ vào `event_snapshots.sale_window` của booking_db; chỉ xử lý sự kiện APPROVED/PUBLISHED trong phase đang bán. `admit_rate` là số user/tick 1 giây theo spec T-304; không catch-up tick bỏ lỡ. Hai replica có thể scan, nhưng Lua chỉ cho một replica cấp mỗi event/tick: Redis TIME xác định tick, SET NX PX giữ khóa tới đầu giây Redis kế tiếp; khóa, prune grant hết hạn, cấp grant và dequeue chạy cùng script. Worker chết sau Lua thì grant vẫn có để SSE replica khác đọc và ký token. Phase deadline được kiểm tra lại trong Lua để replica bị pause không cấp sau hạn.
+
+Trần `ADMISSION_MAX_ACTIVE` áp theo event, số được cấp mỗi tick là min(admit_rate, số slot còn lại). Slot tồn tại tới hạn admission, không nhả sớm khi checkout. Estimated wait = floor(position/admit_rate)+1, chỉ là ước lượng tốc độ; chạm trần active có thể chờ lâu hơn. Mỗi tick cấp tối đa 10000 user theo giới hạn cấu hình cap; Lua không dùng KEYS/SCAN. Queue/sequence có TTL, admitted/grant metadata có TTL và score hết hạn riêng từng user để prune chính xác.
+
+| Key                      | Kiểu   | Nội dung                             |
+| ------------------------ | ------ | ------------------------------------ |
+| `queue:{evt:E}`          | ZSET   | member user ID, score FIFO sequence  |
+| `queue-sequence:{evt:E}` | String | INCR cho FIFO, cùng TTL queue        |
+| `admitted:{evt:E}`       | ZSET   | user ID → expiry ms                  |
+| `admission-data:{evt:E}` | Hash   | user ID → jti/iat/exp; không lưu JWT |
+| `admission-tick:{evt:E}` | String | Khóa NX PX đến đầu tick kế tiếp      |
+
+| Biến                        | Mặc định | Giới hạn / ý nghĩa                                                                                      |
+| --------------------------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| ADMISSION_REQUIRED          | true     | Bật bảo vệ cho phase queue-enabled                                                                      |
+| ADMISSION_TOKEN_SECRET      | Không có | Bắt buộc khi admission bật, ít nhất 32 ký tự ngẫu nhiên; mọi replica dùng cùng secret từ secret manager |
+| ADMISSION_TOKEN_TTL_SECONDS | 600      | 300–600 giây                                                                                            |
+| ADMISSION_MAX_ACTIVE        | 1000     | 1–10000 user/event                                                                                      |
+| QUEUE_TTL_SECONDS           | 86400    | 600–604800 giây, refresh khi join                                                                       |
+| QUEUE_MAX_STREAMS           | 1000     | 1–10000 stream/replica                                                                                  |
+| QUEUE_WORKER_ENABLED        | true     | Tắt scheduler khi test thủ công hoặc export OpenAPI; độc lập EVENT_CONSUMER_ENABLED                     |
+
+Không có secret mặc định; điền ADMISSION_TOKEN_SECRET vào môi trường riêng trước khi chạy. Metrics: `booking_queue_admitted_total`, `booking_queue_operations_total{outcome}`, `booking_queue_streams`; không có label user/event. Kong dev và loadtest cho phép X-Admission-Token trong CORS. Luồng đã kiểm chứng đến checkout; E2E tới payment/ticket thuộc nghiệm thu G2 chung, không phải bằng chứng của riêng T-304. Xem [run report](../../docs/agent/runs/T-304.md).
 
 ## Checkout và stock saga (T-301)
 
@@ -15,7 +59,7 @@ Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-2
 }
 ```
 
-Có ít nhất một item. Mảng bỏ qua mặc định rỗng; mỗi mảng tối đa 1000 phần tử, không trùng ID, quantity nguyên 1–1000. Không nhận giá/user_id/combo từ client. `voucher_code` có giá trị trả `422 VOUCHER_NOT_SUPPORTED`. Trước T-304 giữ `ADMISSION_REQUIRED=false`; bật true từ chối checkout bằng `403 ADMISSION_REQUIRED`.
+Có ít nhất một item. Mảng bỏ qua mặc định rỗng; mỗi mảng tối đa 1000 phần tử, không trùng ID, quantity nguyên 1–1000. Không nhận giá/user_id/combo từ client. `voucher_code` có giá trị trả `422 VOUCHER_NOT_SUPPORTED`. AdmissionGuard kiểm tra token khi phase bật queue (xem T-304 ở trên).
 
 Response 201 gồm order_id, status, ticket_amount_vnd, merch_amount_vnd, total_amount_vnd, expires_at. Cùng key/user/hash trả lại response lúc tạo, kể cả sau khi trạng thái đổi; khác user/hash trả `422 IDEMPOTENCY_KEY_REUSED`. Hash chuẩn hóa thứ tự các mảng. Key có phạm vi toàn bảng theo schema T-201. Advisory lock theo key giữ tới commit; response, order và outbox ghi cùng transaction. Checkout khác key của cùng user/event cũng được tuần tự hóa để cleanup không tranh nhau.
 
@@ -145,7 +189,7 @@ Không FLUSHALL Redis dev; test rehydrate tự dùng container Redis riêng, xó
   Mỗi 500 ms chỉ gửi trạng thái cuối cùng của mỗi ghế thay đổi; không gửi lô rỗng hay toàn map.
   H = held, A = available, S = sold; luồng bán phát S thuộc task checkout sau này.
 - Hai endpoint dùng JWT bearer của service; event UUID được validate và chuyển về chữ thường.
-  SSE từ chối `403 ADMISSION_REQUIRED` khi bật Waiting Room, giống holds, đến khi T-304 có guard admission.
+  SSE yêu cầu X-Admission-Token hợp lệ khi phase bật Waiting Room, giống holds/checkout (T-304).
   FE dùng fetch streaming hỗ trợ header Authorization; không truyền token qua query string.
   Qua Kong dùng `/api/booking/v1/events/:id/seat-status` hoặc `seat-stream`.
 - Một kết nối Redis Pub/Sub dùng chung cho mỗi replica subscribe `delta:{evt:*}`. Snapshot Lua phát marker
@@ -317,13 +361,13 @@ Content-Type: application/json
 
 Đường POST chỉ đọc event_snapshots trong booking_db, không gọi event-service. Snapshot cho bán ở trạng thái APPROVED hoặc PUBLISHED; sale_window chứa `{starts_at,ends_at}` hoặc mảng các phase có hai trường này (UTC ISO-8601, cùng tên trường sale_phases trong event-contracts). Cửa sổ bán bao gồm starts_at, không bao gồm ends_at. Snapshot thiếu, trạng thái khác, cửa sổ sai/chưa mở/đã đóng: `404 EVENT_NOT_ON_SALE`. Snapshot chưa pricing_ready: `503 EVENT_NOT_READY` và `Retry-After: 1`. T-202 dùng snapshot dựng sẵn trong test; nạp snapshot/pricing thuộc T-203/T-203b.
 
-| Biến               | Mặc định               | Ý nghĩa                                                           |
-| ------------------ | ---------------------- | ----------------------------------------------------------------- |
-| REDIS_URL          | redis://localhost:6379 | Chỉ nhận redis:// hoặc rediss://                                  |
-| HOLD_TTL_SECONDS   | 600                    | Số nguyên 1–86400 giây                                            |
-| HOLD_MAX_SEATS     | 6                      | Số nguyên 1–1000 ghế/user/event                                   |
-| ADMISSION_REQUIRED | false                  | Tới T-304; bật true hiện từ chối POST bằng 403 ADMISSION_REQUIRED |
-| HOLDLOG_ENABLED    | false                  | Chỉ bật trong test T-205 để ghi Stream mỗi lần hold thành công    |
+| Biến               | Mặc định               | Ý nghĩa                                                        |
+| ------------------ | ---------------------- | -------------------------------------------------------------- |
+| REDIS_URL          | redis://localhost:6379 | Chỉ nhận redis:// hoặc rediss://                               |
+| HOLD_TTL_SECONDS   | 600                    | Số nguyên 1–86400 giây                                         |
+| HOLD_MAX_SEATS     | 6                      | Số nguyên 1–1000 ghế/user/event                                |
+| ADMISSION_REQUIRED | true                   | T-304: yêu cầu admission token khi sale phase bật queue        |
+| HOLDLOG_ENABLED    | false                  | Chỉ bật trong test T-205 để ghi Stream mỗi lần hold thành công |
 
 Redis không sẵn sàng hoặc script lỗi: `503 SEAT_HOLD_UNAVAILABLE`, `Retry-After: 1`; không log URL Redis/token/body. Redis dùng noeviction theo ADR-0002. Sau timeout kết quả có thể chưa xác định; client thử lại cùng ghế an toàn nhờ ownership check.
 

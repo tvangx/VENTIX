@@ -27,6 +27,8 @@ describe("seat status HTTP and two SSE replicas", () => {
   const env = (admission = "false") =>
     loadEnv(envSchema, {
       NODE_ENV: "test",
+      ADMISSION_TOKEN_SECRET: "synthetic-admission-key-for-booking-tests",
+      QUEUE_WORKER_ENABLED: "false",
       INTERNAL_API_KEY: "synthetic-test-key",
       DATABASE_URL: db.pool.options.connectionString,
       REDIS_URL: cache.url,
@@ -72,6 +74,8 @@ describe("seat status HTTP and two SSE replicas", () => {
         event,
         randomUUID(),
         JSON.stringify({
+          queue_enabled: true,
+          admit_rate: 100,
           starts_at: new Date(Date.now() - 60000).toISOString(),
           ends_at: new Date(Date.now() + 60000).toISOString(),
         }),
@@ -168,7 +172,7 @@ describe("seat status HTTP and two SSE replicas", () => {
     }
   });
 
-  it("fails closed when admission is required, until T-304", async () => {
+  it("fails closed for a queue-enabled phase without an admission token", async () => {
     const app = await createApp(env("true"), createLogger("seat-test", { level: "silent" }));
     try {
       await app.init();

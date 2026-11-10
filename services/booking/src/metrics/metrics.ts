@@ -7,6 +7,22 @@ import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from "prom
 @Injectable()
 export class MetricsService {
   readonly registry = new Registry();
+  readonly queueStreams = new Gauge({
+    name: "booking_queue_streams",
+    help: "Active private queue SSE connections",
+    registers: [this.registry],
+  });
+  readonly queueAdmitted = new Counter({
+    name: "booking_queue_admitted_total",
+    help: "Users admitted by this replica",
+    registers: [this.registry],
+  });
+  readonly queueOutcomes = new Counter({
+    name: "booking_queue_operations_total",
+    help: "Queue request outcomes",
+    labelNames: ["outcome"] as const,
+    registers: [this.registry],
+  });
   readonly orderExpired = new Counter({
     name: "booking_orders_expired_total",
     help: "Orders expired by this replica",

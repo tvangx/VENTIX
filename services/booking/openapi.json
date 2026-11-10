@@ -84,6 +84,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "X-Admission-Token",
+            "in": "header",
+            "description": "Required for queue-enabled sale phases; HS256 token from queue status SSE",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -296,6 +305,15 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "name": "X-Admission-Token",
+            "in": "header",
+            "description": "Required for queue-enabled sale phases; HS256 token from queue status SSE",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -347,6 +365,15 @@
             "name": "Idempotency-Key",
             "in": "header",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Admission-Token",
+            "in": "header",
+            "description": "Required for queue-enabled sale phases; HS256 token from queue status SSE",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -407,6 +434,111 @@
         ],
         "summary": "Convert held seats and GA/merch items into an order at server prices",
         "tags": ["checkout"]
+      }
+    },
+    "/v1/queue/join": {
+      "post": {
+        "operationId": "QueueController_join",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Idempotency is by JWT user/event via ZADD NX; header does not create another place",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueueEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueStatusDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid event UUID (application/problem+json)"
+          },
+          "401": {
+            "description": "JWT required (application/problem+json)"
+          },
+          "404": {
+            "description": "EVENT_NOT_ON_SALE (application/problem+json)"
+          },
+          "503": {
+            "description": "QUEUE_UNAVAILABLE (application/problem+json); Retry-After: 1"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Join Waiting Room once per authenticated user/event; repeats keep FIFO order",
+        "tags": ["queue"]
+      }
+    },
+    "/v1/queue/status": {
+      "get": {
+        "description": "event: status with QueueStatusDto. Terminal admitted/disabled/not_joined closes stream. Reconnect replays the same unexpired grant. Requires Authorization header; tokens never appear in URL. Post-header errors use event: error with code then close.",
+        "operationId": "QueueController_status",
+        "parameters": [
+          {
+            "name": "event_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid event UUID (application/problem+json)"
+          },
+          "401": {
+            "description": "JWT required (application/problem+json)"
+          },
+          "404": {
+            "description": "EVENT_NOT_ON_SALE (application/problem+json)"
+          },
+          "503": {
+            "description": "QUEUE_UNAVAILABLE (application/problem+json); Retry-After: 1"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stream private queue position once per second, then admission token",
+        "tags": ["queue"]
       }
     }
   },
@@ -657,6 +789,44 @@
           "total_amount_vnd",
           "expires_at"
         ]
+      },
+      "QueueEventDto": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["event_id"]
+      },
+      "QueueStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["waiting", "admitted", "not_joined", "disabled"]
+          },
+          "position": {
+            "type": "number",
+            "nullable": true,
+            "description": "Zero-based ZRANK; null outside queue"
+          },
+          "estimated_wait_sec": {
+            "type": "number",
+            "nullable": true,
+            "description": "Estimate from rate; capacity may delay admission further"
+          },
+          "admission_token": {
+            "type": "string",
+            "description": "HS256 admission JWT; pass in X-Admission-Token"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["status", "position", "estimated_wait_sec"]
       }
     }
   }

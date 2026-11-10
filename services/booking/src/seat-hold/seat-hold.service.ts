@@ -46,14 +46,6 @@ export class SeatHoldService {
   }
 
   async hold(userId: string, input: CreateHoldDto): Promise<HoldResponseDto> {
-    if (this.env.ADMISSION_REQUIRED) {
-      // TODO(T-304): thay bằng guard verify admission token của Waiting Room.
-      throw new ProblemException(
-        "ADMISSION_REQUIRED",
-        403,
-        "Admission is required before holding seats",
-      );
-    }
     const snapshot = await this.snapshots.find(input.event_id);
     const now = Date.now();
     const parsedWindow = saleWindow.safeParse(snapshot?.sale_window);

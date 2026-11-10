@@ -23,6 +23,10 @@ import { CheckoutRepository } from "./checkout/checkout.repository";
 import { CheckoutService } from "./checkout/checkout.service";
 import { OrderSagaWorker } from "./orders/order-saga-worker.service";
 import { MERCH_QUOTE, MerchQuoteClient } from "./clients/merch-quote.client";
+import { QueueController } from "./queue/queue.controller";
+import { QueueService } from "./queue/queue.service";
+import { AdmissionWorker } from "./queue/admission-worker.service";
+import { AdmissionGuard } from "./queue/admission.guard";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -45,11 +49,15 @@ export class AppModule implements NestModule {
         SeatHoldController,
         SeatStatusController,
         CheckoutController,
+        QueueController,
       ],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        QueueService,
+        AdmissionWorker,
+        AdmissionGuard,
         CheckoutRepository,
         CheckoutService,
         OrderSagaWorker,

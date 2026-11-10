@@ -1,6 +1,7 @@
-import { Controller, Get, Param, Res } from "@nestjs/common";
+import { Controller, Get, Param, Res, UseGuards } from "@nestjs/common";
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiProduces,
@@ -11,6 +12,7 @@ import { ProblemException } from "@ticketing/common";
 import type { Response } from "express";
 import { SeatStatusDto, SeatStatusParams } from "./seat-status.dto";
 import { SeatStatusService } from "./seat-status.service";
+import { AdmissionGuard } from "../queue/admission.guard";
 
 @ApiTags("seat-status")
 @ApiBearerAuth()
@@ -46,6 +48,12 @@ export class SeatStatusController {
   }
 
   @Get("seat-stream")
+  @UseGuards(AdmissionGuard)
+  @ApiHeader({
+    name: "X-Admission-Token",
+    required: false,
+    description: "Required for queue-enabled sale phases; HS256 token from queue status SSE",
+  })
   @ApiProduces("text/event-stream")
   @ApiOperation({
     summary:

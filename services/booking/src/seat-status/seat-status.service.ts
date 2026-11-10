@@ -141,13 +141,6 @@ export class SeatStatusService implements OnApplicationBootstrap, BeforeApplicat
   }
 
   async stream(eventId: string, res: Response): Promise<void> {
-    if (this.env.ADMISSION_REQUIRED) {
-      throw new ProblemException(
-        "ADMISSION_REQUIRED",
-        403,
-        "Admission is required before subscribing to seat status",
-      );
-    }
     await this.subscribe();
     if (res.destroyed || this.stopping || this.subscriber?.status !== "ready")
       throw this.unavailable();

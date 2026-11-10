@@ -50,6 +50,8 @@ export async function checkoutFixture() {
     REDIS_URL: cache.url,
     EVENT_CONSUMER_ENABLED: "false",
     REHYDRATE_ENABLED: "false",
+    ADMISSION_TOKEN_SECRET: "synthetic-admission-key-for-booking-tests",
+    QUEUE_WORKER_ENABLED: "false",
     INTERNAL_API_KEY: "synthetic-key",
     MERCH_INTERNAL_URL: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
     MERCH_QUOTE_TIMEOUT_MS: 800,
@@ -78,19 +80,27 @@ export async function checkoutFixture() {
     repository,
     client,
     env,
+    token,
     calls: () => calls,
     mode: (value: typeof mode) => {
       mode = value;
     },
-    post: async (user: string, input: CheckoutDto, key?: string): Promise<request.Response> => {
+    post: async (
+      user: string,
+      input: CheckoutDto,
+      key?: string,
+      admission?: string,
+    ): Promise<request.Response> => {
       const req = request(app.getHttpServer())
         .post("/v1/checkout")
         .set("Authorization", `Bearer ${await token(user)}`);
       if (key !== undefined) req.set("Idempotency-Key", key);
+      if (admission !== undefined) req.set("X-Admission-Token", admission);
       return req.send(input);
     },
-    seed: async (capacity = 100) => {
+    seed: async (capacity = 100, queue = false) => {
       const data = lifecycleData();
+      data.sale_phases[0].queue_enabled = queue;
       data.ticket_classes[0].capacity = capacity;
       const ga = randomUUID();
       const classes = [

@@ -62,7 +62,16 @@ export const envSchema = z
     HOLD_MAX_SEATS: z.coerce.number().int().positive().max(1000).default(6),
     ADMISSION_REQUIRED: z
       .enum(["true", "false"])
-      .default("false")
+      .default("true")
+      .transform((value) => value === "true"),
+    ADMISSION_TOKEN_SECRET: z.string().min(32).optional(),
+    ADMISSION_TOKEN_TTL_SECONDS: z.coerce.number().int().min(300).max(600).default(600),
+    ADMISSION_MAX_ACTIVE: z.coerce.number().int().positive().max(10000).default(1000),
+    QUEUE_TTL_SECONDS: z.coerce.number().int().min(600).max(604800).default(86400),
+    QUEUE_MAX_STREAMS: z.coerce.number().int().positive().max(10000).default(1000),
+    QUEUE_WORKER_ENABLED: z
+      .enum(["true", "false"])
+      .default("true")
       .transform((value) => value === "true"),
     HOLDLOG_ENABLED: z
       .enum(["true", "false"])
@@ -87,7 +96,16 @@ export const envSchema = z
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
     ...authEnvShape,
   })
-  .superRefine((env, ctx) => refineAuthEnv(env, ctx));
+  .superRefine((env, ctx) => {
+    refineAuthEnv(env, ctx);
+    if (env.ADMISSION_REQUIRED && !env.ADMISSION_TOKEN_SECRET)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ADMISSION_TOKEN_SECRET"],
+        message:
+          "ADMISSION_TOKEN_SECRET is required when admission is enabled (at least 32 characters)",
+      });
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

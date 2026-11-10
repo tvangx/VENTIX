@@ -4,6 +4,8 @@ import { BookingStartupService } from "./booking-startup.service";
 
 describe("startup readiness gate", () => {
   const env = envSchema.parse({
+    ADMISSION_TOKEN_SECRET: "synthetic-admission-key-for-booking-tests",
+    QUEUE_WORKER_ENABLED: "false",
     INTERNAL_API_KEY: "synthetic-test-key",
     DATABASE_URL: "postgresql://booking_user:test@localhost/booking_db",
     AUTH_ISSUER: "test",

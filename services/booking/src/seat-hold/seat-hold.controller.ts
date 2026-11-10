@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, Post, Query, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -20,6 +30,7 @@ import {
   ReleaseHoldDto,
 } from "./seat-hold.dto";
 import { SeatHoldService } from "./seat-hold.service";
+import { AdmissionGuard } from "../queue/admission.guard";
 
 @ApiTags("holds")
 @ApiBearerAuth()
@@ -46,6 +57,12 @@ export class SeatHoldController {
   }
 
   @Post()
+  @UseGuards(AdmissionGuard)
+  @ApiHeader({
+    name: "X-Admission-Token",
+    required: false,
+    description: "Required for queue-enabled sale phases; HS256 token from queue status SSE",
+  })
   @ApiOperation({
     summary: "Atomically hold all requested seats; repeated requests renew their TTL",
   })

@@ -54,12 +54,6 @@ export class CheckoutService {
       throw new ProblemException("VOUCHER_NOT_SUPPORTED", 422, "Vouchers are not supported");
     if (!input.seat_ids.length && !input.ga_items.length && !input.merch_items.length)
       throw new ProblemException("EMPTY_CHECKOUT", 400, "At least one item is required");
-    if (this.env.ADMISSION_REQUIRED)
-      throw new ProblemException(
-        "ADMISSION_REQUIRED",
-        403,
-        "Admission is required before checkout",
-      );
     // Chuẩn hóa thứ tự trước khi hash: cùng lựa chọn không phụ thuộc thứ tự JSON/array.
     const normalized = {
       event_id: input.event_id,

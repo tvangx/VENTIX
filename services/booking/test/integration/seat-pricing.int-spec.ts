@@ -261,6 +261,8 @@ describe("seat pricing prefetch (PostgreSQL)", () => {
     const config = {
       NODE_ENV: "test",
       DATABASE_URL: db.pool.options.connectionString!,
+      ADMISSION_TOKEN_SECRET: "synthetic-admission-key-for-booking-tests",
+      QUEUE_WORKER_ENABLED: "false",
       INTERNAL_API_KEY: "synthetic-key",
       AUTH_ISSUER: "test",
       AUTH_AUDIENCE: "test",

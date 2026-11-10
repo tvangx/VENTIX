@@ -10,6 +10,8 @@ jest.mock("pg", () => ({ Pool: jest.fn() }));
 describe("seat pricing worker recovery", () => {
   const env = envSchema.parse({
     DATABASE_URL: "postgresql://booking_user:test@localhost/booking_db",
+    ADMISSION_TOKEN_SECRET: "synthetic-admission-key-for-booking-tests",
+    QUEUE_WORKER_ENABLED: "false",
     INTERNAL_API_KEY: "synthetic-key",
     AUTH_ISSUER: "test",
     AUTH_AUDIENCE: "test",

@@ -2,6 +2,7 @@ import { loadEnv } from "@ticketing/common";
 import { envSchema } from "./env.schema";
 
 const base = {
+  ADMISSION_TOKEN_SECRET: "synthetic-admission-key-for-booking-tests",
   INTERNAL_API_KEY: "synthetic-test-key",
   DATABASE_URL: "postgresql://booking_user:booking_dev@localhost:5432/booking_db",
   AUTH_ISSUER: "https://identity.test",
@@ -20,7 +21,10 @@ describe("envSchema", () => {
     expect(env.REDIS_URL).toBe("redis://localhost:6379");
     expect(env.HOLD_TTL_SECONDS).toBe(600);
     expect(env.HOLD_MAX_SEATS).toBe(6);
-    expect(env.ADMISSION_REQUIRED).toBe(false);
+    expect(env.ADMISSION_REQUIRED).toBe(true);
+    expect(env.ADMISSION_TOKEN_TTL_SECONDS).toBe(600);
+    expect(env.ADMISSION_MAX_ACTIVE).toBe(1000);
+    expect(env.QUEUE_WORKER_ENABLED).toBe(true);
     expect(env.HOLDLOG_ENABLED).toBe(false);
     expect(env.REHYDRATE_ENABLED).toBe(true);
     expect(env.EVENT_CONSUMER_ENABLED).toBe(true);
@@ -33,6 +37,19 @@ describe("envSchema", () => {
 
   it("fails fast when DATABASE_URL is missing", () => {
     expect(() => loadEnv(envSchema, { ...base, DATABASE_URL: undefined })).toThrow(/DATABASE_URL/);
+  });
+
+  it("requires a secret by default but permits explicit admission disablement", () => {
+    expect(() => loadEnv(envSchema, { ...base, ADMISSION_TOKEN_SECRET: undefined })).toThrow(
+      /ADMISSION_TOKEN_SECRET/,
+    );
+    expect(
+      loadEnv(envSchema, {
+        ...base,
+        ADMISSION_REQUIRED: "false",
+        ADMISSION_TOKEN_SECRET: undefined,
+      }).ADMISSION_REQUIRED,
+    ).toBe(false);
   });
 
   it.each([undefined, ""])("requires an internal API key (%s)", (key) => {
@@ -82,6 +99,14 @@ describe("envSchema", () => {
   });
 
   it.each([
+    { ADMISSION_TOKEN_SECRET: "short" },
+    { ADMISSION_TOKEN_TTL_SECONDS: "299" },
+    { ADMISSION_TOKEN_TTL_SECONDS: "601" },
+    { ADMISSION_MAX_ACTIVE: "0" },
+    { ADMISSION_MAX_ACTIVE: "10001" },
+    { QUEUE_TTL_SECONDS: "0" },
+    { QUEUE_MAX_STREAMS: "0" },
+    { QUEUE_WORKER_ENABLED: "yes" },
     { HOLD_TTL_SECONDS: "0" },
     { HOLD_TTL_SECONDS: "1.5" },
     { HOLD_TTL_SECONDS: "86401" },

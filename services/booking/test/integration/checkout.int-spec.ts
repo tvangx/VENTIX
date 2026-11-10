@@ -106,13 +106,13 @@ describe("checkout HTTP + PostgreSQL + Redis", () => {
     expect((await f.post(s.user, s.input, randomUUID())).status).toBe(409);
   });
   it("fails closed with admission enabled without calling merch", async () => {
-    const s = await f.seed();
-    f.env.ADMISSION_REQUIRED = true;
-    try {
-      expect((await f.post(s.user, s.input, randomUUID())).body.code).toBe("ADMISSION_REQUIRED");
-    } finally {
-      f.env.ADMISSION_REQUIRED = false;
-    }
+    const s = await f.seed(100, true);
+    expect(f.env.ADMISSION_REQUIRED).toBe(true);
+    const before = f.calls();
+    const result = await f.post(s.user, s.input, randomUUID());
+    expect(result.status).toBe(403);
+    expect(result.body.code).toBe("ADMISSION_REQUIRED");
+    expect(f.calls()).toBe(before);
   });
   it("does not partially extend a multi-seat hold when a seat is missing", async () => {
     const s = await f.seed();
