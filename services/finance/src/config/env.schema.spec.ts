@@ -10,6 +10,18 @@ const base = {
 };
 
 describe("envSchema", () => {
+  it("từ chối VAT-exclusive theo quyết định T-402, không coi chuỗi false là truthy", () => {
+    expect(() => loadEnv(envSchema, { ...base, PRICES_INCLUDE_VAT: "false" })).toThrow(
+      /PRICES_INCLUDE_VAT/,
+    );
+    expect(() => loadEnv(envSchema, { ...base, VAT_RATE_TICKET: "0.12345" })).toThrow(
+      /VAT_RATE_TICKET/,
+    );
+    expect(() => loadEnv(envSchema, { ...base, FINANCE_WORKERS_ENABLED: "true" })).toThrow(
+      /INTERNAL_API_KEY/,
+    );
+    expect(loadEnv(envSchema, base).PRICES_INCLUDE_VAT).toBe("true");
+  });
   it("accepts a valid configuration and applies defaults", () => {
     const env = loadEnv(envSchema, base);
     expect(env.PORT).toBe(3099);

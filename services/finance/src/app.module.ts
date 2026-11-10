@@ -8,6 +8,14 @@ import { DbModule } from "./db/db-health.service";
 import { HealthController } from "./health/health.controller";
 import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
+import { FinanceController } from "./modules/finance.controller";
+import { FinanceRepository } from "./modules/finance.repository";
+import { StatsService } from "./modules/stats/stats.service";
+import { AuditService } from "./modules/audit/audit.service";
+import { DlqService } from "./modules/dlq/dlq.service";
+import { FinanceHandler } from "./messaging/finance.handler";
+import { SeatPrefetch } from "./messaging/seat-prefetch";
+import { FinanceWorker } from "./messaging/finance-worker";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -23,11 +31,18 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController],
+      controllers: [HealthController, MetricsController, WhoamiController, FinanceController],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        FinanceRepository,
+        StatsService,
+        AuditService,
+        DlqService,
+        FinanceHandler,
+        SeatPrefetch,
+        FinanceWorker,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],
