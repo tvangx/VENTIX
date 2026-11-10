@@ -26,7 +26,6 @@ describe("production event lifecycle consumer (real Kafka + PostgreSQL)", () => 
         AUTH_JWKS_URI: "http://localhost/jwks",
       }),
       createLogger("test", { level: "silent" }),
-      { release: async () => undefined },
     );
     await consumer.start();
   });
@@ -123,6 +122,72 @@ describe("production event lifecycle consumer (real Kafka + PostgreSQL)", () => 
       await producer.disconnect();
     }
   });
+  it("production payment consumer confirms once through Kafka and transactional Outbox", async () => {
+    const order = randomUUID(),
+      user = randomUUID(),
+      event = randomUUID(),
+      seat = randomUUID();
+    await db.pool.query(
+      "INSERT INTO orders(id,user_id,event_id,status,ticket_amount_vnd,merch_amount_vnd,total_amount_vnd,idempotency_key,expires_at) VALUES($1,$2,$3,'AWAITING_PAYMENT',100000,0,100000,$4,now()+interval '5 minutes')",
+      [order, user, event, order],
+    );
+    await db.pool.query(
+      "INSERT INTO order_items(id,order_id,item_type,ref_id,quantity,unit_price_vnd) VALUES($1,$2,'TICKET_SEAT',$3,1,100000)",
+      [randomUUID(), order, seat],
+    );
+    await db.pool.query(
+      "INSERT INTO seat_allocations(id,order_id,event_id,seat_id,state) VALUES($1,$2,$3,$4,'HELD')",
+      [randomUUID(), order, event, seat],
+    );
+    const success = newMessage("PaymentSucceeded", {
+      payment_id: randomUUID(),
+      purpose: "ORDER",
+      order_id: order,
+      amount_vnd: 100000,
+      provider: "MOCK",
+      provider_txn_id: randomUUID(),
+      paid_at: new Date().toISOString(),
+    });
+    const producer = broker.kafka.producer();
+    await producer.connect();
+    try {
+      await producer.send({
+        topic: "payment.events",
+        acks: -1,
+        messages: [success, success, { ...success, message_id: randomUUID() }].map((message) => ({
+          key: order,
+          value: JSON.stringify(message),
+        })),
+      });
+      await pollUntil(
+        async () =>
+          (
+            await db.pool.query(
+              "SELECT count(*)::int n FROM processed_events WHERE consumer='booking-payment-saga'",
+            )
+          ).rows[0].n === 2,
+        20000,
+      );
+      expect(
+        (await db.pool.query("SELECT status FROM orders WHERE id=$1", [order])).rows[0].status,
+      ).toBe("CONFIRMED");
+      expect(
+        (await db.pool.query("SELECT state FROM seat_allocations WHERE order_id=$1", [order]))
+          .rows[0].state,
+      ).toBe("SOLD");
+      expect(
+        (
+          await db.pool.query(
+            "SELECT * FROM outbox_events WHERE message_key=$1 AND event_type='OrderConfirmed'",
+            [order],
+          )
+        ).rows,
+      ).toHaveLength(1);
+    } finally {
+      await producer.disconnect();
+    }
+  });
+
   it("routes unsupported v1 to DLQ without committing an Inbox row", async () => {
     const legacy = newMessage("EventCancelled", {
       event_id: randomUUID(),

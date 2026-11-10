@@ -123,3 +123,11 @@ Refund/reconciliation mới có schema; refund() báo chưa hỗ trợ tới T-4
 Resale thuộc T-405; booking consumers, expiry sweeper, bù trừ thuộc T-303.
 T-302 có callback payment cần để mock/adapter hoàn tất và phát kết quả an toàn.
 Metric payment_callback_total, HTTP duration và Outbox relay xuất qua `/metrics`.
+
+T-303 kiểm chứng thêm IPN VNPay gửi 3 lần: lần đầu RspCode=00, hai lần sau
+RspCode=02, chỉ một payment_transaction và một sự kiện Outbox. Chữ ký/số tiền sai
+không thay đổi payment; provider_txn_id đã thuộc payment khác trả 99 và không trả
+tiền nhầm order. Callback thất bại trùng cũng chỉ phát PaymentFailed một lần.
+Định dạng phản hồi giữ theo [tài liệu chính thức VNPay](https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay/pay.html).
+Booking xử lý success đến muộn và phát LATE_PAYMENT trong T-303; tự hoàn tiền
+khi nhận sự kiện này vẫn thuộc T-401.

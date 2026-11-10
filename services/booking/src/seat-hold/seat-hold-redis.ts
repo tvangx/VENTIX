@@ -12,6 +12,7 @@ export type SeatHoldRedis = Redis & {
   releaseSeats(keyCount: number, ...args: RedisArg[]): Promise<number>;
   readHold(keyCount: number, ...args: RedisArg[]): Promise<[number, ...string[]]>;
   checkoutHold(keyCount: number, ...args: RedisArg[]): Promise<number>;
+  sagaSeats(keyCount: number, ...args: RedisArg[]): Promise<number>;
 };
 
 export function registerSeatHoldCommands(redis: Redis, holdlogEnabled: boolean): SeatHoldRedis {
@@ -21,6 +22,7 @@ export function registerSeatHoldCommands(redis: Redis, holdlogEnabled: boolean):
   });
   redis.defineCommand("releaseSeats", { lua: script("release_seats") });
   redis.defineCommand("readHold", { lua: script("read_hold") });
+  redis.defineCommand("sagaSeats", { lua: script("saga_seats") });
   redis.defineCommand("checkoutHold", {
     lua: readFileSync(join(__dirname, "../checkout/lua/checkout_hold.lua"), "utf8"),
   });

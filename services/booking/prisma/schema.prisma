@@ -143,6 +143,18 @@ model IdempotencyKey {
 }
 
 // Giữ đúng cấu trúc SQL dùng chung trong packages/outbox-inbox/sql/outbox_inbox.sql.
+// T-303: hàng công việc bền vững cho message đến sớm và projection Redis sau commit.
+model OrderSagaWork {
+  id        String   @id @db.Uuid
+  orderId   String   @map("order_id") @db.Uuid
+  kind      String   @db.Text
+  payload   Json     @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([orderId], map: "ix_order_saga_work_order")
+  @@map("order_saga_work")
+}
+
 model OutboxEvent {
   id          String    @id @db.Uuid
   topic       String    @db.Text

@@ -51,6 +51,8 @@ export async function startBookingKafka() {
           { topic: "merch.stock", numPartitions: 3 },
           { topic: "merch.stock.dlq", numPartitions: 3 },
           { topic: "booking.orders", numPartitions: 3 },
+          { topic: "payment.events", numPartitions: 3 },
+          { topic: "payment.events.dlq", numPartitions: 3 },
         ],
       });
     } finally {

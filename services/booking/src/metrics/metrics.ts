@@ -7,6 +7,17 @@ import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from "prom
 @Injectable()
 export class MetricsService {
   readonly registry = new Registry();
+  readonly orderExpired = new Counter({
+    name: "booking_orders_expired_total",
+    help: "Orders expired by this replica",
+    registers: [this.registry],
+  });
+  readonly orderSagaWork = new Counter({
+    name: "booking_order_saga_work_total",
+    help: "Durable order saga work outcomes",
+    labelNames: ["outcome"] as const,
+    registers: [this.registry],
+  });
   readonly seatPricingJobs = new Counter({
     name: "seat_pricing_jobs_total",
     help: "Seat pricing prefetch outcomes",

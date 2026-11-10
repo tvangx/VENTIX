@@ -184,10 +184,59 @@ describe("payment PostgreSQL + HTTP", () => {
     fail.mockRestore();
     expect((await get("ipn", query())).body.RspCode).toBe("00");
     expect((await get("ipn", query())).body.RspCode).toBe("02");
+    expect((await get("ipn", query())).body).toEqual({
+      RspCode: "02",
+      Message: "Order already confirmed",
+    });
+    expect(
+      (await f.repo.pool.query("SELECT * FROM payment_transactions WHERE payment_id=$1", [p.id]))
+        .rows,
+    ).toHaveLength(1);
+    expect(
+      (await f.repo.pool.query("SELECT * FROM outbox_events WHERE message_key=$1", [s.order])).rows,
+    ).toHaveLength(1);
     expect((await f.row(s.order)).status).toBe("SUCCEEDED");
     const actual = new URL(link.body.redirect_url);
     expect(actual.searchParams.get("vnp_ExpireDate")).toHaveLength(14);
   });
+  it("provider transaction ID collision never pays another order; failed duplicate is idempotent", async () => {
+    const first = await f.seed(),
+      second = await f.seed();
+    await f.post(first.user, first.order, randomUUID());
+    await f.post(second.user, second.order, randomUUID());
+    const a = await f.row(first.order),
+      b = await f.row(second.order);
+    const n = f.service.mock.verifyIpn(a.mock_data.notification)!;
+    expect(await f.service.receive("MOCK", n, "collision")).toBe("00");
+    expect(await f.service.receive("MOCK", { ...n, paymentId: b.id }, "collision")).toBe("99");
+    expect((await f.row(second.order)).status).toBe("PENDING");
+    expect(
+      (await f.repo.pool.query("SELECT * FROM outbox_events WHERE message_key=$1", [second.order]))
+        .rows,
+    ).toHaveLength(0);
+    const failed = {
+      ...n,
+      paymentId: b.id,
+      providerTxnId: randomUUID(),
+      succeeded: false,
+      reason: "OTP",
+    };
+    expect(await f.service.receive("MOCK", failed, "failed-duplicate")).toBe("00");
+    expect(await f.service.receive("MOCK", failed, "failed-duplicate")).toBe("02");
+    expect(await f.service.receive("MOCK", failed, "failed-duplicate")).toBe("02");
+    expect(
+      (await f.repo.pool.query("SELECT * FROM payment_transactions WHERE payment_id=$1", [b.id]))
+        .rows,
+    ).toHaveLength(1);
+    expect(
+      (
+        await f.repo.pool.query("SELECT event_type FROM outbox_events WHERE message_key=$1", [
+          second.order,
+        ])
+      ).rows,
+    ).toEqual([{ event_type: "PaymentFailed" }]);
+  });
+
   it("rolls back payment state and transaction when outbox insert fails", async () => {
     const s = await f.seed();
     await f.post(s.user, s.order, randomUUID());

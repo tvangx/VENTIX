@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { newMessage, parseMessage } from "@ticketing/event-contracts";
 import { InboxProcessor, fromPgClient } from "@ticketing/outbox-inbox";
+import { drainSagaWork } from "../../src/orders/order-saga";
 import { stockHandler } from "../../src/messaging/stock.handler";
 import { transition } from "../../src/orders/order-state";
 import { CheckoutFixture, checkoutFixture } from "../support/checkout";
@@ -235,7 +236,7 @@ describe("checkout HTTP + PostgreSQL + Redis", () => {
     const processor = new InboxProcessor({
       consumerName: "test-stock",
       db: f.repository.db,
-      handler: stockHandler((...args) => f.service.release(...args)),
+      handler: stockHandler(),
       deadLetter: async () => {
         throw new Error("Unexpected DLQ");
       },
@@ -285,13 +286,14 @@ describe("checkout HTTP + PostgreSQL + Redis", () => {
         reason: "out of stock",
       }),
     );
-    const handler = stockHandler((...args) => f.service.release(...args));
+    const handler = stockHandler();
     await f.repository.db.transaction((exec) => handler(exec, msg));
     await f.repository.db.transaction((exec) => handler(exec, msg));
     expect(
       (await f.db.pool.query("SELECT status FROM orders WHERE id=$1", [result.body.order_id]))
         .rows[0].status,
     ).toBe("CANCELLED");
+    await drainSagaWork(f.repository.db, f.client);
     expect(await f.cache.redis.get(`seat:{evt:${s.event}}:${s.seat}`)).toBeNull();
     expect(
       (

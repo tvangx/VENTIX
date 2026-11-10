@@ -21,6 +21,7 @@ import { SeatPricingWorker } from "./seat-pricing/seat-pricing-worker.service";
 import { CheckoutController } from "./checkout/checkout.controller";
 import { CheckoutRepository } from "./checkout/checkout.repository";
 import { CheckoutService } from "./checkout/checkout.service";
+import { OrderSagaWorker } from "./orders/order-saga-worker.service";
 import { MERCH_QUOTE, MerchQuoteClient } from "./clients/merch-quote.client";
 
 @Module({})
@@ -51,6 +52,7 @@ export class AppModule implements NestModule {
         MetricsService,
         CheckoutRepository,
         CheckoutService,
+        OrderSagaWorker,
         {
           provide: MERCH_QUOTE,
           useFactory: () =>
