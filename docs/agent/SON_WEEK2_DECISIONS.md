@@ -153,3 +153,8 @@ phương án này. Không suy diễn phản hồi “ok” thành một ma trậ
 | ----------- | ------------------------- | ------------------------------------- | ------------------------------------------------------------------- |
 | S-201       | [S-201.md](runs/S-201.md) | Q-S201-01, Q-S201-02                  | Chuẩn bị worktree, test nền, nghiên cứu và nhật ký; chưa code CRUD. |
 | S-202–S-206 | Chưa tạo                  | O-S203-01 cần kiểm tra khi tới S-203. | Chưa bắt đầu.                                                       |
+
+## Cập nhật Q-S201-02 — 2026-11-10
+
+- Sơn chấp nhận phạm vi S-201 giới hạn chỉnh sửa và xóa event, ticket class và sale phase trong DRAFT/REJECTED, đồng thời xác nhận dùng nhánh nền tuần 1 đã có S-104/S-107.
+- Quyền sửa sau duyệt theo BR-02.4 chuyển sang việc theo sau. Danh sách trường, điều kiện duyệt lại và thông báo còn chờ chốt.

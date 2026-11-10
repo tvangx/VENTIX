@@ -7,6 +7,7 @@ import type { Env } from "./config/env.schema";
 import { DbModule } from "./db/db-health.service";
 import { HealthController } from "./health/health.controller";
 import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
+import { OrganizerModule } from "./modules/organizer/organizer.module";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
 
 @Module({})
@@ -16,6 +17,7 @@ export class AppModule implements NestModule {
       module: AppModule,
       imports: [
         DbModule,
+        OrganizerModule,
         AuthModule.register({
           issuer: env.AUTH_ISSUER,
           audience: env.AUTH_AUDIENCE,

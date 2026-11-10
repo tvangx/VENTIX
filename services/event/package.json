@@ -18,7 +18,7 @@
     "test": "node scripts/prisma-generate.js && jest",
     "test:int": "node scripts/prisma-generate.js && jest --config jest.int.config.js --runInBand",
     "test:conc": "node scripts/prisma-generate.js && jest --config jest.conc.config.js --runInBand --passWithNoTests",
-    "openapi:export": "pnpm build && node dist/tools/export-openapi.js",
+    "openapi:export": "pnpm build && node dist/tools/export-openapi.js && prettier --write openapi.json",
     "prisma:migrate:create": "prisma migrate dev --create-only",
     "prisma:migrate:deploy": "prisma migrate deploy"
   },

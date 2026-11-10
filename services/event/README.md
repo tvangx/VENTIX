@@ -53,3 +53,33 @@ Testcontainers postgres:16 là mặc định. TEST_DATABASE_URL cho phép kiểm
 PostgreSQL riêng với event_user có CREATEDB; mỗi suite tạo/xóa đúng DB ngẫu nhiên
 của mình. Rollback `prisma/rollback/event-init.sql` xóa dữ liệu Event, chỉ chạy khi
 đã xác nhận DB kiểm thử đích. Không tự chạy rollback trên DB có dữ liệu thật.
+
+## S-201 — Quản lý sự kiện của Organizer
+
+Gửi JWT có role `ORGANIZER` và claim `organizer_id`. Các API quản trị lấy tenant
+từ JWT. Tài nguyên của tenant khác trả 404.
+
+| Tài nguyên | Đường dẫn collection                            |
+| ---------- | ----------------------------------------------- |
+| Địa điểm   | `/v1/organizer/venues`                          |
+| Sự kiện    | `/v1/organizer/events`                          |
+| Hạng vé    | `/v1/organizer/events/{eventId}/ticket-classes` |
+| Đợt mở bán | `/v1/organizer/events/{eventId}/sale-phases`    |
+
+Qua Kong, thêm tiền tố `/api/event`. Mỗi collection có GET danh sách và POST tạo.
+Thêm `/{id}` để GET chi tiết, PATCH hoặc DELETE. GET danh sách nhận `limit` từ 1
+đến 100 (mặc định 20) và `cursor` từ `next_cursor` của trang trước. Tham khảo
+Swagger `/docs` hoặc `openapi.json` để xem cấu trúc request và response.
+
+- POST, PATCH và DELETE cần `Idempotency-Key` là UUID. Gửi lại cùng yêu cầu và
+  key trả lại kết quả ban đầu. Đổi yêu cầu với cùng key trong tenant trả 409.
+- PATCH gửi `version` hiện tại trong JSON cùng các trường cần đổi. DELETE gửi
+  `?version=<version>`. Phiên bản cũ hoặc tài nguyên còn tham chiếu trả 409.
+- Chỉ sửa/xóa sự kiện và ghi hạng vé, đợt mở bán ở DRAFT hoặc REJECTED. Sửa địa
+  điểm bị chặn khi có sự kiện gắn với địa điểm ở trạng thái khác.
+
+Khi nâng cấp dữ liệu S-107, migration tự gán venue cho Organizer nếu tất cả sự
+kiện gắn với venue thuộc cùng tenant. Nếu venue chưa có sự kiện hoặc được nhiều
+tenant dùng, migration rollback. Chủ dữ liệu cần đối chiếu và thống nhất cách
+tách hoặc ánh xạ các venue đó trước khi thử lại.
+File rollback `prisma/rollback/event-organizer-crud.sql` dùng cho bản sao kiểm thử đã xác nhận.
