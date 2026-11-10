@@ -6,9 +6,10 @@ import { Notification, PaymentLink, Provider } from "./payment-adapter";
 import { ENV } from "../../app.tokens";
 import { Env } from "../../config/env.schema";
 
+export type PaymentPurpose = "ORDER" | "RESALE";
 export interface PaymentRow {
   id: string;
-  purpose: "ORDER";
+  purpose: PaymentPurpose;
   ref_id: string;
   user_id: string;
   event_id: string;
@@ -67,11 +68,11 @@ export class PaymentTransaction {
       await this.exec.query<PaymentRow>("SELECT * FROM payments WHERE idempotency_key=$1", [key])
     )[0];
   }
-  async payable(order: string): Promise<PayableRow | undefined> {
+  async payable(order: string, purpose: PaymentPurpose): Promise<PayableRow | undefined> {
     return (
       await this.exec.query<PayableRow>(
-        "SELECT * FROM payables WHERE purpose='ORDER' AND ref_id=$1::uuid FOR UPDATE",
-        [order],
+        "SELECT * FROM payables WHERE purpose=$2 AND ref_id=$1::uuid FOR UPDATE",
+        [order, purpose],
       )
     )[0];
   }
@@ -79,12 +80,12 @@ export class PaymentTransaction {
     return (await this.exec.query<{ db_now: Date }>("SELECT clock_timestamp() AS db_now"))[0]
       .db_now;
   }
-  async hasActive(order: string): Promise<boolean> {
+  async hasActive(order: string, purpose: PaymentPurpose): Promise<boolean> {
     return (
       (
         await this.exec.query(
-          "SELECT id FROM payments WHERE purpose='ORDER' AND ref_id=$1::uuid AND status IN ('PENDING','SUCCEEDED')",
-          [order],
+          "SELECT id FROM payments WHERE purpose=$2 AND ref_id=$1::uuid AND status IN ('PENDING','SUCCEEDED')",
+          [order, purpose],
         )
       ).length !== 0
     );
@@ -92,6 +93,7 @@ export class PaymentTransaction {
   async insert(input: {
     id: string;
     order: string;
+    purpose: PaymentPurpose;
     user: string;
     payable: PayableRow;
     provider: Provider;
@@ -103,7 +105,7 @@ export class PaymentTransaction {
   }): Promise<void> {
     const p = input;
     await this.exec.query(
-      "INSERT INTO payments(id,purpose,ref_id,user_id,event_id,provider,amount_vnd,idempotency_key,request_hash,redirect_url,expires_at,mock_data,trace_id) VALUES($1::uuid,'ORDER',$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10,$11::jsonb,$12) RETURNING id",
+      "INSERT INTO payments(id,purpose,ref_id,user_id,event_id,provider,amount_vnd,idempotency_key,request_hash,redirect_url,expires_at,mock_data,trace_id) VALUES($1::uuid,$13,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10,$11::jsonb,$12) RETURNING id",
       [
         p.id,
         p.order,
@@ -117,6 +119,7 @@ export class PaymentTransaction {
         p.payable.expires_at,
         p.link.mock ? JSON.stringify(p.link.mock) : null,
         p.trace,
+        p.purpose,
       ],
     );
   }

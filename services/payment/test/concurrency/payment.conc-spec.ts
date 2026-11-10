@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { fixture, Fixture } from "../support/payment";
 
-describe("payment concurrency (50 contenders)", () => {
+describe.each(["ORDER", "RESALE"] as const)("%s payment concurrency (50 contenders)", (purpose) => {
   let f: Fixture;
   beforeAll(async () => {
     f = await fixture();
@@ -9,12 +9,13 @@ describe("payment concurrency (50 contenders)", () => {
   afterAll(async () => {
     await f?.close();
   });
+  const seed = () => (purpose === "RESALE" ? f.seedResale() : f.seed());
+  const post = (user: string, order: string, key: string) =>
+    purpose === "RESALE" ? f.postResale(user, order, key) : f.post(user, order, key);
   it("50 identical keys create one payment and replay one URL", async () => {
-    const s = await f.seed(),
+    const s = await seed(),
       key = randomUUID();
-    const results = await Promise.all(
-      Array.from({ length: 50 }, () => f.post(s.user, s.order, key)),
-    );
+    const results = await Promise.all(Array.from({ length: 50 }, () => post(s.user, s.order, key)));
     expect(results.map((r) => r.status)).toEqual(Array(50).fill(201));
     expect(new Set(results.map((r) => r.body.redirect_url)).size).toBe(1);
     expect(
@@ -22,9 +23,9 @@ describe("payment concurrency (50 contenders)", () => {
     ).toHaveLength(1);
   });
   it("50 different keys allow one active payment; callbacks racing write once", async () => {
-    const s = await f.seed();
+    const s = await seed();
     const results = await Promise.all(
-      Array.from({ length: 50 }, () => f.post(s.user, s.order, randomUUID())),
+      Array.from({ length: 50 }, () => post(s.user, s.order, randomUUID())),
     );
     expect(results.filter((r) => r.status === 201)).toHaveLength(1);
     expect(
@@ -46,8 +47,8 @@ describe("payment concurrency (50 contenders)", () => {
     ).toHaveLength(1);
   });
   it("DB index rejects a second active writer even outside service locks", async () => {
-    const s = await f.seed();
-    await f.post(s.user, s.order, randomUUID());
+    const s = await seed();
+    await post(s.user, s.order, randomUUID());
     const p = await f.row(s.order);
     await expect(
       f.repo.pool.query(

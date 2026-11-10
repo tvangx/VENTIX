@@ -98,7 +98,21 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PaymentDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PaymentDto"
+                  },
+                  {
+                    "oneOf": [
+                      {
+                        "required": ["order_id"]
+                      },
+                      {
+                        "required": ["resale_order_id"]
+                      }
+                    ]
+                  }
+                ]
               }
             }
           }
@@ -135,7 +149,7 @@
             }
           },
           "422": {
-            "description": "IDEMPOTENCY_KEY_REUSED, INVALID_PAYMENT_AMOUNT"
+            "description": "INVALID_PAYMENT_REFERENCE, IDEMPOTENCY_KEY_REUSED, INVALID_PAYMENT_AMOUNT"
           },
           "503": {
             "description": "PROVIDER_UNAVAILABLE"
@@ -453,14 +467,20 @@
         "properties": {
           "order_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Exactly one of order_id or resale_order_id"
+          },
+          "resale_order_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Exactly one of order_id or resale_order_id"
           },
           "provider": {
             "type": "string",
             "enum": ["VNPAY", "MOCK"]
           }
         },
-        "required": ["order_id", "provider"]
+        "required": ["provider"]
       },
       "PaymentResponse": {
         "type": "object",

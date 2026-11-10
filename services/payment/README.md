@@ -1,7 +1,8 @@
-# payment-service (T-302)
+# payment-service (T-302, T-303, T-405)
 
 Tạo link thanh toán VNPay sandbox hoặc mock từ read-model `payables` cục bộ. Cổng dev 3004.
-Không đọc DB booking. Inbox dựng payable từ `OrderAwaitingPayment` trong cùng transaction.
+Inbox dựng payable từ `OrderAwaitingPayment` (ORDER) và `ResaleOrderAwaitingPayment` (RESALE)
+trong cùng transaction; chỉ đọc DB payment. Consumer subscribe `booking.orders` và `resale.events`.
 
 ## Chạy local
 
@@ -26,10 +27,17 @@ Có `/health/live`, `/health/ready`, `/metrics`, `/docs` từ template.
 { "order_id": "11111111-1111-4111-8111-111111111111", "provider": "MOCK" }
 ```
 
+Đơn resale dùng `{ "resale_order_id": "11111111-1111-4111-8111-111111111111", "provider": "MOCK" }`.
+Phải gửi đúng một trong `order_id` và `resale_order_id`; gửi cả hai hoặc không gửi khóa nào
+trả 422 `INVALID_PAYMENT_REFERENCE`. UUID/provider sai hoặc trường dư trả 400.
+Buyer của resale phải khớp JWT; payable lấy từ sự kiện, bao gồm event, tiền và hạn thanh toán.
+Khóa payable và active payment theo `(purpose, ref_id)` nên hai loại đơn có cùng UUID vẫn độc lập.
+
 Trả HTTP 201 `{ "redirect_url": "..." }`. Chủ đơn phải khớp JWT; giá, event, expiry lấy từ payable.
 Chưa có payable: 409 `ORDER_NOT_READY`, `Retry-After: 1`; hết hạn: 409 `PAYABLE_EXPIRED`.
 Cùng key/user/body trả URL đã lưu, kể cả khi payment đã kết thúc hoặc payable đã hết hạn.
-Cùng key đổi user/order/provider: 422 `IDEMPOTENCY_KEY_REUSED`.
+Cùng key đổi user/reference/purpose/provider: 422 `IDEMPOTENCY_KEY_REUSED`.
+Fingerprint ORDER giữ tương thích payment đã tạo trước T-405.
 Sau FAILED dùng key mới để thử lại; PENDING/SUCCEEDED chặn key mới bằng 409 `PAYMENT_ALREADY_ACTIVE`.
 Khóa hàng payable và partial unique index `(purpose,ref_id)` với trạng thái PENDING/SUCCEEDED bảo vệ D7.
 Tiền phải dương và là số nguyên an toàn; VNPay giới hạn 12 chữ số sau nhân 100.
@@ -120,7 +128,9 @@ Unit có vector Python hmac/hashlib độc lập. Integration/concurrency dùng 
 luồng worker dùng Kafka thật trong Testcontainers. Cần Docker; dùng lại image có sẵn trong repo.
 DB có sáu bảng nghiệp vụ theo ERD cùng Outbox/Inbox. Payables giữ PK kép và thêm UUID unique.
 Refund/reconciliation mới có schema; refund() báo chưa hỗ trợ tới T-401.
-Resale thuộc T-405; booking consumers, expiry sweeper, bù trừ thuộc T-303.
+Resale dùng chung IPN, mock worker và Outbox với ORDER; sự kiện kết quả có
+`purpose=RESALE`, `resale_order_id` và không có `order_id`.
+Booking consumers, expiry sweeper, bù trừ thuộc T-303.
 T-302 có callback payment cần để mock/adapter hoàn tất và phát kết quả an toàn.
 Metric payment_callback_total, HTTP duration và Outbox relay xuất qua `/metrics`.
 
@@ -131,3 +141,22 @@ tiền nhầm order. Callback thất bại trùng cũng chỉ phát PaymentFaile
 Định dạng phản hồi giữ theo [tài liệu chính thức VNPay](https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay/pay.html).
 Booking xử lý success đến muộn và phát LATE_PAYMENT trong T-303; tự hoàn tiền
 khi nhận sự kiện này vẫn thuộc T-401.
+
+## Resale khi S-405 chưa sẵn sàng
+
+Script chỉ dùng dữ liệu giả trong môi trường local, phát sự kiện đúng schema bằng `newMessage`.
+Chạy từ workspace payment (để resolve các dependency đã có), Node 20:
+
+```bash
+cd services/payment
+pnpm dev:publish-fake-resale-order
+```
+
+Các biến tùy chọn của script: `KAFKA_BROKERS` (localhost:9092), `FAKE_RESALE_ORDER_ID`,
+`FAKE_LISTING_ID`, `FAKE_BUYER_ID`, `FAKE_EVENT_ID` (mặc định UUID ngẫu nhiên),
+`FAKE_AMOUNT_VND` (125000), `FAKE_EXPIRES_IN_SECONDS` (900, tối đa 86400).
+Script in các ID và expiry; đặt FAKE_BUYER_ID bằng user_id của JWT dùng tạo payment.
+Kafka key là listing_id theo contracts. Replay snapshot không ghi đè hoặc mở lại payable đã đóng.
+
+**Hạn chế đã biết:** chưa hỗ trợ hoàn tiền đơn resale theo ADR-0009 C7; chưa kiểm chứng
+escrow/chuyển quyền vé với resale-service thực tế. Script giả không tạo listing/vé thật.

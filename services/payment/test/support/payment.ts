@@ -70,8 +70,8 @@ export async function fixture() {
       .setAudience("api")
       .setExpirationTime("5m")
       .sign(pair.privateKey);
-  const record = (message: unknown): InboxRecord => ({
-    topic: Topics.BOOKING_ORDERS,
+  const record = (message: unknown, topic: string = Topics.BOOKING_ORDERS): InboxRecord => ({
+    topic,
     partition: 0,
     offset: "0",
     key: null,
@@ -88,6 +88,33 @@ export async function fixture() {
     dead,
     record,
     token,
+    seedResale: async (
+      seconds = 900,
+      refId: string = randomUUID(),
+      buyerId: string = randomUUID(),
+    ) => {
+      const message = newMessage("ResaleOrderAwaitingPayment", {
+        resale_order_id: refId,
+        listing_id: randomUUID(),
+        buyer_id: buyerId,
+        event_id: randomUUID(),
+        amount_vnd: 125000,
+        expires_at: new Date(Date.now() + seconds * 1000).toISOString(),
+      });
+      const result = await inbox.process(record(message, Topics.RESALE_EVENTS));
+      expect(result).toBe("processed");
+      return { user: buyerId, order: refId, event: message.data.event_id, message };
+    },
+    postResale: async (
+      user: string,
+      order: string,
+      key: string = randomUUID(),
+    ): Promise<request.Response> =>
+      request(app.getHttpServer())
+        .post("/v1/payments")
+        .set("Authorization", `Bearer ${await token(user)}`)
+        .set("Idempotency-Key", key)
+        .send({ resale_order_id: order, provider: "MOCK" }),
     seed: async (seconds = 900) => {
       const user = randomUUID(),
         order = randomUUID(),
