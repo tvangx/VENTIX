@@ -29,7 +29,7 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | T-402  | 4    | finance-service (sổ cái, VAT, audit, thống kê, DLQ admin)           | T-103, T-303               | In review  | #59 | 32 test pass; cần 2 người đọc; xem runs/T-402.md          |
 | T-403  | 4    | Load test vòng 1 + tối ưu                                           | G2, T-304 (T-404 nên xong) | Todo       |     | Bạn chạy k6 từ máy thứ hai                             |
 | T-404  | 4    | Prometheus + Grafana                                                | T-102                      | Todo       |     |                                                        |
-| T-405  | 4    | Payment cho đơn resale (C7)                                         | T-302, T-303, S-405        | Todo       |     | Chờ Sơn hoặc dùng server giả                           |
+| T-405  | 4    | Payment cho đơn resale (C7)                                         | T-302, T-303, S-405        | In review  | #61 | 54 test pass; producer giả S-405; cần 2 người đọc; xem runs/T-405.md |
 | T-501  | 5    | Dashboard + Loki + Jaeger                                           | T-404                      | Todo       |     |                                                        |
 | T-502  | 5    | Chaos S4 + sửa lỗi                                                  | T-403                      | Todo       |     | Bạn chạy kịch bản thật                                 |
 | T-503  | 5    | Hardening                                                           | —                          | Todo       |     |                                                        |
