@@ -51,13 +51,13 @@ done
 for origin in http://localhost:5173 http://localhost:5174; do
   request -X OPTIONS "$base/api/booking/v1/holds" -H "Origin: $origin" \
     -H 'Access-Control-Request-Method: POST' \
-    -H 'Access-Control-Request-Headers: authorization,content-type,idempotency-key,x-request-id'
+    -H 'Access-Control-Request-Headers: authorization,content-type,idempotency-key,x-request-id,x-admission-token'
   [[ "$status" == 200 || "$status" == 204 ]] || die 'CORS preflight bị từ chối'
   [[ "$(header Access-Control-Allow-Origin)" == "$origin" ]] || die 'sai CORS origin'
   [[ "$(header Access-Control-Allow-Credentials)" == true ]] || die 'thiếu CORS credentials'
   [[ "$(header Access-Control-Allow-Methods)" == *POST* ]] || die 'CORS thiếu POST'
   allowed=$(header Access-Control-Allow-Headers | tr '[:upper:]' '[:lower:]')
-  for name in authorization content-type idempotency-key x-request-id; do
+  for name in authorization content-type idempotency-key x-request-id x-admission-token; do
     [[ "$allowed" == *"$name"* ]] || die "CORS thiếu header $name"
   done
   request_id

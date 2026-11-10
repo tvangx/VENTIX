@@ -468,6 +468,9 @@ importers:
       ioredis:
         specifier: 5.11.1
         version: 5.11.1
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4
@@ -523,9 +526,6 @@ importers:
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@20.19.43)
-      jose:
-        specifier: ^5.9.6
-        version: 5.10.0
       supertest:
         specifier: ^7.0.0
         version: 7.3.1

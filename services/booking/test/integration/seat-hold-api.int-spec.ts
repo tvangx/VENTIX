@@ -46,6 +46,8 @@ describe("/v1/holds (HTTP, JWT, PostgreSQL and Redis)", () => {
     loadEnv(envSchema, {
       NODE_ENV: "test",
       EVENT_CONSUMER_ENABLED: "false", // suite HTTP giữ ghế không chạy broker
+      ADMISSION_TOKEN_SECRET: "synthetic-admission-key-for-booking-tests",
+      QUEUE_WORKER_ENABLED: "false",
       INTERNAL_API_KEY: "synthetic-test-key",
       DATABASE_URL: db.pool.options.connectionString,
       REDIS_URL: cache.url,
@@ -77,6 +79,8 @@ describe("/v1/holds (HTTP, JWT, PostgreSQL and Redis)", () => {
         event,
         randomUUID(),
         JSON.stringify({
+          queue_enabled: true,
+          admit_rate: 100,
           starts_at: new Date(Date.now() - 60000).toISOString(),
           ends_at: new Date(Date.now() + 60000).toISOString(),
         }),
@@ -225,7 +229,7 @@ describe("/v1/holds (HTTP, JWT, PostgreSQL and Redis)", () => {
     expect((await create()).status).toBe(201);
   });
 
-  it("fails closed with ADMISSION_REQUIRED=true until T-304", async () => {
+  it("fails closed for a queue-enabled phase without an admission token", async () => {
     const protectedApp = await createApp(
       env("true"),
       createLogger("admission-test", { level: "silent" }),

@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post, Res } from "@nestjs/common";
+import { Body, Controller, Headers, Post, Res, UseGuards } from "@nestjs/common";
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -13,6 +13,7 @@ import { randomUUID } from "node:crypto";
 import { Response } from "express";
 import { CheckoutDto, CheckoutResponseDto } from "./checkout.dto";
 import { CheckoutService } from "./checkout.service";
+import { AdmissionGuard } from "../queue/admission.guard";
 
 @ApiTags("checkout")
 @ApiBearerAuth()
@@ -20,6 +21,12 @@ import { CheckoutService } from "./checkout.service";
 export class CheckoutController {
   constructor(private readonly checkoutService: CheckoutService) {}
   @Post()
+  @UseGuards(AdmissionGuard)
+  @ApiHeader({
+    name: "X-Admission-Token",
+    required: false,
+    description: "Required for queue-enabled sale phases; HS256 token from queue status SSE",
+  })
   @ApiOperation({ summary: "Convert held seats and GA/merch items into an order at server prices" })
   @ApiHeader({ name: "Idempotency-Key", required: true })
   @ApiCreatedResponse({ type: CheckoutResponseDto })

@@ -2,6 +2,8 @@
 
 Kong OSS 3.8 DB-less đảm nhiệm routing, CORS, request-id, giới hạn body và rate limit. JWT và admission token được verify trong service theo ADR-0004. API nội bộ gọi trực tiếp giữa các service trong mạng nội bộ (ADR-0010).
 
+T-304: CORS dev và loadtest cho phép `X-Admission-Token` để client gửi token Waiting Room tới booking; `scripts/check-kong.sh` kiểm chứng header này trong preflight. Token được gửi trong header cùng Authorization, không nằm trong query string.
+
 ## Hạn mức đề xuất
 
 Mọi hạn mức theo IP/phút, policy `local`:

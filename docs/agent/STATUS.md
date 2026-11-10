@@ -24,7 +24,7 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | T-301  | 3    | Checkout API                                                        | T-202, T-301a, T-203b      | In review  | #55 | Mã lõi                                                 |
 | T-302  | 3    | payment-service + adapter                                           | T-103, T-301a              | Doing      |     | Cần VNPay sandbox                                      |
 | T-303  | 3    | IPN idempotent + sweeper + bù trừ                                   | T-301, T-302               | In review  | #57 | Node 20: 240 test pass; cần 2 người đọc; xem runs/T-303.md |
-| T-304  | 3    | Waiting Room                                                        | T-202, T-206               | Todo       |     | Cuối tuần 3, được trượt sang T4                        |
+| T-304  | 3    | Waiting Room                                                        | T-202, T-206               | Doing      |     | T-206 Done theo Tuấn; đang kiểm chứng T-304             |
 | T-401  | 4    | Refund, hoàn lô, tự hoàn tiền (LATE_PAYMENT, EventCancelled)        | T-302, T-303               | Todo       |     | Hoàn tiền = tiền thật, 2 người đọc                     |
 | T-402  | 4    | finance-service (sổ cái, VAT, audit, thống kê, DLQ admin)           | T-103, T-303               | Todo       |     | Consume OrderConfirmed; 2 người đọc                    |
 | T-403  | 4    | Load test vòng 1 + tối ưu                                           | G2, T-304 (T-404 nên xong) | Todo       |     | Bạn chạy k6 từ máy thứ hai                             |

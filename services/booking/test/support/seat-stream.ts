@@ -7,10 +7,15 @@ export interface SeatFrame {
   at: number;
 }
 
-export async function openSeatStream(url: string, token: string) {
+export async function openSeatStream(url: string, token: string, admission?: string) {
   const frames: SeatFrame[] = [];
   let buffer = "";
-  const connection = get(url, { headers: { Authorization: `Bearer ${token}` } });
+  const connection = get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(admission ? { "X-Admission-Token": admission } : {}),
+    },
+  });
   const response = await new Promise<import("node:http").IncomingMessage>((resolve, reject) => {
     connection.once("response", resolve);
     connection.once("error", reject);

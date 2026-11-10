@@ -9,7 +9,8 @@
       "seat-hold/lua/*.lua",
       "rehydrate/lua/*.lua",
       "seat-status/lua/*.lua",
-      "checkout/lua/*.lua"
+      "checkout/lua/*.lua",
+      "queue/lua/*.lua"
     ],
     "watchAssets": true
   }
