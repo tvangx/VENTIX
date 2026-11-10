@@ -1,14 +1,207 @@
-// Chưa có model nghiệp vụ (xem docs/dev/new-service.md).
-// Tạo migration: `pnpm --filter @ticketing/finance prisma:migrate:create --name <mô_tả>`
-// rồi MỞ file SQL và sửa tay (CONVENTIONS mục 5). Thêm bảng outbox_events/processed_events ở T-103.
-// Lưu ý: Prisma 5 từ chối `prisma generate` khi chưa có model; scripts/prisma-generate.js tự bỏ qua trường hợp đó.
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
+  output        = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model ledger_transactions {
+  id          String           @id @db.Uuid
+  order_id    String           @db.Uuid
+  kind        String
+  created_xid String           @default(dbgenerated("pg_current_xact_id()::text"))
+  created_at  DateTime         @default(now()) @db.Timestamptz(6)
+  entries     ledger_entries[]
+
+  @@unique([order_id, kind])
+}
+
+model ledger_entries {
+  id          String              @id @default(uuid()) @db.Uuid
+  txn_id      String              @db.Uuid
+  transaction ledger_transactions @relation(fields: [txn_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "ledger_txn_fk")
+  account     String
+  debit_vnd   BigInt              @default(0)
+  credit_vnd  BigInt              @default(0)
+  ref_type    String
+  ref_id      String              @db.Uuid
+  created_at  DateTime            @default(now()) @db.Timestamptz(6)
+
+  @@index([txn_id])
+}
+
+model events_ref {
+  id               String   @id @default(uuid()) @db.Uuid
+  event_id         String   @unique @db.Uuid
+  organizer_id     String   @db.Uuid
+  title            String
+  event_version    Int
+  seat_map_version Int      @default(0)
+  pricing_ready    Boolean  @default(false)
+  ticket_classes   Json
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime @default(now()) @db.Timestamptz(6)
+  version          Int      @default(0)
+}
+
+model seat_classes {
+  id               String   @id @default(uuid()) @db.Uuid
+  event_id         String   @db.Uuid
+  seat_id          String   @db.Uuid
+  ticket_class_id  String   @db.Uuid
+  seat_map_version Int
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([event_id, seat_id, seat_map_version])
+}
+
+model finance_orders {
+  id          String   @id @db.Uuid
+  event_id    String   @db.Uuid
+  payment_id  String   @db.Uuid
+  fingerprint String
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model revenue_records {
+  id           String    @id @default(uuid()) @db.Uuid
+  order_id     String    @db.Uuid
+  organizer_id String    @db.Uuid
+  event_id     String    @db.Uuid
+  category     String
+  gross_vnd    BigInt
+  net_vnd      BigInt
+  vat_rate     Decimal   @db.Decimal(5, 4)
+  vat_vnd      BigInt
+  items        Json
+  reversed_at  DateTime? @db.Timestamptz(6)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @default(now()) @db.Timestamptz(6)
+  version      Int       @default(0)
+
+  @@unique([order_id, category])
+}
+
+model pending_refunds {
+  id         String   @id @db.Uuid
+  order_id   String   @db.Uuid
+  payment_id String   @db.Uuid
+  amount_vnd BigInt
+  message    Json
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([order_id])
+}
+
+model event_sales_stats {
+  id              String   @id @default(uuid()) @db.Uuid
+  event_id        String   @db.Uuid
+  ticket_class_id String   @db.Uuid
+  sold            Int
+  revenue_vnd     BigInt
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+  version         Int      @default(0)
+
+  @@unique([event_id, ticket_class_id])
+}
+
+model event_revenue_stats {
+  id         String   @id @default(uuid()) @db.Uuid
+  event_id   String   @db.Uuid
+  category   String
+  gross_vnd  BigInt
+  net_vnd    BigInt
+  vat_vnd    BigInt
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  version    Int      @default(0)
+
+  @@unique([event_id, category])
+}
+
+model audit_logs {
+  id            BigInt   @id @default(autoincrement())
+  message_id    String   @unique @db.Uuid
+  actor_id      String?  @db.Uuid
+  action        String
+  resource_type String
+  resource_id   String
+  before_state  Json?
+  after_state   Json?
+  record        Json
+  prev_hash     String   @db.Char(64)
+  hash          String   @db.Char(64)
+  created_at    DateTime @db.Timestamptz(6)
+}
+
+model dead_letters {
+  id             String   @id @default(uuid()) @db.Uuid
+  topic          String
+  partition      Int
+  offset         String
+  original_topic String
+  message_id     String?
+  message_key    String?
+  payload        String?
+  headers        Json
+  error          String
+  status         String   @default("PENDING")
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+  version        Int      @default(0)
+
+  @@unique([topic, partition, offset])
+}
+
+model dlq_replays {
+  id             String    @id @default(uuid()) @db.Uuid
+  dead_letter_id String    @unique @db.Uuid
+  published_at   DateTime? @db.Timestamptz(6)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+model invoices {
+  id          String          @id @default(uuid()) @db.Uuid
+  order_id    String          @db.Uuid
+  provider    String
+  invoice_no  String?
+  status      String
+  retry_count Int             @default(0)
+  created_at  DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime        @default(now()) @db.Timestamptz(6)
+  version     Int             @default(0)
+  items       invoice_items[]
+}
+
+model invoice_items {
+  id         String   @id @default(uuid()) @db.Uuid
+  invoice_id String   @db.Uuid
+  category   String
+  vat_rate   Decimal  @db.Decimal(5, 4)
+  amount_vnd BigInt
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  invoice    invoices @relation(fields: [invoice_id], references: [id], onDelete: Restrict)
+}
+
+model outbox_events {
+  id           String    @id @db.Uuid
+  topic        String
+  message_key  String
+  event_type   String
+  payload      Json
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  published_at DateTime? @db.Timestamptz(6)
+}
+
+model processed_events {
+  message_id   String   @db.Uuid
+  consumer     String
+  processed_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([message_id, consumer])
 }

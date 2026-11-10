@@ -26,7 +26,7 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | T-303  | 3    | IPN idempotent + sweeper + bù trừ                                   | T-301, T-302               | In review  | #57 | Node 20: 240 test pass; cần 2 người đọc; xem runs/T-303.md |
 | T-304  | 3    | Waiting Room                                                        | T-202, T-206               | In review  | #58 | 232 test pass; Kong 95 checks; cần 2 người đọc Lua       |
 | T-401  | 4    | Refund, hoàn lô, tự hoàn tiền (LATE_PAYMENT, EventCancelled)        | T-302, T-303               | Todo       |     | Hoàn tiền = tiền thật, 2 người đọc                     |
-| T-402  | 4    | finance-service (sổ cái, VAT, audit, thống kê, DLQ admin)           | T-103, T-303               | Todo       |     | Consume OrderConfirmed; 2 người đọc                    |
+| T-402  | 4    | finance-service (sổ cái, VAT, audit, thống kê, DLQ admin)           | T-103, T-303               | Doing      |     | Consume OrderConfirmed; 2 người đọc                    |
 | T-403  | 4    | Load test vòng 1 + tối ưu                                           | G2, T-304 (T-404 nên xong) | Todo       |     | Bạn chạy k6 từ máy thứ hai                             |
 | T-404  | 4    | Prometheus + Grafana                                                | T-102                      | Todo       |     |                                                        |
 | T-405  | 4    | Payment cho đơn resale (C7)                                         | T-302, T-303, S-405        | Todo       |     | Chờ Sơn hoặc dùng server giả                           |

@@ -71,6 +71,278 @@
         "summary": "Return the authenticated principal",
         "tags": ["whoami"]
       }
+    },
+    "/v1/organizer/events/{id}/stats": {
+      "get": {
+        "operationId": "FinanceController_statsForEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT thiếu hoặc không hợp lệ (problem+json)"
+          },
+          "403": {
+            "description": "Sai role hoặc tenant (problem+json)"
+          },
+          "404": {
+            "description": "EVENT_NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Thống kê event; tiền VND là chuỗi số nguyên để không mất chính xác",
+        "tags": ["finance"]
+      }
+    },
+    "/v1/admin/audit/verify": {
+      "get": {
+        "operationId": "FinanceController_verify",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditVerifyResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT thiếu hoặc không hợp lệ (problem+json)"
+          },
+          "403": {
+            "description": "Sai role hoặc tenant (problem+json)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Kiểm tra toàn bộ hash-chain audit",
+        "tags": ["finance"]
+      }
+    },
+    "/v1/admin/audit": {
+      "get": {
+        "operationId": "FinanceController_auditList",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resource_type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT thiếu hoặc không hợp lệ (problem+json)"
+          },
+          "403": {
+            "description": "Sai role hoặc tenant (problem+json)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Audit theo cursor id tăng dần",
+        "tags": ["finance"]
+      }
+    },
+    "/v1/admin/dlq": {
+      "get": {
+        "operationId": "FinanceController_dlqList",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlqPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT thiếu hoặc không hợp lệ (problem+json)"
+          },
+          "403": {
+            "description": "Sai role hoặc tenant (problem+json)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dead letters theo cursor UUID tăng dần",
+        "tags": ["finance"]
+      }
+    },
+    "/v1/admin/dlq/{id}/replay": {
+      "post": {
+        "operationId": "FinanceController_replay",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlqActionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT thiếu hoặc không hợp lệ (problem+json)"
+          },
+          "403": {
+            "description": "Sai role hoặc tenant (problem+json)"
+          },
+          "409": {
+            "description": "Không replay dead letter đã discard hoặc payload sai schema"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Xếp replay qua Outbox, giữ nguyên payload/message_id; idempotent theo dead letter",
+        "tags": ["finance"]
+      }
+    },
+    "/v1/admin/dlq/{id}/discard": {
+      "post": {
+        "operationId": "FinanceController_discard",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlqActionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT thiếu hoặc không hợp lệ (problem+json)"
+          },
+          "403": {
+            "description": "Sai role hoặc tenant (problem+json)"
+          },
+          "409": {
+            "description": "Dead letter đã hoặc đang replay"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Discard dead letter; idempotent theo dead letter",
+        "tags": ["finance"]
+      }
     }
   },
   "info": {
@@ -119,6 +391,280 @@
           }
         },
         "required": ["userId", "roles"]
+      },
+      "SalesRow": {
+        "type": "object",
+        "properties": {
+          "ticket_class_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sold": {
+            "type": "number",
+            "minimum": 0
+          },
+          "revenue_vnd": {
+            "type": "string",
+            "example": "110000",
+            "pattern": "^\\d+$"
+          }
+        },
+        "required": ["ticket_class_id", "sold", "revenue_vnd"]
+      },
+      "RevenueRow": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": ["TICKET", "MERCH"]
+          },
+          "gross_vnd": {
+            "type": "string",
+            "example": "110000"
+          },
+          "net_vnd": {
+            "type": "string",
+            "example": "100000"
+          },
+          "vat_vnd": {
+            "type": "string",
+            "example": "10000"
+          }
+        },
+        "required": ["category", "gross_vnd", "net_vnd", "vat_vnd"]
+      },
+      "StatsResponse": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "sales": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesRow"
+            }
+          },
+          "revenue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RevenueRow"
+            }
+          }
+        },
+        "required": ["event_id", "title", "sales", "revenue"]
+      },
+      "AuditVerifyResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "checked": {
+            "type": "number",
+            "minimum": 0
+          },
+          "first_broken_id": {
+            "type": "string",
+            "description": "id bigint của dòng lỗi đầu tiên"
+          }
+        },
+        "required": ["ok", "checked"]
+      },
+      "AuditRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "1",
+            "description": "bigint dưới dạng chuỗi"
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actor_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string"
+          },
+          "resource_type": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "before_state": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          },
+          "after_state": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          },
+          "prev_hash": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "hash": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "message_id",
+          "actor_id",
+          "action",
+          "resource_type",
+          "resource_id",
+          "before_state",
+          "after_state",
+          "prev_hash",
+          "hash",
+          "created_at"
+        ]
+      },
+      "AuditPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditRow"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["items", "next_cursor"]
+      },
+      "DeadLetterRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "partition": {
+            "type": "number"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "original_topic": {
+            "type": "string"
+          },
+          "message_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "message_key": {
+            "type": "string",
+            "nullable": true,
+            "description": "base64 bytes key Kafka"
+          },
+          "payload": {
+            "type": "string",
+            "nullable": true,
+            "description": "base64 bytes payload Kafka"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Giá trị header là mảng base64"
+          },
+          "error": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "REPLAY_PENDING", "REPLAYED", "DISCARDED"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "topic",
+          "partition",
+          "offset",
+          "original_topic",
+          "message_id",
+          "message_key",
+          "payload",
+          "headers",
+          "error",
+          "status",
+          "created_at",
+          "updated_at",
+          "version"
+        ]
+      },
+      "DlqPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeadLetterRow"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": ["items", "next_cursor"]
+      },
+      "DlqActionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["REPLAY_PENDING", "REPLAYED", "DISCARDED"]
+          }
+        },
+        "required": ["id", "status"]
       }
     }
   }
