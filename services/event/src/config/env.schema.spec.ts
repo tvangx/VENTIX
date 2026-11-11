@@ -16,6 +16,7 @@ describe("envSchema", () => {
     expect(env.NODE_ENV).toBe("development");
     expect(env.LOG_LEVEL).toBe("info");
     expect(env.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
+    expect(env.INTERNAL_API_KEY).toBeUndefined();
     expect(env.REDIS_URL).toBe("redis://localhost:6379");
   });
 
@@ -43,6 +44,13 @@ describe("envSchema", () => {
       "redis://localhost:16379",
     );
     expect(() => loadEnv(envSchema, { ...base, REDIS_URL: "not-a-url" })).toThrow(/REDIS_URL/);
+  });
+
+  it("validates the optional internal API key", () => {
+    expect(
+      loadEnv(envSchema, { ...base, INTERNAL_API_KEY: "synthetic-test-key" }).INTERNAL_API_KEY,
+    ).toBe("synthetic-test-key");
+    expect(() => loadEnv(envSchema, { ...base, INTERNAL_API_KEY: "" })).toThrow(/INTERNAL_API_KEY/);
   });
 
   it("fails fast when DATABASE_URL is missing", () => {
