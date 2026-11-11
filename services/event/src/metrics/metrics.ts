@@ -2,12 +2,13 @@ import { Controller, Get, Injectable, NestMiddleware, Res } from "@nestjs/common
 import { ApiExcludeController } from "@nestjs/swagger";
 import { Public } from "@ticketing/auth-guard";
 import type { NextFunction, Request, Response } from "express";
-import { Histogram, Registry, collectDefaultMetrics } from "prom-client";
+import { Counter, Histogram, Registry, collectDefaultMetrics } from "prom-client";
 
 @Injectable()
 export class MetricsService {
   readonly registry = new Registry();
   readonly httpDuration: Histogram<"method" | "route" | "status">;
+  readonly catalogCache: Counter<"result">;
 
   constructor() {
     collectDefaultMetrics({ register: this.registry });
@@ -16,6 +17,12 @@ export class MetricsService {
       help: "HTTP request duration in seconds",
       labelNames: ["method", "route", "status"],
       buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
+      registers: [this.registry],
+    });
+    this.catalogCache = new Counter({
+      name: "event_catalog_cache_requests_total",
+      help: "Catalog Redis cache outcomes",
+      labelNames: ["result"],
       registers: [this.registry],
     });
   }

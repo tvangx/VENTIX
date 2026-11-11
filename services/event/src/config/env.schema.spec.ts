@@ -16,6 +16,7 @@ describe("envSchema", () => {
     expect(env.NODE_ENV).toBe("development");
     expect(env.LOG_LEVEL).toBe("info");
     expect(env.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
+    expect(env.REDIS_URL).toBe("redis://localhost:6379");
   });
 
   it("uses the relay by default outside tests and parses multiple brokers", () => {
@@ -35,6 +36,13 @@ describe("envSchema", () => {
     expect(() => loadEnv(envSchema, { ...base, KAFKA_BROKERS: "broker:65536" })).toThrow(
       /KAFKA_BROKERS/,
     );
+  });
+
+  it("accepts the local Redis port and rejects malformed URLs", () => {
+    expect(loadEnv(envSchema, { ...base, REDIS_URL: "redis://localhost:16379" }).REDIS_URL).toBe(
+      "redis://localhost:16379",
+    );
+    expect(() => loadEnv(envSchema, { ...base, REDIS_URL: "not-a-url" })).toThrow(/REDIS_URL/);
   });
 
   it("fails fast when DATABASE_URL is missing", () => {
