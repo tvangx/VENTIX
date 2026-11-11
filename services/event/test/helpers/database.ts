@@ -5,7 +5,7 @@ import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { Pool } from "pg";
 
 /** TEST_DATABASE_URL chỉ trỏ tới PostgreSQL kiểm thử, event_user có CREATEDB. */
-export async function testDatabase() {
+export async function testDatabase({ migrate = true } = {}) {
   const external = process.env.TEST_DATABASE_URL;
   const container = external ? undefined : await new PostgreSqlContainer("postgres:16").start();
   const adminUrl = external ?? container!.getConnectionUri();
@@ -17,11 +17,17 @@ export async function testDatabase() {
   const url = uri.toString();
   const pool = new Pool({ connectionString: url });
   try {
-    execFileSync(
-      process.execPath,
-      [require.resolve("prisma/build/index.js"), "migrate", "deploy"],
-      { cwd: join(__dirname, "../.."), env: { ...process.env, DATABASE_URL: url }, stdio: "pipe" },
-    );
+    if (migrate) {
+      execFileSync(
+        process.execPath,
+        [require.resolve("prisma/build/index.js"), "migrate", "deploy"],
+        {
+          cwd: join(__dirname, "../.."),
+          env: { ...process.env, DATABASE_URL: url },
+          stdio: "pipe",
+        },
+      );
+    }
   } catch (error) {
     await pool.end();
     await admin.query(`DROP DATABASE "${name}"`);
