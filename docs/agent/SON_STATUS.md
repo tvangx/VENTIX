@@ -13,8 +13,8 @@ In review chỉ có nghĩa cài đặt và kiểm thử local; Done chờ ngư�
 | S-105 | 1    | Organizer, duyệt, MinIO        | In review  | feat/identity-s105-organizer        | Đã audit: Multer 2.5 + SDK S3; MinIO thật bị chặn Docker         |
 | S-106 | 1    | OpenAPI + request mẫu          | In review  | docs/identity-s106-openapi-requests | Export, contract test, TypeScript generation; Postman 18 request |
 | S-107 | 1    | Schema Event                   | In review  | feat/event-s107-schema              | Unit 4, integration 14 pass; FK/immutability/rollback            |
-| S-201 | 2    | CRUD Event và tenant           | In review  | feat/event-s201-implementation      | PR #44 lưu quyết định. Triển khai ở PR riêng.                    |
-| S-202 | 2    | Seat map và sinh ghế           | In review  | feat/event-s202-seat-map            | Integration 26/26. Tạo 10.000 ghế dưới 5 giây.                   |
+| S-201 | 2    | CRUD Event và tenant           | Done       | feat/event-s201-implementation      | PR #60 đã merge vào nhánh tích hợp.                              |
+| S-202 | 2    | Seat map và sinh ghế           | Done       | feat/event-s202-seat-map            | PR #62 đã merge. Tạo 10.000 ghế dưới 5 giây.                     |
 
 ## Kiểm chứng cuối lô — 2026-10-25
 
