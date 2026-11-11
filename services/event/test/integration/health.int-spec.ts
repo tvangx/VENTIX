@@ -1,17 +1,16 @@
 import "reflect-metadata";
 import { INestApplication } from "@nestjs/common";
-import { PostgreSqlContainer, StartedPostgreSqlContainer } from "@testcontainers/postgresql";
 import { createLogger, loadEnv } from "@ticketing/common";
 import { SignJWT, exportSPKI, generateKeyPair, KeyLike } from "jose";
 import request from "supertest";
 import { createApp } from "../../src/bootstrap";
 import { envSchema } from "../../src/config/env.schema";
+import { testDatabase } from "../helpers/database";
 
 describe("service template (integration, Postgres via Testcontainers)", () => {
-  let pg: StartedPostgreSqlContainer;
+  let pg: Awaited<ReturnType<typeof testDatabase>>;
   let app: INestApplication;
   let privateKey: KeyLike;
-  let dbStopped = false;
 
   const sign = () =>
     new SignJWT({ roles: ["USER"] })
@@ -23,13 +22,13 @@ describe("service template (integration, Postgres via Testcontainers)", () => {
       .sign(privateKey);
 
   beforeAll(async () => {
-    pg = await new PostgreSqlContainer("postgres:16").start();
+    pg = await testDatabase();
     const pair = await generateKeyPair("RS256");
     privateKey = pair.privateKey;
     const env = loadEnv(envSchema, {
       NODE_ENV: "test",
       PORT: "3999", // app không listen trong test; chỉ cần giá trị hợp lệ
-      DATABASE_URL: pg.getConnectionUri(),
+      DATABASE_URL: pg.url,
       AUTH_ISSUER: "https://identity.test",
       AUTH_AUDIENCE: "ticketing-api",
       AUTH_PUBLIC_KEY_PEM: await exportSPKI(pair.publicKey),
@@ -40,7 +39,7 @@ describe("service template (integration, Postgres via Testcontainers)", () => {
 
   afterAll(async () => {
     await app?.close();
-    if (!dbStopped) await pg?.stop();
+    await pg?.close();
   });
 
   it("GET /health/live → 200", async () => {
@@ -80,7 +79,6 @@ describe("service template (integration, Postgres via Testcontainers)", () => {
 
   it("GET /health/ready → 503 problem+json once the DB is gone", async () => {
     await pg.stop();
-    dbStopped = true;
     const res = await request(app.getHttpServer()).get("/health/ready").expect(503);
     expect(res.body).toMatchObject({ code: "NOT_READY", status: 503 });
   });

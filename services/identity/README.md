@@ -55,3 +55,97 @@ trỏ tới PostgreSQL kiểm thử riêng với user có CREATEDB: mỗi suite 
 nhiên, chạy migration/seed và xóa đúng DB đó khi kết thúc. Không dùng DB chứa dữ
 liệu thật. Rollback kiểm thử nằm ở prisma/rollback/identity-init.sql; rollback
 sẽ xóa dữ liệu Identity và chỉ được chạy sau khi xác nhận DB đích.
+
+## S-102 — Đăng nhập email
+
+- `POST /v1/auth/register`: body email/password (12–128 ký tự), header Idempotency-Key UUID; trả id/email, không tạo phiên. Cùng key/body trả cùng kết quả, đổi body trả 409.
+- `POST /v1/auth/login`: body email/password; trả access_token, token_type, expires_in và cookie ventix_refresh HttpOnly, SameSite=Lax, Secure ở production.
+- `POST /v1/auth/refresh`: dùng cookie, không có body. Mỗi lần đổi token; dùng lại token cũ thu hồi cả family và trả 401. Client phải gom các lần refresh đồng thời.
+- `POST /v1/auth/logout`: thu hồi family của cookie và xóa cookie, 204; access JWT đã phát còn hiệu lực tối đa ACCESS_TOKEN_TTL_SECONDS.
+- `GET /.well-known/jwks.json`: public RSA JWK (RS256, kid), không có trường private key. Qua gateway: `/api/identity/.well-known/jwks.json`.
+
+Client dùng credentials/include khi gọi cookie API. Chỉ WEB_ORIGIN được CORS; session API từ Origin khác bị 403. Refresh token không trả trong JSON, không đưa vào localStorage. DB chỉ lưu SHA-256 refresh token; reuse xử lý và commit thu hồi trước khi báo lỗi.
+
+Production bắt buộc JWT_PRIVATE_KEY_PEM là PKCS8 RSA ≥2048 bits. Dev/test không đặt biến sinh khóa tạm, restart làm access JWT cũ mất hiệu lực và key đăng ký cũ có thể trả 409 (fingerprint HMAC phụ thuộc khóa). Để dev ổn định, đặt khóa riêng trong `.env` không commit. JWKS hiện có một khóa; chưa có giai đoạn giữ đồng thời khóa cũ/mới khi xoay khóa.
+
+Argon2 0.41.1 được ghim vì hỗ trợ Node 20, giấy phép MIT, có native binary Windows/Linux. jose chuyển từ devDependency sang runtime dependency. Không thêm thư viện hashing khác.
+
+## S-103 — Google OAuth
+
+Cấu hình GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI trong `.env`.
+Google Cloud Console cần đăng ký redirect URI khớp chính xác (dev mặc định
+http://localhost:3001/v1/auth/google/callback, hoặc URL gateway tương ứng).
+Production bắt buộc HTTPS. Không có credentials thì Google start trả 503,
+các luồng email vẫn hoạt động.
+
+1. GET `/v1/auth/google/start` với credentials/include: nhận authorization_url và
+   cookie ventix_oauth HttpOnly. Trình duyệt chuyển đến URL Google.
+2. Google callback về service: kiểm tra state/cookie TTL 10 phút, consume một lần,
+   exchange code với PKCE S256, verify ID token RS256/issuer/audience/exp/nonce/email_verified.
+3. Đặt refresh cookie, redirect về WEB_ORIGIN/auth/callback?provider=google.
+   Frontend gọi POST auth/refresh để lấy access token vào bộ nhớ.
+
+Nếu email đã tồn tại chưa link: trả ACCOUNT_LINK_REQUIRED (409). Người dùng login
+bằng email trước, gọi GET `/v1/auth/google/link` với Bearer JWT rồi đi theo URL
+trả về để liên kết; email Google phải trùng tài khoản đó. Không tự gộp theo email.
+Record state chỉ lưu hash; không lưu Google access/refresh token. Dọn record state
+hết hạn là tác vụ vận hành định kỳ, không ảnh hưởng việc từ chối state hết hạn.
+
+Tài liệu đối chiếu: [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect).
+
+## S-104 — Quyền và tenant
+
+GET `/v1/auth/me` với Bearer token trả global roles và memberships còn hiệu lực.
+POST `/v1/auth/tenants/{organizerId}/token` trả access token mới có organizer_id
+và chỉ các role global + role thuộc organizer đã chọn. Organizer phải APPROVED.
+Token đăng nhập ban đầu không có scope ORGANIZER/STAFF; refresh trả lại token global,
+client chọn lại tenant sau khi refresh.
+
+GET `/v1/organizers/{organizerId}/context` yêu cầu role ORGANIZER hoặc STAFF, scope
+trùng path và membership hiện còn trong DB. User bị suspend hoặc quyền bị thu hồi
+không dùng lại token tenant cũ để truy cập được. Không có bypass tenant cho ADMIN;
+Admin dùng các API `/v1/admin/*` riêng.
+
+Bootstrap Admin: cấu hình ADMIN_EMAIL, ADMIN_PASSWORD (12–128 ký tự) trong `.env`,
+chạy `pnpm --filter @ticketing/identity seed` rồi
+`pnpm --filter @ticketing/identity seed:admin`. Không có default password.
+Chạy lại giữ mật khẩu hiện có, chỉ bảo đảm role ADMIN; không tái kích hoạt user suspend.
+
+## S-105 — Hồ sơ Organizer và giấy phép
+
+- POST `/v1/organizer-applications` (Bearer + Idempotency-Key UUID): company_name,
+  tax_code tùy chọn; tạo PENDING và chưa cấp role.
+- GET `/v1/organizer-applications/{id}`: owner hoặc Admin xem hồ sơ/documents.
+- POST `/v1/organizer-applications/{id}/documents`: multipart file +
+  doc_type=BUSINESS_LICENSE, Bearer của owner + Idempotency-Key. Chỉ PENDING;
+  PDF/PNG/JPEG đúng magic/MIME, tối đa 1 MiB. Retry cùng key/file không upload trùng.
+- GET `/v1/organizer-applications/{id}/documents/{documentId}/download`: owner/Admin,
+  trả URL tải attachment có chữ ký, hiệu lực 60 giây. Bucket organizer-docs phải private.
+- GET `/v1/admin/organizer-applications?status=PENDING&limit=20&cursor={uuid}`:
+  Admin, next_cursor hoặc null, tối đa 100 dòng.
+- PATCH `/v1/admin/organizer-applications/{id}`: Admin, body decision
+  (APPROVED/REJECTED) và version. Chỉ PENDING đúng version được xử lý; approved
+  phải có giấy phép và cấp scope ORGANIZER trong cùng transaction. Hai request
+  đồng thời chỉ một thành công, request còn lại 409.
+
+MINIO_ENDPOINT, MINIO_BUCKET, MINIO_ACCESS_KEY, MINIO_SECRET_KEY cấu hình ở service.
+Dev values trong `.env.example` khớp compose; production cấp key riêng chỉ có
+quyền bucket organizer-docs. Thiếu cấu hình/lỗi storage trả 503, DB không có document
+giả. I/O bị hủy sau 5 giây; transaction tối đa 15 giây để bao gồm SDK retry/backoff.
+Upload thành công nhưng DB commit lỗi có thể để object mồ côi; retry cùng key dùng
+lại object key an toàn. Chưa có tác vụ dọn object mồ côi.
+
+ERD hiện chỉ cho một scope ORGANIZER/user; duyệt hồ sơ thứ hai không chuyển quyền
+khỏi hồ sơ trước mà trả ORGANIZER_SCOPE_CONFLICT. Chưa phát OrganizerApproved
+vì event-contracts hiện không có loại sự kiện Identity; thêm cần review contract riêng.
+
+`test:int` kiểm tra HTTP/DB với storage adapter giả, và hủy HTTP upstream bị treo.
+`test:storage` dùng MinIO thật qua Testcontainers, kiểm tra bytes và bucket private;
+chạy riêng vì cần Docker và image MinIO hạ tầng hiện có.
+
+## S-106 — OpenAPI và request mẫu
+
+`pnpm --filter @ticketing/identity openapi:export` sinh spec từ app thật;
+`openapi.json` được commit để Vũ sinh client. Bộ Postman 18 request và environment
+trống mật khẩu nằm ở `docs/api/identity/`, cùng hướng dẫn cookie, tenant, Google
+callback và upload. Không cần DB để export OpenAPI.

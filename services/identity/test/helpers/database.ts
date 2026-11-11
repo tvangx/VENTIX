@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { Pool } from "pg";
 
 /** Mỗi suite có DB riêng. TEST_DATABASE_URL chỉ dành cho PostgreSQL kiểm thử local. */
-export async function testDatabase() {
+export async function testDatabase(options: { initialOnly?: boolean } = {}) {
   const external = process.env.TEST_DATABASE_URL;
   const container = external ? undefined : await new PostgreSqlContainer("postgres:16").start();
   const adminUrl = external ?? container!.getConnectionUri();
@@ -24,7 +25,16 @@ export async function testDatabase() {
     });
   const pool = new Pool({ connectionString: url });
   try {
-    runPrisma("migrate", "deploy");
+    if (options.initialOnly) {
+      await pool.query(
+        readFileSync(
+          join(root, "prisma/migrations/20261025035958_identity_init/migration.sql"),
+          "utf8",
+        ),
+      );
+    } else {
+      runPrisma("migrate", "deploy");
+    }
   } catch (error) {
     await pool.end();
     await admin.query(`DROP DATABASE "${databaseName}"`);
