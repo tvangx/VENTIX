@@ -21,11 +21,12 @@ export function eventInput(venueId: string) {
   };
 }
 
-export async function organizerApp() {
+export async function organizerApp({ kafkaBrokers }: { kafkaBrokers?: string[] } = {}) {
   const db = await testDatabase();
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const env = loadEnv(envSchema, {
     NODE_ENV: "test",
+    ...(kafkaBrokers && { KAFKA_BROKERS: kafkaBrokers.join(","), EVENT_OUTBOX_ENABLED: "true" }),
     DATABASE_URL: db.url,
     AUTH_ISSUER: "https://identity.test",
     AUTH_AUDIENCE: "ticketing-api",

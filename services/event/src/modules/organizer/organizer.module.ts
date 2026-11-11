@@ -9,6 +9,12 @@ import {
 import { OrganizerRepository } from "./organizer.repository";
 import { OrganizerService } from "./organizer.service";
 import { OrganizerWrites } from "./organizer-writes";
+import {
+  AdminEventReviewController,
+  OrganizerLifecycleController,
+} from "./event-lifecycle.controller";
+import { EventLifecycleRepository } from "./event-lifecycle.repository";
+import { EventLifecycleService } from "./event-lifecycle.service";
 import { SeatMapsController } from "./seat-maps.controller";
 
 @Module({
@@ -18,7 +24,17 @@ import { SeatMapsController } from "./seat-maps.controller";
     OrganizerTicketClassesController,
     OrganizerSalePhasesController,
     SeatMapsController,
+    OrganizerLifecycleController,
+    AdminEventReviewController,
   ],
-  providers: [PrismaService, OrganizerRepository, OrganizerService, OrganizerWrites],
+  providers: [
+    PrismaService,
+    OrganizerRepository,
+    OrganizerService,
+    OrganizerWrites,
+    EventLifecycleRepository,
+    EventLifecycleService,
+  ],
+  exports: [PrismaService],
 })
 export class OrganizerModule {}

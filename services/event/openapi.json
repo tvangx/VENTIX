@@ -2286,6 +2286,601 @@
         ],
         "tags": ["organizer-seat-maps"]
       }
+    },
+    "/v1/organizer/events/{id}/submit": {
+      "post": {
+        "operationId": "OrganizerLifecycleController_submit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu token hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Thiếu role hoặc tenant hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy trong tenant",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Trạng thái, phiên bản, khóa ghi hoặc quan hệ bị xung đột",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": ["organizer-event-lifecycle"]
+      }
+    },
+    "/v1/organizer/events/{id}/publish": {
+      "post": {
+        "operationId": "OrganizerLifecycleController_publish",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu token hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Thiếu role hoặc tenant hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy trong tenant",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Trạng thái, phiên bản, khóa ghi hoặc quan hệ bị xung đột",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": ["organizer-event-lifecycle"]
+      }
+    },
+    "/v1/organizer/events/{id}/cancel": {
+      "post": {
+        "operationId": "OrganizerLifecycleController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu token hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Thiếu role hoặc tenant hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy trong tenant",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Trạng thái, phiên bản, khóa ghi hoặc quan hệ bị xung đột",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": ["organizer-event-lifecycle"]
+      }
+    },
+    "/v1/admin/events": {
+      "get": {
+        "operationId": "AdminEventReviewController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu token hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Thiếu role hoặc tenant hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy trong tenant",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": ["admin-event-review"]
+      }
+    },
+    "/v1/admin/events/{id}": {
+      "get": {
+        "operationId": "AdminEventReviewController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventReviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu token hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Thiếu role hoặc tenant hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy trong tenant",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": ["admin-event-review"]
+      }
+    },
+    "/v1/admin/events/{id}/decision": {
+      "post": {
+        "operationId": "AdminEventReviewController_decide",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu token hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Thiếu role hoặc tenant hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy trong tenant",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Trạng thái, phiên bản, khóa ghi hoặc quan hệ bị xung đột",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": ["admin-event-review"]
+      }
     }
   },
   "info": {
@@ -3027,6 +3622,146 @@
           }
         },
         "required": ["layout"]
+      },
+      "VersionDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": ["version"]
+      },
+      "CancelEventDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": ["version", "reason"]
+      },
+      "EventReviewResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "organizer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["DRAFT", "PENDING", "APPROVED", "REJECTED", "PUBLISHED", "ENDED", "CANCELLED"]
+          },
+          "venue_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "banner_key": {
+            "type": "string",
+            "maxLength": 512,
+            "nullable": true
+          },
+          "start_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "venue": {
+            "$ref": "#/components/schemas/VenueResponse"
+          },
+          "ticket_classes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketClassResponse"
+            }
+          },
+          "sale_phases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalePhaseResponse"
+            }
+          },
+          "seat_map": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeatMapResponse"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "created_at",
+          "updated_at",
+          "organizer_id",
+          "status",
+          "venue_id",
+          "title",
+          "description",
+          "banner_key",
+          "start_at",
+          "end_at",
+          "venue",
+          "ticket_classes",
+          "sale_phases",
+          "seat_map"
+        ]
+      },
+      "DecideEventDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["APPROVED", "REJECTED"]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": ["version", "decision"]
       }
     }
   }
