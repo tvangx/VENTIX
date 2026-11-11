@@ -24,7 +24,8 @@ export function eventInput(venueId: string) {
 export async function organizerApp({
   kafkaBrokers,
   redisUrl,
-}: { kafkaBrokers?: string[]; redisUrl?: string } = {}) {
+  internalApiKey,
+}: { kafkaBrokers?: string[]; redisUrl?: string; internalApiKey?: string } = {}) {
   const db = await testDatabase();
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const env = loadEnv(envSchema, {
@@ -32,6 +33,7 @@ export async function organizerApp({
     ...(kafkaBrokers && { KAFKA_BROKERS: kafkaBrokers.join(","), EVENT_OUTBOX_ENABLED: "true" }),
     DATABASE_URL: db.url,
     ...(redisUrl && { REDIS_URL: redisUrl }),
+    ...(internalApiKey && { INTERNAL_API_KEY: internalApiKey }),
     AUTH_ISSUER: "https://identity.test",
     AUTH_AUDIENCE: "ticketing-api",
     AUTH_PUBLIC_KEY_PEM: await exportSPKI(publicKey),

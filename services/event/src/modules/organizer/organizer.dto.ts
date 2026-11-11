@@ -19,7 +19,7 @@ import { ApiProperty, ApiPropertyOptional, IntersectionType, PartialType } from 
 export const MAX_DB_INT = 2147483647;
 const TIME_ZONE = /T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
-function queryInteger(value: unknown) {
+export function queryInteger(value: unknown) {
   return typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value;
 }
 

@@ -177,3 +177,16 @@ giả lập đã publish, gồm một sự kiện 10.000 ghế chia hai hạng v
 sự kiện có địa điểm, hạng vé và đợt mở bán. Lệnh dùng ID cố định cho
 fixture và giữ nguyên dữ liệu của các sự kiện đã tồn tại khi chạy lại.
 Publish ghi sự kiện vào Outbox của Event để relay hiện có phát lên Kafka.
+
+## API nội bộ hạng vé theo ghế (S-206)
+
+Booking gọi trực tiếp GET /v1/internal/events/{eventId}/seat-classes
+với header X-Internal-Key. Cấu hình INTERNAL_API_KEY giống nhau ở Event
+và Booking để bật luồng này. Thiếu cấu hình hoặc khóa sai trả 401.
+Kong dùng cấu hình T-206 trên main để trả 404 với đường dẫn nội bộ từ ngoài.
+
+Giữ seat_map_version của snapshot khi đọc các trang tiếp theo. Nếu
+không truyền phiên bản, Event chọn seat map đã publish mới nhất. Mỗi
+trang mặc định 1.000 ghế, tối đa 5.000. Dùng next_cursor của trang trước
+cho tới khi nhận null. Hợp đồng xem tại
+[seat-classes.yaml](../../docs/api/internal/seat-classes.yaml).

@@ -10,6 +10,7 @@ export const envSchema = z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
     DATABASE_URL: z.string().url(),
+    INTERNAL_API_KEY: z.string().min(1).optional(),
     REDIS_URL: z
       .string()
       .url()
