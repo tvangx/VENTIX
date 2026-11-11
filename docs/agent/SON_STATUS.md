@@ -15,7 +15,7 @@ In review chỉ có nghĩa cài đặt và kiểm thử local; Done chờ ngư�
 | S-107 | 1    | Schema Event                   | In review  | feat/event-s107-schema              | Unit 4, integration 14 pass; FK/immutability/rollback            |
 | S-201 | 2    | CRUD Event và tenant           | Done       | feat/event-s201-implementation      | PR #60 đã merge vào nhánh tích hợp.                              |
 | S-202 | 2    | Seat map và sinh ghế           | Done       | feat/event-s202-seat-map            | PR #62 đã merge. Tạo 10.000 ghế dưới 5 giây.                     |
-| S-203 | 2    | Duyệt và publish sự kiện       | In review  | feat/event-s203-lifecycle           | Lifecycle v2 qua outbox.                                         |
+| S-203 | 2    | Duyệt và publish sự kiện       | Done       | feat/event-s203-lifecycle           | PR #64 đã merge. Kafka lifecycle v2, 41 test pass.               |
 
 ## Kiểm chứng cuối lô — 2026-10-25
 
