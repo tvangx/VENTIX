@@ -5,7 +5,7 @@ import type { Env } from "../config/env.schema";
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnApplicationShutdown {
-  constructor(@Inject(ENV) env: Env) {
+  constructor(@Inject(ENV) env: Pick<Env, "DATABASE_URL">) {
     super({ datasources: { db: { url: env.DATABASE_URL } } });
   }
 
