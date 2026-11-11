@@ -2,6 +2,30 @@ import { authEnvShape, refineAuthEnv } from "@ticketing/auth-guard";
 import { z } from "zod";
 import { DEFAULT_PORT } from "../service.constants";
 
+const encryptionKeys = z.string().transform((value, context): Record<string, string> => {
+  try {
+    return z
+      .record(
+        z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+        z
+          .string()
+          .regex(/^[A-Za-z0-9+/]{43}=$/)
+          .refine(
+            (key) =>
+              Buffer.from(key, "base64").length === 32 &&
+              Buffer.from(key, "base64").toString("base64") === key,
+          ),
+      )
+      .parse(JSON.parse(value));
+  } catch {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Expected a JSON key ring of canonical base64 32-byte keys",
+    });
+    return z.NEVER;
+  }
+});
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -10,10 +34,39 @@ export const envSchema = z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
     DATABASE_URL: z.string().url(),
+    TICKET_WORKERS_ENABLED: z.enum(["true", "false"]).default("false"),
+    KAFKA_BROKERS: z
+      .string()
+      .regex(/^[^,\s]+(?::\d+)?(\s*,\s*[^,\s]+(?::\d+)?)*$/)
+      .default("localhost:9092"),
+    TICKET_ENCRYPTION_KEYS: encryptionKeys.optional(),
+    TICKET_ACTIVE_KEY_ID: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,64}$/)
+      .optional(),
     /** Đặt biến này mới bật OpenTelemetry. */
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
     ...authEnvShape,
   })
-  .superRefine((env, ctx) => refineAuthEnv(env, ctx));
+  .superRefine((env, ctx) => {
+    refineAuthEnv(env, ctx);
+    if (
+      env.TICKET_WORKERS_ENABLED === "true" ||
+      env.TICKET_ENCRYPTION_KEYS ||
+      env.TICKET_ACTIVE_KEY_ID
+    ) {
+      if (
+        !env.TICKET_ACTIVE_KEY_ID ||
+        !env.TICKET_ENCRYPTION_KEYS ||
+        !Object.hasOwn(env.TICKET_ENCRYPTION_KEYS, env.TICKET_ACTIVE_KEY_ID)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["TICKET_ACTIVE_KEY_ID"],
+          message: "An active key present in TICKET_ENCRYPTION_KEYS is required",
+        });
+      }
+    }
+  });
 
 export type Env = z.infer<typeof envSchema>;
