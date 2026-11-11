@@ -13,6 +13,7 @@
     "dev": "nest start --watch",
     "build": "node scripts/prisma-generate.js && nest build",
     "start": "node dist/main.js",
+    "seed": "pnpm build && node dist/tools/seed.js",
     "lint": "eslint src test",
     "typecheck": "node scripts/prisma-generate.js && tsc -p tsconfig.json --noEmit",
     "test": "node scripts/prisma-generate.js && jest",

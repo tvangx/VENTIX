@@ -17,6 +17,7 @@ In review chỉ có nghĩa cài đặt và kiểm thử local; Done chờ ngư�
 | S-202 | 2    | Seat map và sinh ghế           | Done       | feat/event-s202-seat-map            | PR #62 đã merge. Tạo 10.000 ghế dưới 5 giây.                     |
 | S-203 | 2    | Duyệt và publish sự kiện       | Done       | feat/event-s203-lifecycle           | PR #64 đã merge. Kafka lifecycle v2, 41 test pass.               |
 | S-204 | 2    | Catalog sự kiện công khai      | Done       | feat/event-s204-public-catalog      | PR #66 đã merge. Redis, ETag và tải đọc đã kiểm chứng.           |
+| S-205 | 2    | Seed dữ liệu Event             | In review  | feat/event-s205-seed                | 3 sự kiện, 10.000 ghế, kiểm thử chạy lặp đã qua.                 |
 
 ## Kiểm chứng cuối lô — 2026-10-25
 

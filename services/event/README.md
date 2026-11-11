@@ -162,3 +162,18 @@ service xác minh `PUBLISHED` trong event_db để cache cũ không lộ sự ki
 Redis lỗi thì đọc PostgreSQL. `REDIS_URL` mặc định `redis://localhost:6379`;
 local compose dùng `redis://localhost:16379`. Metric
 `event_catalog_cache_requests_total{result="hit|miss"}` cho biết hiệu quả cache.
+
+## Dữ liệu mẫu (S-205)
+
+Sau khi migrate Event database local, đặt DATABASE_URL của Event trong
+services/event/.env hoặc biến môi trường, rồi chạy:
+
+```sh
+pnpm --filter @ticketing/event seed
+```
+
+Có thể chạy pnpm seed ngay trong services/event. Lệnh tạo ba sự kiện
+giả lập đã publish, gồm một sự kiện 10.000 ghế chia hai hạng vé. Mỗi
+sự kiện có địa điểm, hạng vé và đợt mở bán. Lệnh dùng ID cố định cho
+fixture và giữ nguyên dữ liệu của các sự kiện đã tồn tại khi chạy lại.
+Publish ghi sự kiện vào Outbox của Event để relay hiện có phát lên Kafka.
