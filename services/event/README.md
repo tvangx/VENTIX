@@ -118,5 +118,32 @@ version tiếp theo; API không cho sửa hoặc xóa map cũ. `GET` collection 
 Mỗi row sinh ghế đánh số từ 1 đến `seats`; tên zone trong map, tên block trong
 zone và nhãn row trong block phải duy nhất. Mỗi row có 1 hạng vé SEATED thuộc
 cùng event. Tổng ghế tối đa 100.000; mỗi row tối đa 1.000 ghế. Việc tạo map và toàn bộ hierarchy nằm trong một
-transaction. S-203 đánh dấu `published_at` khi duyệt/publish; trigger S-107
+transaction. S-203 đánh dấu `published_at` khi Organizer publish; trigger S-107
 chặn mọi sửa/xóa map hoặc hierarchy đã publish.
+
+## S-203 — Duyệt và công khai sự kiện
+
+| Vai trò   | Endpoint                                            | Chuyển trạng thái                           |
+| --------- | --------------------------------------------------- | ------------------------------------------- |
+| Organizer | `POST /v1/organizer/events/{id}/submit`             | DRAFT hoặc REJECTED → PENDING               |
+| Admin     | `GET /v1/admin/events`, `GET /v1/admin/events/{id}` | Danh sách chờ duyệt và cấu hình để kiểm tra |
+| Admin     | `POST /v1/admin/events/{id}/decision`               | PENDING → APPROVED hoặc REJECTED            |
+| Organizer | `POST /v1/organizer/events/{id}/publish`            | APPROVED → PUBLISHED                        |
+| Organizer | `POST /v1/organizer/events/{id}/cancel`             | Trạng thái chưa kết thúc → CANCELLED        |
+
+Các lệnh POST nhận `version` hiện tại và `Idempotency-Key` UUID. Từ chối và
+hủy cần lý do. Quyết định Admin được ghi vào `event_approvals`. Admin duyệt
+xong, Organizer mới có thể chủ động publish. Lịch mở bán vẫn do sale phase
+quyết định.
+
+Publish cần hạng vé và sale phase. Event có vé SEATED phải có bản đồ phiên
+bản mới nhất khớp các hạng vé ghế. Event chỉ có GA dùng `seat_map_version=0`.
+Việc đánh dấu seat map, chuyển PUBLISHED và ghi `EventApproved` v2 xảy ra
+cùng transaction. Event đã công khai khi hủy sẽ ghi `EventCancelled` v2.
+Hủy trước công khai chỉ đổi trạng thái Event. Booking xử lý dừng bán và T-401
+phụ trách hoàn tiền. `EventUpdated` đi cùng luồng sửa sau duyệt đã hoãn.
+
+Outbox relay dùng `KAFKA_BROKERS` (mặc định `localhost:9092`) và
+`EVENT_OUTBOX_ENABLED`. Relay mặc định bật cho dev/prod, tắt cho test. Relay
+đọc `outbox_events` và gửi topic `event.lifecycle` với key ID sự kiện. Các
+metric `outbox_relay_*` xuất qua `/metrics`.

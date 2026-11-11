@@ -18,6 +18,25 @@ describe("envSchema", () => {
     expect(env.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
   });
 
+  it("uses the relay by default outside tests and parses multiple brokers", () => {
+    expect(loadEnv(envSchema, base).EVENT_OUTBOX_ENABLED).toBe(true);
+    expect(loadEnv(envSchema, { ...base, NODE_ENV: "test" }).EVENT_OUTBOX_ENABLED).toBe(false);
+    const config = loadEnv(envSchema, {
+      ...base,
+      NODE_ENV: "test",
+      EVENT_OUTBOX_ENABLED: "true",
+      KAFKA_BROKERS: "broker:9092, [::1]:9093",
+    });
+    expect(config.EVENT_OUTBOX_ENABLED).toBe(true);
+    expect(config.KAFKA_BROKERS).toEqual(["broker:9092", "[::1]:9093"]);
+  });
+
+  it("rejects invalid Kafka brokers", () => {
+    expect(() => loadEnv(envSchema, { ...base, KAFKA_BROKERS: "broker:65536" })).toThrow(
+      /KAFKA_BROKERS/,
+    );
+  });
+
   it("fails fast when DATABASE_URL is missing", () => {
     expect(() => loadEnv(envSchema, { ...base, DATABASE_URL: undefined })).toThrow(/DATABASE_URL/);
   });

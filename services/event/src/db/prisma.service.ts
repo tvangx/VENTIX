@@ -1,15 +1,15 @@
-import { Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
+import { Inject, Injectable, OnApplicationShutdown } from "@nestjs/common";
 import { PrismaClient } from "../../generated/client";
 import { ENV } from "../app.tokens";
 import type { Env } from "../config/env.schema";
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleDestroy {
+export class PrismaService extends PrismaClient implements OnApplicationShutdown {
   constructor(@Inject(ENV) env: Env) {
     super({ datasources: { db: { url: env.DATABASE_URL } } });
   }
 
-  async onModuleDestroy(): Promise<void> {
+  async onApplicationShutdown(): Promise<void> {
     await this.$disconnect();
   }
 }

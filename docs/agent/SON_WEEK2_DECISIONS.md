@@ -158,3 +158,15 @@ phương án này. Không suy diễn phản hồi “ok” thành một ma trậ
 
 - Sơn chấp nhận phạm vi S-201 giới hạn chỉnh sửa và xóa event, ticket class và sale phase trong DRAFT/REJECTED, đồng thời xác nhận dùng nhánh nền tuần 1 đã có S-104/S-107.
 - Quyền sửa sau duyệt theo BR-02.4 chuyển sang việc theo sau. Danh sách trường, điều kiện duyệt lại và thông báo còn chờ chốt.
+
+## Q-S203-01 — Thời điểm công khai và phát lifecycle v2
+
+- Sơn chốt ngày 2026-11-11. Admin duyệt sang APPROVED. Organizer chủ động
+  publish sang PUBLISHED. Event phát EventApproved v2 trong transaction publish
+  cùng phiên bản seat map đã công khai. Booking dùng sale phase để mở bán.
+- EventUpdated đi cùng quyền chỉnh sửa sau duyệt đã hoãn. Hợp đồng lifecycle
+  dùng bản đã duyệt ở [ADR-0011](../adr/0011-versioned-event-lifecycle.md),
+  đồng bộ qua PR #63.
+- Căn cứ gồm [UC-05](https://docs.google.com/document/d/1sL16iT1i_q1jONa7eY9iEFgjpCmlvclW1_l1ybZCuOU/edit)
+  và việc Booking dùng snapshot EventApproved để xét khả năng mở bán.
+- Triển khai và bằng chứng kiểm thử nằm trong [run report S-203](runs/S-203.md).

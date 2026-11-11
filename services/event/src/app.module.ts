@@ -7,6 +7,7 @@ import type { Env } from "./config/env.schema";
 import { DbModule } from "./db/db-health.service";
 import { HealthController } from "./health/health.controller";
 import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
+import { EventOutboxWorker } from "./messaging/event-outbox.worker";
 import { OrganizerModule } from "./modules/organizer/organizer.module";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
 
@@ -30,6 +31,7 @@ export class AppModule implements NestModule {
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        EventOutboxWorker,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],
