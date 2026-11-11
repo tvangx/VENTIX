@@ -41,6 +41,7 @@ export class OrganizerWrites {
     operation: string,
     payload: object,
     write: (tx: Prisma.TransactionClient) => Promise<Prisma.InputJsonObject>,
+    timeout = 15000,
   ): Promise<Prisma.JsonValue | Prisma.InputJsonObject> {
     const parsed = z.string().uuid().safeParse(key);
     if (!parsed.success) {
@@ -80,7 +81,7 @@ export class OrganizerWrites {
           });
           return response;
         },
-        { timeout: 15000, maxWait: 5000 },
+        { timeout, maxWait: 5000 },
       );
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {

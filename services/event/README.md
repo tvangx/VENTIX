@@ -83,3 +83,40 @@ kiện gắn với venue thuộc cùng tenant. Nếu venue chưa có sự kiện
 tenant dùng, migration rollback. Chủ dữ liệu cần đối chiếu và thống nhất cách
 tách hoặc ánh xạ các venue đó trước khi thử lại.
 File rollback `prisma/rollback/event-organizer-crud.sql` dùng cho bản sao kiểm thử đã xác nhận.
+
+## S-202 — Seat map theo phiên bản
+
+Organizer dùng `POST /v1/organizer/events/{eventId}/seat-maps` với JWT, tenant và
+`Idempotency-Key` UUID. Sự kiện phải ở DRAFT hoặc REJECTED. Mỗi lần tạo sinh
+version tiếp theo; API không cho sửa hoặc xóa map cũ. `GET` collection hỗ trợ
+`limit`/`cursor`, `GET /{version}` trả layout của một version.
+
+```json
+{
+  "layout": {
+    "zones": [
+      {
+        "name": "A",
+        "blocks": [
+          {
+            "name": "B1",
+            "rows": [
+              {
+                "label": "R1",
+                "seats": 10,
+                "ticket_class_id": "00000000-0000-4000-8000-000000000001"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Mỗi row sinh ghế đánh số từ 1 đến `seats`; tên zone trong map, tên block trong
+zone và nhãn row trong block phải duy nhất. Mỗi row có 1 hạng vé SEATED thuộc
+cùng event. Tổng ghế tối đa 100.000; mỗi row tối đa 1.000 ghế. Việc tạo map và toàn bộ hierarchy nằm trong một
+transaction. S-203 đánh dấu `published_at` khi duyệt/publish; trigger S-107
+chặn mọi sửa/xóa map hoặc hierarchy đã publish.

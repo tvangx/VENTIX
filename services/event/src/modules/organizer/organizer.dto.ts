@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsObject,
   IsISO8601,
   IsOptional,
   IsString,
@@ -180,3 +181,29 @@ export class UpdateSalePhaseDto extends IntersectionType(
   PartialType(CreateSalePhaseDto, { skipNullProperties: false }),
   VersionDto,
 ) {}
+
+class SeatMapRowDto {
+  @ApiProperty({ maxLength: 16 }) label!: string;
+  @ApiProperty({ minimum: 1, maximum: 1000 }) seats!: number;
+  @ApiProperty({ format: "uuid" }) ticket_class_id!: string;
+}
+
+class SeatMapBlockDto {
+  @ApiProperty({ maxLength: 128 }) name!: string;
+  @ApiProperty({ type: [SeatMapRowDto] }) rows!: SeatMapRowDto[];
+}
+
+class SeatMapZoneDto {
+  @ApiProperty({ maxLength: 128 }) name!: string;
+  @ApiProperty({ type: [SeatMapBlockDto] }) blocks!: SeatMapBlockDto[];
+}
+
+class SeatMapLayoutDto {
+  @ApiProperty({ type: [SeatMapZoneDto] }) zones!: SeatMapZoneDto[];
+}
+
+export class CreateSeatMapDto {
+  @ApiProperty({ type: SeatMapLayoutDto })
+  @IsObject()
+  layout!: SeatMapLayoutDto;
+}

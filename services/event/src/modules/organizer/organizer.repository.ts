@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { ProblemException } from "@ticketing/common";
 import type { Event, Prisma } from "../../../generated/client";
 import { PrismaService } from "../../db/prisma.service";
 import type {
@@ -13,6 +14,7 @@ import type {
   UpdateVenueDto,
 } from "./organizer.dto";
 import { checkEditable, checkRange, checkVersion, notFound } from "./organizer-writes";
+import type { SeatMapLayout } from "./seat-map.layout";
 
 function pageQuery(query: PageQuery) {
   return { take: query.limit + 1, orderBy: { id: "asc" as const } };
@@ -47,6 +49,83 @@ function phaseData(input: CreateSalePhaseDto | UpdateSalePhaseDto) {
 @Injectable()
 export class OrganizerRepository {
   constructor(private readonly db: PrismaService) {}
+
+  listSeatMaps(organizerId: string, eventId: string, query: PageQuery) {
+    return this.db.seatMap.findMany({
+      where: { eventId, event: { organizerId }, id: after(query) },
+      ...pageQuery(query),
+    });
+  }
+
+  seatMap(organizerId: string, eventId: string, version: number) {
+    return this.db.seatMap.findFirst({
+      where: { eventId, version, event: { organizerId } },
+    });
+  }
+
+  async createSeatMap(
+    tx: Prisma.TransactionClient,
+    organizerId: string,
+    eventId: string,
+    layout: SeatMapLayout,
+  ) {
+    await this.lockEditableEvent(tx, organizerId, eventId);
+    const classIds = new Set<string>();
+    for (const zone of layout.zones) {
+      for (const block of zone.blocks) {
+        for (const row of block.rows) {
+          classIds.add(row.ticket_class_id);
+        }
+      }
+    }
+    const classes = await tx.ticketClass.findMany({
+      where: { eventId, id: { in: [...classIds] } },
+    });
+    if (
+      classes.length !== classIds.size ||
+      classes.some((ticketClass) => ticketClass.kind !== "SEATED")
+    ) {
+      throw new ProblemException(
+        "INVALID_SEAT_CLASS",
+        400,
+        "Hạng vé ghế không thuộc sự kiện hoặc không phải SEATED",
+      );
+    }
+    const latest = await tx.seatMap.findFirst({ where: { eventId }, orderBy: { version: "desc" } });
+    const map = await tx.seatMap.create({
+      data: {
+        eventId,
+        version: (latest?.version ?? 0) + 1,
+        layout: layout as Prisma.InputJsonValue,
+      },
+    });
+    for (const zoneInput of layout.zones) {
+      const zone = await tx.zone.create({
+        data: { eventId, seatMapId: map.id, name: zoneInput.name },
+      });
+      for (const blockInput of zoneInput.blocks) {
+        const block = await tx.block.create({
+          data: { eventId, zoneId: zone.id, name: blockInput.name },
+        });
+        const seats: Prisma.SeatCreateManyInput[] = [];
+        for (const row of blockInput.rows) {
+          for (let seatNo = 1; seatNo <= row.seats; seatNo++) {
+            seats.push({
+              eventId,
+              blockId: block.id,
+              ticketClassId: row.ticket_class_id,
+              rowLabel: row.label,
+              seatNo,
+            });
+          }
+        }
+        for (let start = 0; start < seats.length; start += 1000) {
+          await tx.seat.createMany({ data: seats.slice(start, start + 1000) });
+        }
+      }
+    }
+    return map;
+  }
 
   listVenues(organizerId: string, query: PageQuery) {
     return this.db.venue.findMany({
