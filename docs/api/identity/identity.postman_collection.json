@@ -1,0 +1,562 @@
+{
+  "info": {
+    "name": "VENTIX Identity — Sơn tuần 1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "S-101–S-106. Import environment, nhập mật khẩu riêng, chạy theo thứ tự. Cookie jar giữ refresh cookie; không có refresh token trong JSON. Google flow cần cùng trình duyệt từ start đến callback."
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "user_token",
+      "value": ""
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "tenant_token",
+      "value": ""
+    },
+    {
+      "key": "organizer_id",
+      "value": ""
+    },
+    {
+      "key": "document_id",
+      "value": ""
+    },
+    {
+      "key": "organizer_version",
+      "value": "0"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "for (const key of ['register_key','application_key','document_key']) { if (!pm.collectionVariables.get(key)) pm.collectionVariables.set(key, pm.variables.replaceIn('{{$guid}}')); }"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Email auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{register_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/v1/auth/register",
+            "description": "Register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) pm.collectionVariables.set('user_id', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/v1/auth/login",
+            "description": "Login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) pm.collectionVariables.set('user_token', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/auth/me",
+            "description": "Me",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{user_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Refresh — cookie jar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/v1/auth/refresh",
+            "description": "Không body; cookie jar gửi ventix_refresh. Gọi tuần tự, không refresh song song."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) pm.collectionVariables.set('user_token', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public JWKS",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/.well-known/jwks.json",
+            "description": "Public JWKS"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Organizer application",
+      "item": [
+        {
+          "name": "Create application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{application_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/v1/organizer-applications",
+            "description": "Create application",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{user_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_name\": \"VENTIX Demo Organizer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) pm.collectionVariables.set('organizer_id', pm.response.json().id);\nif (pm.response.code >= 200 && pm.response.code < 300) pm.collectionVariables.set('organizer_version', String(pm.response.json().version));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get application",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/organizer-applications/{{organizer_id}}",
+            "description": "Get application",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{user_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) pm.collectionVariables.set('organizer_version', String(pm.response.json().version));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload business license — select local file",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{document_key}}"
+              }
+            ],
+            "url": "{{base_url}}/v1/organizer-applications/{{organizer_id}}/documents",
+            "description": "Chọn file PDF/PNG/JPEG ≤1 MiB trong Body. Upload lại cùng key cần cùng nội dung.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{user_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "doc_type",
+                  "value": "BUSINESS_LICENSE",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) pm.collectionVariables.set('document_id', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Private document download URL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/organizer-applications/{{organizer_id}}/documents/{{document_id}}/download",
+            "description": "Private document download URL",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{user_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Admin review",
+      "item": [
+        {
+          "name": "Admin login — seed admin first",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/v1/auth/login",
+            "description": "Login Admin thay refresh cookie trong cùng cookie jar. Đăng nhập lại user trước khi test refresh user.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) pm.collectionVariables.set('admin_token', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List pending applications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/admin/organizer-applications?status=PENDING&limit=20",
+            "description": "List pending applications",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/v1/admin/organizer-applications/{{organizer_id}}",
+            "description": "Approve",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"APPROVED\",\n  \"version\": {{organizer_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) pm.collectionVariables.set('organizer_version', String(pm.response.json().version));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject — alternative to Approve",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/v1/admin/organizer-applications/{{organizer_id}}",
+            "description": "Chọn Approve hoặc Reject trên hồ sơ PENDING. Không chạy cả hai trên cùng hồ sơ đã xử lý.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"REJECTED\",\n  \"version\": {{organizer_version}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Tenant access",
+      "item": [
+        {
+          "name": "Select approved tenant",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/v1/auth/tenants/{{organizer_id}}/token",
+            "description": "Select approved tenant",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{user_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) pm.collectionVariables.set('tenant_token', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tenant context",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/organizers/{{organizer_id}}/context",
+            "description": "Tenant context",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tenant_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Google — inspect only, complete in browser",
+      "item": [
+        {
+          "name": "Google start",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/auth/google/start",
+            "description": "Postman và trình duyệt không dùng chung cookie jar. Đăng nhập thật: gọi start trong cùng trình duyệt/frontend rồi chuyển tới authorization_url."
+          }
+        },
+        {
+          "name": "Google link start",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/auth/google/link",
+            "description": "Cần email login trước. Chạy trong trình duyệt/frontend có cookie OAuth để callback cùng phiên. Không tự gộp tài khoản theo email.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{user_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Logout",
+      "item": [
+        {
+          "name": "Logout current cookie family",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/v1/auth/logout",
+            "description": "204, cookie jar nhận cookie hết hạn. Access JWT đã phát còn hiệu lực đến exp."
+          }
+        }
+      ]
+    }
+  ]
+}

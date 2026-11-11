@@ -8,6 +8,27 @@ import { DbModule } from "./db/db-health.service";
 import { HealthController } from "./health/health.controller";
 import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
+import { PrismaService } from "./db/prisma.service";
+import { AuthKeys } from "./modules/auth/auth-keys";
+import { AuthController, JwksController } from "./modules/auth/auth.controller";
+import { AuthRepository } from "./modules/auth/auth.repository";
+import { AuthService } from "./modules/auth/auth.service";
+import { IdempotencyService } from "./modules/auth/idempotency.service";
+import { GoogleController } from "./modules/auth/google.controller";
+import { GoogleProvider } from "./modules/auth/google.provider";
+import { GoogleRepository } from "./modules/auth/google.repository";
+import { GoogleService } from "./modules/auth/google.service";
+import { AccessController, TenantContextController } from "./modules/access/access.controller";
+import { AccessRepository } from "./modules/access/access.repository";
+import { AccessService } from "./modules/access/access.service";
+import { TenantGuard } from "./modules/access/tenant.guard";
+import {
+  AdminOrganizersController,
+  OrganizersController,
+} from "./modules/organizers/organizers.controller";
+import { OrganizersRepository } from "./modules/organizers/organizers.repository";
+import { OrganizersService } from "./modules/organizers/organizers.service";
+import { DocumentsStorage } from "./modules/organizers/documents.storage";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -23,11 +44,36 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController],
+      controllers: [
+        HealthController,
+        MetricsController,
+        WhoamiController,
+        AuthController,
+        JwksController,
+        GoogleController,
+        AccessController,
+        TenantContextController,
+        OrganizersController,
+        AdminOrganizersController,
+      ],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        PrismaService,
+        AuthKeys,
+        AuthRepository,
+        AuthService,
+        IdempotencyService,
+        GoogleProvider,
+        GoogleRepository,
+        GoogleService,
+        AccessRepository,
+        AccessService,
+        TenantGuard,
+        OrganizersRepository,
+        OrganizersService,
+        DocumentsStorage,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],
