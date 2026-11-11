@@ -4,21 +4,21 @@ Sơn giao làm theo lô S-101–S-107 ngày 2026-10-25. Mỗi task có nhánh ri
 nhánh sau có thể dựa trên nhánh trước để kiểm thử tích hợp trước khi review.
 In review chỉ có nghĩa cài đặt và kiểm thử local; Done chờ người review và merge.
 
-| ID    | Tuần | Tên                            | Trạng thái | Nhánh                               | Ghi chú                                                          |
-| ----- | ---- | ------------------------------ | ---------- | ----------------------------------- | ---------------------------------------------------------------- |
-| S-101 | 1    | Schema Identity                | In review  | feat/identity-s101-schema           | Unit 4, integration 13 pass; native PostgreSQL 17                |
-| S-102 | 1    | Email auth, JWT/JWKS, rotation | In review  | feat/identity-s102-auth             | Unit 5, integration 21, concurrency 1 pass                       |
-| S-103 | 1    | Google OAuth PKCE              | In review  | feat/identity-s103-google-oauth     | Unit 12, integration 25 pass; chưa Google thật                   |
-| S-104 | 1    | RBAC, tenant, Admin seed       | In review  | feat/identity-s104-rbac-tenant      | Integration 30 pass; role/tenant/revocation/Admin seed           |
-| S-105 | 1    | Organizer, duyệt, MinIO        | In review  | feat/identity-s105-organizer        | Đã audit: Multer 2.5 + SDK S3; MinIO thật bị chặn Docker         |
-| S-106 | 1    | OpenAPI + request mẫu          | In review  | docs/identity-s106-openapi-requests | Export, contract test, TypeScript generation; Postman 18 request |
-| S-107 | 1    | Schema Event                   | In review  | feat/event-s107-schema              | Unit 4, integration 14 pass; FK/immutability/rollback            |
-| S-201 | 2    | CRUD Event và tenant           | Done       | feat/event-s201-implementation      | PR #60 đã merge vào nhánh tích hợp.                              |
-| S-202 | 2    | Seat map và sinh ghế           | Done       | feat/event-s202-seat-map            | PR #62 đã merge. Tạo 10.000 ghế dưới 5 giây.                     |
-| S-203 | 2    | Duyệt và publish sự kiện       | Done       | feat/event-s203-lifecycle           | PR #64 đã merge. Kafka lifecycle v2, 41 test pass.               |
-| S-204 | 2    | Catalog sự kiện công khai      | Done       | feat/event-s204-public-catalog      | PR #66 đã merge. Redis, ETag và tải đọc đã kiểm chứng.           |
-| S-205 | 2    | Seed dữ liệu Event             | Done       | feat/event-s205-seed                | PR #67 đã merge. 3 sự kiện, 10.000 ghế, chạy lặp được.           |
-| S-206 | 2    | API hạng vé theo ghế           | In review  | feat/event-s206-seat-classes        | Key nội bộ, cursor, 10.000 ghế và Kong đã kiểm chứng.            |
+| ID    | Tuần | Tên                            | Trạng thái | Nhánh                               | Ghi chú                                                                  |
+| ----- | ---- | ------------------------------ | ---------- | ----------------------------------- | ------------------------------------------------------------------------ |
+| S-101 | 1    | Schema Identity                | In review  | feat/identity-s101-schema           | Unit 4, integration 13 pass; native PostgreSQL 17                        |
+| S-102 | 1    | Email auth, JWT/JWKS, rotation | In review  | feat/identity-s102-auth             | Unit 5, integration 21, concurrency 1 pass                               |
+| S-103 | 1    | Google OAuth PKCE              | In review  | feat/identity-s103-google-oauth     | Unit 12, integration 25 pass; chưa Google thật                           |
+| S-104 | 1    | RBAC, tenant, Admin seed       | In review  | feat/identity-s104-rbac-tenant      | Integration 30 pass; role/tenant/revocation/Admin seed                   |
+| S-105 | 1    | Organizer, duyệt, MinIO        | In review  | feat/identity-s105-organizer        | Đã audit: Multer 2.5 + SDK S3; MinIO thật bị chặn Docker                 |
+| S-106 | 1    | OpenAPI + request mẫu          | In review  | docs/identity-s106-openapi-requests | Export, contract test, TypeScript generation; Postman 18 request         |
+| S-107 | 1    | Schema Event                   | In review  | feat/event-s107-schema              | Unit 4, integration 14 pass; FK/immutability/rollback                    |
+| S-201 | 2    | CRUD Event và tenant           | Done       | feat/event-s201-implementation      | PR #60 đã merge vào nhánh tích hợp.                                      |
+| S-202 | 2    | Seat map và sinh ghế           | Done       | feat/event-s202-seat-map            | PR #62 đã merge. Tạo 10.000 ghế dưới 5 giây.                             |
+| S-203 | 2    | Duyệt và publish sự kiện       | Done       | feat/event-s203-lifecycle           | PR #64 đã merge. Kafka lifecycle v2, 41 test pass.                       |
+| S-204 | 2    | Catalog sự kiện công khai      | Done       | feat/event-s204-public-catalog      | PR #66 đã merge. Redis, ETag và tải đọc đã kiểm chứng.                   |
+| S-205 | 2    | Seed dữ liệu Event             | Done       | feat/event-s205-seed                | PR #67 đã merge. 3 sự kiện, 10.000 ghế, chạy lặp được.                   |
+| S-206 | 2    | API hạng vé theo ghế           | Done       | feat/event-s206-seat-classes        | PR #68 đã merge. 10.000 ánh xạ, khóa nội bộ và Kong T-206 đã kiểm chứng. |
 
 ## Kiểm chứng cuối lô — 2026-10-25
 
