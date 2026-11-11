@@ -9,6 +9,7 @@ import { HealthController } from "./health/health.controller";
 import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
 import { EventOutboxWorker } from "./messaging/event-outbox.worker";
 import { OrganizerModule } from "./modules/organizer/organizer.module";
+import { PublicCatalogModule } from "./modules/public-catalog/public-catalog.module";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
 
 @Module({})
@@ -19,6 +20,7 @@ export class AppModule implements NestModule {
       imports: [
         DbModule,
         OrganizerModule,
+        PublicCatalogModule,
         AuthModule.register({
           issuer: env.AUTH_ISSUER,
           audience: env.AUTH_AUDIENCE,
@@ -34,7 +36,7 @@ export class AppModule implements NestModule {
         EventOutboxWorker,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
-      exports: [ENV, LOGGER],
+      exports: [ENV, LOGGER, MetricsService],
       global: true,
     };
   }

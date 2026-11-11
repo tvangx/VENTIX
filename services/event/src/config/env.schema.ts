@@ -10,6 +10,11 @@ export const envSchema = z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
     DATABASE_URL: z.string().url(),
+    REDIS_URL: z
+      .string()
+      .url()
+      .refine((value) => value.startsWith("redis://") || value.startsWith("rediss://"))
+      .default("redis://localhost:6379"),
     KAFKA_BROKERS: z
       .string()
       .default("localhost:9092")

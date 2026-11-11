@@ -2881,6 +2881,112 @@
         ],
         "tags": ["admin-event-review"]
       }
+    },
+    "/v1/events": {
+      "get": {
+        "operationId": "PublicCatalogController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm trong tiêu đề sự kiện",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Object"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogPage"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "ETag còn hiệu lực"
+          },
+          "400": {
+            "description": "Query không hợp lệ"
+          }
+        },
+        "summary": "Danh sách và tìm kiếm sự kiện đã công khai",
+        "tags": ["public-events"]
+      }
+    },
+    "/v1/events/{id}": {
+      "get": {
+        "operationId": "PublicCatalogController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogDetail"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "ETag còn hiệu lực"
+          },
+          "404": {
+            "description": "Không có sự kiện công khai"
+          }
+        },
+        "summary": "Chi tiết sự kiện đã công khai",
+        "tags": ["public-events"]
+      }
     }
   },
   "info": {
@@ -3762,6 +3868,118 @@
           }
         },
         "required": ["version", "decision"]
+      },
+      "CatalogPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventResponse"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": ["items", "next_cursor"]
+      },
+      "CatalogDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "number",
+            "minimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "organizer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["DRAFT", "PENDING", "APPROVED", "REJECTED", "PUBLISHED", "ENDED", "CANCELLED"]
+          },
+          "venue_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "banner_key": {
+            "type": "string",
+            "maxLength": 512,
+            "nullable": true
+          },
+          "start_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "venue": {
+            "$ref": "#/components/schemas/VenueResponse"
+          },
+          "ticket_classes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketClassResponse"
+            }
+          },
+          "sale_phases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalePhaseResponse"
+            }
+          },
+          "seat_map": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeatMapResponse"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "created_at",
+          "updated_at",
+          "organizer_id",
+          "status",
+          "venue_id",
+          "title",
+          "description",
+          "banner_key",
+          "start_at",
+          "end_at",
+          "venue",
+          "ticket_classes",
+          "sale_phases",
+          "seat_map"
+        ]
       }
     }
   }

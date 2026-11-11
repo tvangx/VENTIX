@@ -21,13 +21,17 @@ export function eventInput(venueId: string) {
   };
 }
 
-export async function organizerApp({ kafkaBrokers }: { kafkaBrokers?: string[] } = {}) {
+export async function organizerApp({
+  kafkaBrokers,
+  redisUrl,
+}: { kafkaBrokers?: string[]; redisUrl?: string } = {}) {
   const db = await testDatabase();
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const env = loadEnv(envSchema, {
     NODE_ENV: "test",
     ...(kafkaBrokers && { KAFKA_BROKERS: kafkaBrokers.join(","), EVENT_OUTBOX_ENABLED: "true" }),
     DATABASE_URL: db.url,
+    ...(redisUrl && { REDIS_URL: redisUrl }),
     AUTH_ISSUER: "https://identity.test",
     AUTH_AUDIENCE: "ticketing-api",
     AUTH_PUBLIC_KEY_PEM: await exportSPKI(publicKey),
@@ -36,6 +40,7 @@ export async function organizerApp({ kafkaBrokers }: { kafkaBrokers?: string[] }
   await app.listen(0, "127.0.0.1");
   return {
     db,
+    nest: app,
     http: request(await app.getUrl()),
     token(organizerId?: string, roles = ["ORGANIZER"]) {
       return new SignJWT({ roles, organizer_id: organizerId })

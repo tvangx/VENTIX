@@ -147,3 +147,18 @@ Outbox relay dùng `KAFKA_BROKERS` (mặc định `localhost:9092`) và
 `EVENT_OUTBOX_ENABLED`. Relay mặc định bật cho dev/prod, tắt cho test. Relay
 đọc `outbox_events` và gửi topic `event.lifecycle` với key ID sự kiện. Các
 metric `outbox_relay_*` xuất qua `/metrics`.
+
+## S-204 — Catalog sự kiện công khai
+
+`GET /v1/events` hỗ trợ `q` (tìm không phân biệt hoa/thường trong tiêu đề),
+`limit` (1–100, mặc định 20) và `cursor` UUID. `GET /v1/events/{id}` trả chi tiết,
+địa điểm, hạng vé, đợt mở bán và seat map đã publish mới nhất. Hai API không cần
+JWT, chỉ trả sự kiện `PUBLISHED`; qua Kong dùng tiền tố `/api/event`.
+
+Cả hai API trả `ETag` và hỗ trợ `If-None-Match`/304. Client cần kiểm tra lại với
+server (`Cache-Control: public, no-cache`). Dữ liệu được cache Redis 30–45 giây
+với mutex ngắn hạn và gom yêu cầu đồng thời. Trước khi trả cache hoặc 304,
+service xác minh `PUBLISHED` trong event_db để cache cũ không lộ sự kiện đã hủy.
+Redis lỗi thì đọc PostgreSQL. `REDIS_URL` mặc định `redis://localhost:6379`;
+local compose dùng `redis://localhost:16379`. Metric
+`event_catalog_cache_requests_total{result="hit|miss"}` cho biết hiệu quả cache.
