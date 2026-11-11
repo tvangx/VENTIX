@@ -9,6 +9,7 @@ import {
 import { OrganizerRepository } from "./organizer.repository";
 import { OrganizerService } from "./organizer.service";
 import { OrganizerWrites } from "./organizer-writes";
+import { SeatMapsController } from "./seat-maps.controller";
 
 @Module({
   controllers: [
@@ -16,6 +17,7 @@ import { OrganizerWrites } from "./organizer-writes";
     OrganizerEventsController,
     OrganizerTicketClassesController,
     OrganizerSalePhasesController,
+    SeatMapsController,
   ],
   providers: [PrismaService, OrganizerRepository, OrganizerService, OrganizerWrites],
 })

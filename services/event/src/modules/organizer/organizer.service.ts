@@ -8,6 +8,7 @@ import type {
   CreateTicketClassDto,
   UpdateTicketClassDto,
   CreateSalePhaseDto,
+  CreateSeatMapDto,
   UpdateSalePhaseDto,
   PageQuery,
 } from "./organizer.dto";
@@ -16,10 +17,12 @@ import {
   eventResponse,
   ticketClassResponse,
   salePhaseResponse,
+  seatMapResponse,
   page,
 } from "./organizer.responses";
 import { OrganizerRepository } from "./organizer.repository";
 import { OrganizerWrites, notFound } from "./organizer-writes";
+import { parseSeatMapLayout } from "./seat-map.layout";
 
 function required<T>(row: T | null): T {
   if (!row) throw notFound();
@@ -38,6 +41,27 @@ export class OrganizerService {
     private readonly repo: OrganizerRepository,
     private readonly writes: OrganizerWrites,
   ) {}
+
+  async listSeatMaps(tenant: string, eventId: string, query: PageQuery) {
+    required(await this.repo.event(tenant, eventId));
+    return page(await this.repo.listSeatMaps(tenant, eventId, query), query, seatMapResponse);
+  }
+
+  async getSeatMap(tenant: string, eventId: string, version: number) {
+    return seatMapResponse(required(await this.repo.seatMap(tenant, eventId, version)));
+  }
+
+  createSeatMap(tenant: string, eventId: string, dto: CreateSeatMapDto, key: string | undefined) {
+    const { layout } = parseSeatMapLayout(dto.layout);
+    return this.writes.run(
+      tenant,
+      key,
+      "POST events/" + eventId + "/seat-maps",
+      layout,
+      async (tx) => seatMapResponse(await this.repo.createSeatMap(tx, tenant, eventId, layout)),
+      60000,
+    );
+  }
 
   async listVenues(tenant: string, query: PageQuery) {
     return page(await this.repo.listVenues(tenant, query), query, venueResponse);

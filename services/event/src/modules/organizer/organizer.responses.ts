@@ -1,5 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
-import type { Event, SalePhase, TicketClass, Venue } from "../../../generated/client";
+import type {
+  Event,
+  Prisma,
+  SalePhase,
+  SeatMap,
+  TicketClass,
+  Venue,
+} from "../../../generated/client";
 import { MAX_DB_INT, type PageQuery } from "./organizer.dto";
 
 class ResourceResponse {
@@ -82,6 +89,26 @@ export function eventResponse(row: Event) {
     status: row.status,
     start_at: row.startAt.toISOString(),
     end_at: row.endAt.toISOString(),
+  };
+}
+
+export class SeatMapResponse extends ResourceResponse {
+  @ApiProperty({ format: "uuid" }) event_id!: string;
+  @ApiProperty({ type: "object", additionalProperties: true }) layout!: object;
+  @ApiProperty({ type: String, format: "date-time", nullable: true }) published_at!: string | null;
+}
+
+export class SeatMapPage {
+  @ApiProperty({ type: [SeatMapResponse] }) items!: SeatMapResponse[];
+  @ApiProperty({ type: String, format: "uuid", nullable: true }) next_cursor!: string | null;
+}
+
+export function seatMapResponse(row: SeatMap) {
+  return {
+    ...resource(row),
+    event_id: row.eventId,
+    layout: row.layout as Prisma.JsonObject,
+    published_at: row.publishedAt?.toISOString() ?? null,
   };
 }
 
