@@ -15,7 +15,11 @@ export const envelopeBase = z.object({
   tenant_id: z.string().uuid().optional(), // organizer_id nếu có
 });
 
-export function envelope<T extends string, D extends z.ZodTypeAny>(type: T, data: D, version = 1) {
+export function envelope<T extends string, D extends z.ZodTypeAny, V extends number = 1>(
+  type: T,
+  data: D,
+  version: V = 1 as V,
+) {
   return envelopeBase.extend({
     type: z.literal(type),
     version: z.literal(version),
