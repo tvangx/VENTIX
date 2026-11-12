@@ -9,8 +9,8 @@ import { GateContext, GateRepository } from "../gates/gate.repository";
 import { TicketIdempotency } from "../tickets/ticket-idempotency";
 import { TicketSecrets } from "../tickets/ticket-secrets";
 import { verifyTotp } from "../tickets/totp";
-import { CheckinInput, CheckinResponse, CheckinResult } from "./checkin.dto";
-import { CheckinRepository, ScannedTicket } from "./checkin.repository";
+import { CheckinInput, CheckinQr, CheckinResponse, CheckinResult } from "./checkin.dto";
+import { CheckinRepository, OfflineScanContext, ScannedTicket } from "./checkin.repository";
 
 @Injectable()
 export class CheckinService {
@@ -47,38 +47,44 @@ export class CheckinService {
         },
       };
       return this.idempotency.run(executor, user, "online-checkin", key, payload, async () => {
-        const ticket = await this.repo.ticket(executor, input.qr.ticket_id);
-        const scannedAt = await this.gates.now(executor);
-        const result = this.result(ticket, gate, input, scannedAt);
-        if (result === "ACCEPTED") {
-          if (!(await this.repo.accept(executor, ticket!)))
-            throw new ProblemException(
-              "TICKET_STATE_CONFLICT",
-              409,
-              "Ticket changed during check-in",
-            );
-        }
-        const response = await this.repo.log(
-          executor,
-          user,
-          gate,
-          input.qr.ticket_id,
-          ticket?.id ?? null,
-          result,
-          scannedAt,
-        );
-        if (result === "ACCEPTED") await this.publish(executor, gate, response);
-        return response;
+        return this.record(executor, user, gate, input.qr);
       });
     });
     this.scans.inc({ result: response.result });
     return response;
   }
 
+  async record(
+    executor: SqlExecutor,
+    user: AuthUser,
+    gate: GateContext,
+    qr: CheckinQr,
+    scannedAt?: Date,
+    offline?: OfflineScanContext,
+  ): Promise<CheckinResponse> {
+    const ticket = await this.repo.ticket(executor, qr.ticket_id);
+    const scanTime = scannedAt ?? (await this.gates.now(executor));
+    const result = gate.cancelled ? "INVALID" : this.result(ticket, gate, qr, scanTime);
+    if (result === "ACCEPTED" && !(await this.repo.accept(executor, ticket!)))
+      throw new ProblemException("TICKET_STATE_CONFLICT", 409, "Ticket changed during check-in");
+    const response = await this.repo.log(
+      executor,
+      user,
+      gate,
+      qr.ticket_id,
+      ticket?.id ?? null,
+      result,
+      scanTime,
+      offline,
+    );
+    if (result === "ACCEPTED") await this.publish(executor, gate, response, offline !== undefined);
+    return response;
+  }
+
   private result(
     ticket: ScannedTicket | undefined,
     gate: GateContext,
-    input: CheckinInput,
+    qr: CheckinQr,
     scannedAt: Date,
   ): CheckinResult {
     if (!ticket) return "INVALID";
@@ -89,8 +95,7 @@ export class CheckinService {
       return "WRONG_EVENT";
     if (ticket.gate_id !== gate.id) return "WRONG_GATE";
     if (ticket.status === "CHECKED_IN") return "DUPLICATE";
-    if (ticket.status !== "ACTIVE" || ticket.secret_version !== input.qr.secret_version)
-      return "INVALID";
+    if (ticket.status !== "ACTIVE" || ticket.secret_version !== qr.secret_version) return "INVALID";
     if (!ticket.secret_enc || !ticket.key_id)
       throw new ProblemException(
         "TICKET_SECRET_UNAVAILABLE",
@@ -111,7 +116,7 @@ export class CheckinService {
       );
     }
     try {
-      return verifyTotp(secret, input.qr.token, Math.floor(scannedAt.getTime() / 1000))
+      return verifyTotp(secret, qr.token, Math.floor(scannedAt.getTime() / 1000))
         ? "ACCEPTED"
         : "INVALID";
     } finally {
@@ -123,6 +128,7 @@ export class CheckinService {
     executor: SqlExecutor,
     gate: GateContext,
     response: CheckinResponse,
+    offline: boolean,
   ): Promise<void> {
     const context = requestContext.get();
     await this.outbox.add(
@@ -134,7 +140,7 @@ export class CheckinService {
           event_id: gate.event_id,
           gate_id: gate.id,
           scanned_at: response.scanned_at,
-          offline: false,
+          offline,
         },
         { tenant_id: gate.organizer_id, trace_id: context?.traceId ?? context?.requestId },
       ),

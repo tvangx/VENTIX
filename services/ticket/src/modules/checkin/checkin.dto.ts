@@ -20,7 +20,7 @@ export const CHECKIN_RESULTS = [
 ] as const;
 export type CheckinResult = (typeof CHECKIN_RESULTS)[number];
 
-function normalizeUuid({ value }: { value: unknown }): unknown {
+export function normalizeUuid({ value }: { value: unknown }): unknown {
   return typeof value === "string" ? value.toLowerCase() : value;
 }
 

@@ -681,6 +681,219 @@
         "summary": "Verify an online ticket QR and accept a ticket once",
         "tags": ["check-in"]
       }
+    },
+    "/v1/offline-devices": {
+      "post": {
+        "operationId": "OfflineController_register",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterOfflineDevice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflineDeviceView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, request key or scan timestamp"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Staff tenant/assignment or HMAC signature denied"
+          },
+          "404": {
+            "description": "Gate, package or owned device unavailable"
+          },
+          "409": {
+            "description": "Context mismatch, expired package or reused request/scan ID"
+          },
+          "503": {
+            "description": "Signing or ticket key unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Register a HMAC device session for an owned, current gate verification package",
+        "tags": ["offline-check-in"]
+      }
+    },
+    "/v1/offline-sync": {
+      "post": {
+        "operationId": "OfflineController_sync",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Must equal batch_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfflineBatchInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflineSyncResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, request key or scan timestamp"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Staff tenant/assignment or HMAC signature denied"
+          },
+          "404": {
+            "description": "Gate, package or owned device unavailable"
+          },
+          "409": {
+            "description": "Context mismatch, expired package or reused request/scan ID"
+          },
+          "503": {
+            "description": "Signing or ticket key unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify a signed offline batch, record scans idempotently and return current revocations",
+        "tags": ["offline-check-in"]
+      }
+    },
+    "/v1/offline-devices/{deviceId}/revocations": {
+      "get": {
+        "operationId": "OfflineController_revocations",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevocationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, request key or scan timestamp"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Staff tenant/assignment or HMAC signature denied"
+          },
+          "404": {
+            "description": "Gate, package or owned device unavailable"
+          },
+          "409": {
+            "description": "Context mismatch, expired package or reused request/scan ID"
+          },
+          "503": {
+            "description": "Signing or ticket key unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Page through current ticket revocations and secret-version changes for an owned device gate",
+        "tags": ["offline-check-in"]
+      }
     }
   },
   "info": {
@@ -1085,6 +1298,272 @@
           }
         },
         "required": ["scan_id", "ticket_id", "result", "scanned_at"]
+      },
+      "RegisterOfflineDevice": {
+        "type": "object",
+        "properties": {
+          "gate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "package_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "public_key_pem": {
+            "type": "string",
+            "description": "Same RSA SPKI public key used to download the package"
+          }
+        },
+        "required": ["gate_id", "package_id", "public_key_pem"]
+      },
+      "OfflineDeviceView": {
+        "type": "object",
+        "properties": {
+          "server_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Current server clock for timestamp correction, refreshed on replay"
+          },
+          "device_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "package_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "algorithm": {
+            "type": "string",
+            "enum": ["HMAC-SHA256"]
+          },
+          "encrypted_key": {
+            "type": "string",
+            "description": "Base64 RSA-OAEP SHA-256 wrapped HMAC key"
+          },
+          "oaep_label": {
+            "type": "string",
+            "description": "Base64 OAEP label binding the key to this device/package"
+          }
+        },
+        "required": [
+          "server_time",
+          "device_id",
+          "package_id",
+          "event_id",
+          "gate_id",
+          "issued_at",
+          "expires_at",
+          "algorithm",
+          "encrypted_key",
+          "oaep_label"
+        ]
+      },
+      "OfflineScan": {
+        "type": "object",
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "secret_version": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "token": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$"
+          },
+          "scanned_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Canonical UTC ISO timestamp with milliseconds"
+          }
+        },
+        "required": ["scan_id", "ticket_id", "secret_version", "token", "scanned_at"]
+      },
+      "OfflineBatchInput": {
+        "type": "object",
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "device_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "package_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scans": {
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineScan"
+            }
+          },
+          "signature": {
+            "type": "string",
+            "description": "Canonical base64 HMAC-SHA256 signature"
+          }
+        },
+        "required": [
+          "batch_id",
+          "device_id",
+          "package_id",
+          "event_id",
+          "gate_id",
+          "scans",
+          "signature"
+        ]
+      },
+      "OfflineScanView": {
+        "type": "object",
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "result": {
+            "type": "string",
+            "enum": ["ACCEPTED", "DUPLICATE", "WRONG_EVENT", "WRONG_GATE", "INVALID"]
+          },
+          "scanned_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source_scan_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["scan_id", "ticket_id", "result", "scanned_at", "source_scan_id"]
+      },
+      "OfflineBatchView": {
+        "type": "object",
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "device_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "record_count": {
+            "type": "number"
+          },
+          "conflict_count": {
+            "type": "number"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineScanView"
+            }
+          }
+        },
+        "required": [
+          "batch_id",
+          "device_id",
+          "record_count",
+          "conflict_count",
+          "received_at",
+          "items"
+        ]
+      },
+      "TicketUpdate": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "secret_version": {
+            "type": "number"
+          },
+          "revoked": {
+            "type": "boolean"
+          }
+        },
+        "required": ["ticket_id", "status", "secret_version", "revoked"]
+      },
+      "RevocationPage": {
+        "type": "object",
+        "properties": {
+          "revoked_ticket_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ticket_updates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketUpdate"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["revoked_ticket_ids", "ticket_updates", "next_cursor"]
+      },
+      "OfflineSyncResponse": {
+        "type": "object",
+        "properties": {
+          "batch": {
+            "$ref": "#/components/schemas/OfflineBatchView"
+          },
+          "revocations": {
+            "$ref": "#/components/schemas/RevocationPage"
+          }
+        },
+        "required": ["batch", "revocations"]
       }
     }
   }

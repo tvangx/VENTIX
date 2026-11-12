@@ -3,6 +3,7 @@ import { newMessage, parseMessage, Topics } from "@ticketing/event-contracts";
 import { confirmedOrder, fixture } from "../support/ticket";
 import { startKafka } from "../support/kafka";
 import { scanFixture } from "../support/checkin";
+import { offlineFixture } from "../support/offline";
 
 async function eventually(check: () => Promise<boolean>): Promise<void> {
   const deadline = Date.now() + 30000;
@@ -212,6 +213,47 @@ describe("S-301 real Kafka worker", () => {
       expect([...seen.values()][0]).toMatchObject({
         type: "TicketCheckedIn",
         data: { event_id: input.event_id, gate_id: input.gate_id, offline: false },
+      });
+    } finally {
+      await observer.disconnect();
+    }
+  });
+
+  it("publishes an offline TicketCheckedIn after a signed batch through Kafka", async () => {
+    const setup = await offlineFixture(context);
+    const batch = await setup.makeBatch();
+    const observer = broker.kafka.consumer({ groupId: `offline-observer-${randomUUID()}` });
+    const seen = new Map<string, ReturnType<typeof parseMessage>>();
+    await observer.connect();
+    try {
+      await observer.subscribe({ topic: Topics.TICKET_EVENTS, fromBeginning: true });
+      await observer.run({
+        eachMessage: async ({ message }) => {
+          const parsed = parseMessage(JSON.parse(message.value!.toString()));
+          if (
+            parsed.type === "TicketCheckedIn" &&
+            parsed.data.ticket_id === batch.scans[0].ticket_id
+          ) {
+            expect(message.key?.toString()).toBe(batch.scans[0].ticket_id);
+            seen.set(parsed.message_id, parsed);
+          }
+        },
+      });
+      expect((await setup.sync(batch).expect(200)).body.batch.items[0].result).toBe("ACCEPTED");
+      await eventually(async () => seen.size === 1);
+      await eventually(
+        async () =>
+          (
+            await context.repo.pool.query(
+              "SELECT id FROM outbox_events WHERE event_type='TicketCheckedIn' AND message_key=$1 AND published_at IS NOT NULL",
+              [batch.scans[0].ticket_id],
+            )
+          ).rowCount === 1,
+      );
+      expect([...seen.values()][0]).toMatchObject({
+        type: "TicketCheckedIn",
+        tenant_id: setup.organizerId,
+        data: { offline: true, scanned_at: batch.scans[0].scanned_at },
       });
     } finally {
       await observer.disconnect();

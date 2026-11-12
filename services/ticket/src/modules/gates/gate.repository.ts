@@ -39,6 +39,7 @@ export class GateRepository {
     gateId: string,
     user: AuthUser,
     staff: boolean,
+    allowCancelled = false,
   ): Promise<GateContext> {
     const [gate] = await executor.query<GateContext>(
       `SELECT g.id,g.event_id,g.name,e.organizer_id,e.cancelled FROM gates g
@@ -47,7 +48,8 @@ export class GateRepository {
     );
     if (!gate) throw new ProblemException("GATE_NOT_FOUND", 404, "Gate is unavailable");
     if (staff || !user.roles.includes("ADMIN")) assertSameOrganizer(user, gate.organizer_id);
-    if (gate.cancelled) throw new ProblemException("EVENT_CANCELLED", 409, "Event is cancelled");
+    if (gate.cancelled && !allowCancelled)
+      throw new ProblemException("EVENT_CANCELLED", 409, "Event is cancelled");
     if (staff) {
       const assignments = await executor.query(
         "SELECT id FROM staff_assignments WHERE gate_id=$1::uuid AND staff_user_id=$2::uuid AND revoked_at IS NULL",

@@ -86,17 +86,18 @@ model TicketEvent {
 }
 
 model Gate {
-  id          String            @id @db.Uuid
-  eventId     String            @map("event_id") @db.Uuid
-  organizerId String            @map("organizer_id") @db.Uuid
-  name        String            @db.VarChar(100)
-  version     Int               @default(1)
-  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime          @default(now()) @map("updated_at") @db.Timestamptz
-  event       TicketEvent       @relation(fields: [eventId, organizerId], references: [id, organizerId], onDelete: Restrict)
-  tickets     Ticket[]
-  assignments StaffAssignment[]
-  checkins    CheckinLog[]
+  id             String            @id @db.Uuid
+  eventId        String            @map("event_id") @db.Uuid
+  organizerId    String            @map("organizer_id") @db.Uuid
+  name           String            @db.VarChar(100)
+  version        Int               @default(1)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime          @default(now()) @map("updated_at") @db.Timestamptz
+  event          TicketEvent       @relation(fields: [eventId, organizerId], references: [id, organizerId], onDelete: Restrict)
+  tickets        Ticket[]
+  assignments    StaffAssignment[]
+  checkins       CheckinLog[]
+  offlineDevices OfflineDevice[]
 
   @@unique([id, eventId], map: "uq_gate_event")
   @@unique([id, eventId, organizerId], map: "uq_gate_event_organizer")
@@ -135,22 +136,69 @@ model TicketRequest {
 }
 
 model CheckinLog {
-  id              String   @id @db.Uuid
-  ticketId        String?  @map("ticket_id") @db.Uuid
-  scannedTicketId String   @map("scanned_ticket_id") @db.Uuid
-  gateId          String   @map("gate_id") @db.Uuid
-  eventId         String   @map("event_id") @db.Uuid
-  organizerId     String   @map("organizer_id") @db.Uuid
-  staffUserId     String   @map("staff_user_id") @db.Uuid
-  result          String
-  offline         Boolean  @default(false)
-  scannedAt       DateTime @map("scanned_at") @db.Timestamptz
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  ticket          Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Restrict)
-  gate            Gate     @relation(fields: [gateId, eventId, organizerId], references: [id, eventId, organizerId], onDelete: Restrict)
+  id                String            @id @db.Uuid
+  ticketId          String?           @map("ticket_id") @db.Uuid
+  scannedTicketId   String            @map("scanned_ticket_id") @db.Uuid
+  gateId            String            @map("gate_id") @db.Uuid
+  eventId           String            @map("event_id") @db.Uuid
+  organizerId       String            @map("organizer_id") @db.Uuid
+  staffUserId       String            @map("staff_user_id") @db.Uuid
+  result            String
+  offline           Boolean           @default(false)
+  scannedAt         DateTime          @map("scanned_at") @db.Timestamptz
+  batchId           String?           @map("batch_id") @db.Uuid
+  deviceId          String?           @map("device_id") @db.Uuid
+  sourceScanId      String?           @map("source_scan_id") @db.Uuid
+  sourceFingerprint String?           @map("source_fingerprint") @db.VarChar(64)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  ticket            Ticket?           @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  gate              Gate              @relation(fields: [gateId, eventId, organizerId], references: [id, eventId, organizerId], onDelete: Restrict)
+  batch             OfflineSyncBatch? @relation(fields: [batchId, deviceId, gateId, eventId, organizerId, staffUserId], references: [id, deviceId, gateId, eventId, organizerId, staffUserId], onDelete: Restrict, map: "fk_checkin_offline_batch")
+  device            OfflineDevice?    @relation(fields: [deviceId, gateId, eventId, organizerId, staffUserId], references: [id, gateId, eventId, organizerId, staffUserId], onDelete: Restrict, map: "fk_checkin_device")
 
   @@index([gateId, id])
   @@map("checkin_logs")
+}
+
+model OfflineDevice {
+  id          String             @id @db.Uuid
+  gateId      String             @map("gate_id") @db.Uuid
+  eventId     String             @map("event_id") @db.Uuid
+  organizerId String             @map("organizer_id") @db.Uuid
+  staffUserId String             @map("staff_user_id") @db.Uuid
+  packageId   String             @map("package_id") @db.Uuid
+  secretEnc   Bytes              @map("secret_enc")
+  keyId       String             @map("key_id")
+  issuedAt    DateTime           @map("issued_at") @db.Timestamptz
+  expiresAt   DateTime           @map("expires_at") @db.Timestamptz
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  gate        Gate               @relation(fields: [gateId, eventId, organizerId], references: [id, eventId, organizerId], onDelete: Restrict)
+  batches     OfflineSyncBatch[]
+  checkins    CheckinLog[]
+
+  @@unique([id, gateId, eventId, organizerId, staffUserId], map: "uq_offline_device_context")
+  @@index([staffUserId, id])
+  @@map("offline_devices")
+}
+
+model OfflineSyncBatch {
+  id            String        @id @db.Uuid
+  deviceId      String        @map("device_id") @db.Uuid
+  gateId        String        @map("gate_id") @db.Uuid
+  eventId       String        @map("event_id") @db.Uuid
+  organizerId   String        @map("organizer_id") @db.Uuid
+  staffUserId   String        @map("staff_user_id") @db.Uuid
+  fingerprint   String        @db.VarChar(64)
+  recordCount   Int           @map("record_count")
+  conflictCount Int           @map("conflict_count")
+  response      Json
+  receivedAt    DateTime      @map("received_at") @db.Timestamptz
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  device        OfflineDevice @relation(fields: [deviceId, gateId, eventId, organizerId, staffUserId], references: [id, gateId, eventId, organizerId, staffUserId], onDelete: Restrict, map: "fk_offline_batch_device")
+  checkins      CheckinLog[]
+
+  @@unique([id, deviceId, gateId, eventId, organizerId, staffUserId], map: "uq_offline_batch_context")
+  @@map("offline_sync_batches")
 }
 
 model OutboxEvent {
