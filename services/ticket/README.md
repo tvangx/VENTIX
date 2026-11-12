@@ -52,3 +52,11 @@ Metric `ticket_issuance_attempts_total` đếm lượt handler trước commit; 
 ## Kiểm thử S-301
 
 Chạy `test`, `test:int`, `test:conc` trong bảng lệnh. Integration/concurrency dùng PostgreSQL 16 riêng với role `ticket_user` NOSUPERUSER; worker integration dùng Kafka 3.8.0 riêng qua Testcontainers. Bao phủ GA, duplicate message/business key, rollback Outbox, xác thực ciphertext, key rotation và 50 tác vụ đồng thời. TOTP/QR, hoàn vé, gate/check-in, resale và NFT thuộc task tiếp theo.
+
+## Ví vé và QR — S-302
+
+`GET /v1/tickets?limit=20&cursor=<uuid>` trả vé của subject trong JWT. Limit 1–100, cursor tăng theo ID, response có `items` và `next_cursor`. Giá VND trả chuỗi số nguyên để giữ độ chính xác. Danh sách hiển thị trạng thái của vé.
+
+`GET /v1/tickets/{ticketId}/token` chỉ cấp mã cho owner của vé ACTIVE có secret đúng `secret_version`, chưa thu hồi. Response có `token`, `secret_version`, `step_seconds`, `server_time`, `expires_at` và `qr_payload`. FE render chuỗi JSON `qr_payload` thành QR và refresh khi hết hạn. Payload v1 gồm `version`, `ticket_id`, `secret_version`, `token`. Hai endpoint trả `Cache-Control: private, no-store`.
+
+TOTP dùng SHA1, 6 chữ số, mốc Unix và bước 30 giây. Hàm verify chấp nhận lệch ±1 bước theo ADR-0007. Thư viện thuần hỗ trợ SHA256/SHA512 và 8 chữ số phục vụ vector [RFC 6238 Appendix B](https://www.rfc-editor.org/rfc/rfc6238). API cấp token hiện tại dùng secret từ S-301. API provisioning wallet offline thuộc bàn giao riêng. Kiểm tra một lần sử dụng tại cổng nằm ở S-402.
