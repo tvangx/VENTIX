@@ -10,6 +10,16 @@ const base = {
 };
 
 describe("envSchema", () => {
+  it("accepts only a credential-free HTTP Ticket service origin", () => {
+    expect(envSchema.parse(base).TICKET_SERVICE_URL).toBe("http://localhost:3005");
+    for (const url of [
+      "file:///tmp/ticket",
+      "http://user:password@localhost",
+      "https://example.com/path",
+      "https://example.com?token=x",
+    ])
+      expect(() => envSchema.parse({ ...base, TICKET_SERVICE_URL: url })).toThrow();
+  });
   it("accepts a valid configuration and applies defaults", () => {
     const env = loadEnv(envSchema, base);
     expect(env.PORT).toBe(3099);
