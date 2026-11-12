@@ -5,7 +5,7 @@
 - #69 và #70 đã merge main, origin/main hiện 0977e9d sau PR #78 của Vũ.
 - #71–77 đã merge vào các base branch xếp chồng. #79 có CI xanh và đã merge thường vào nhánh S-401 tại ff8d9a1. Code S-302–S-402 chưa vào main. Cần PR tích hợp lên main sau khi CI/review đủ.
 - S-402 In review ở PR [#79](https://github.com/tvangx/VENTIX/pull/79), nhánh feat/ticket-s402-online-checkin. Source cuối gồm UUID case-insensitive có unit 19/19, integration 47/47, concurrency 7/7 pass, OpenAPI/format/build 16/16 pass. Xem [run report](runs/S-402.md).
-- S-403 In review trên feat/ticket-s403-offline-sync, base S-401 chứa #79. Protocol HMAC, device key, sync/delta, unit 22/22, toàn integration 61/61, concurrency 10/10 và build 16/16 pass. Offline integration cuối 13/13 pass, Kafka offline=true đã kiểm tra thật. Xem [run report](runs/S-403.md).
+- S-403 In review ở PR [#80](https://github.com/tvangx/VENTIX/pull/80), nhánh feat/ticket-s403-offline-sync, base S-401 chứa #79. Protocol HMAC, device key, sync/delta, unit 22/22, toàn integration 61/61, concurrency 10/10 và build 16/16 pass. Offline integration cuối 13/13 pass, Kafka offline=true đã kiểm tra thật. Xem [run report](runs/S-403.md).
 
 ## Snapshot đối chiếu GitHub ngày 2026-11-11
 
