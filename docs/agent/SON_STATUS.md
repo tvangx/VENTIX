@@ -23,7 +23,7 @@ S-304 In review ở PR [#75](https://github.com/tvangx/VENTIX/pull/75), nhánh `
 
 S-305 In review trên PR [#76](https://github.com/tvangx/VENTIX/pull/76), nhánh `feat/identity-s305-kyc`. Người dùng chọn email tài khoản + Mailpit local. Identity 23 unit, 49 integration và 3 concurrency pass trên source cuối, bao gồm fingerprint idempotency độc lập JWT. SMTP Mailpit và audit Kafka đã kiểm tra thật, KYC vẫn là email + thông tin tự khai. Xem [run report](runs/S-305.md).
 
-S-401 In review trên `feat/ticket-s401-staff-packages`, base S-305 #76. Gate/Staff/package, tenant binding lifecycle, AES-GCM/RSA-OAEP tương thích WebCrypto. Ticket 19 unit, 35 integration, 5 concurrency pass, build 16/16. Xem [run report](runs/S-401.md).
+S-401 In review trên PR [#77](https://github.com/tvangx/VENTIX/pull/77), nhánh `feat/ticket-s401-staff-packages`, base S-305 #76. Gate/Staff/package, tenant binding lifecycle, AES-GCM/RSA-OAEP tương thích WebCrypto. Ticket 19 unit, 35 integration, 5 concurrency pass, build 16/16. Xem [run report](runs/S-401.md).
 
 ## Snapshot bàn giao tuần 1 — 2026-10-25
 
