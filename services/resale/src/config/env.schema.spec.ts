@@ -10,6 +10,23 @@ const base = {
 };
 
 describe("envSchema", () => {
+  it("validates listing recovery configuration and keeps workers opt-in", () => {
+    const env = envSchema.parse(base);
+    expect(env.RESALE_WORKERS_ENABLED).toBe("false");
+    expect(env.RESALE_RECOVERY_ENABLED).toBe("false");
+    expect(() => envSchema.parse({ ...base, RESALE_RECOVERY_ENABLED: "true" })).toThrow(
+      /INTERNAL_API_KEY/,
+    );
+    expect(
+      envSchema.parse({
+        ...base,
+        RESALE_RECOVERY_ENABLED: "true",
+        INTERNAL_API_KEY: "synthetic_test_internal",
+      }).RESALE_RECOVERY_POLL_MS,
+    ).toBe(1000);
+    expect(() => envSchema.parse({ ...base, RESALE_RECOVERY_POLL_MS: 0 })).toThrow();
+    expect(() => envSchema.parse({ ...base, KAFKA_BROKERS: "" })).toThrow();
+  });
   it("accepts only a credential-free HTTP Ticket service origin", () => {
     expect(envSchema.parse(base).TICKET_SERVICE_URL).toBe("http://localhost:3005");
     for (const url of [

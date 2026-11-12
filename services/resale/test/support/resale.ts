@@ -11,7 +11,7 @@ import { createApp } from "../../src/bootstrap";
 import { envSchema } from "../../src/config/env.schema";
 import { ListingRepository } from "../../src/modules/listings/listing.repository";
 
-export async function fixture() {
+export async function fixture(overrides: Record<string, unknown> = {}) {
   const container = await new PostgreSqlContainer("postgres:16")
     .withUsername("resale_migrator")
     .withPassword("synthetic_test")
@@ -84,6 +84,7 @@ export async function fixture() {
     AUTH_AUDIENCE: "api",
     AUTH_PUBLIC_KEY_PEM: await exportSPKI(pair.publicKey),
     TICKET_SERVICE_URL: `http://127.0.0.1:${address.port}`,
+    ...overrides,
   });
   const app = await createApp(env, createLogger("resale-test", { level: "silent" }));
   await app.init();

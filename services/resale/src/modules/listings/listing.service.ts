@@ -1,6 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { ProblemException } from "@ticketing/common";
-import { ListingPage, ListingQuery, QuoteRequest, QuoteResponse } from "./listing.dto";
+import {
+  ListingPage,
+  ListingQuery,
+  ListingSearchQuery,
+  QuoteRequest,
+  QuoteResponse,
+} from "./listing.dto";
 import { ListingRepository } from "./listing.repository";
 import { TicketSource } from "./ticket-source";
 import { assertPriceCap, maximumPrice } from "./price-cap";
@@ -30,6 +36,21 @@ export class ListingService {
   }
   async list(sellerId: string, query: ListingQuery): Promise<ListingPage> {
     const rows = await this.repo.list(sellerId, query.cursor, query.limit + 1);
+    const items = rows.slice(0, query.limit);
+    return { items, next_cursor: rows.length > query.limit ? items[items.length - 1].id : null };
+  }
+  async search(query: ListingSearchQuery): Promise<ListingPage> {
+    if (
+      query.min_price_vnd !== undefined &&
+      query.max_price_vnd !== undefined &&
+      query.min_price_vnd > query.max_price_vnd
+    )
+      throw new ProblemException(
+        "INVALID_PRICE_RANGE",
+        400,
+        "Minimum price must not exceed maximum price",
+      );
+    const rows = await this.repo.search(query);
     const items = rows.slice(0, query.limit);
     return { items, next_cursor: rows.length > query.limit ? items[items.length - 1].id : null };
   }

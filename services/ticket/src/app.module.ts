@@ -25,6 +25,9 @@ import { OfflineController } from "./modules/offline/offline.controller";
 import { OfflineService } from "./modules/offline/offline.service";
 import { OfflineRepository } from "./modules/offline/offline.repository";
 import { OfflineKeys } from "./modules/offline/offline-keys";
+import { FreezeController } from "./modules/freezes/freeze.controller";
+import { FreezeService } from "./modules/freezes/freeze.service";
+import { FreezeRepository } from "./modules/freezes/freeze.repository";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -48,6 +51,7 @@ export class AppModule implements NestModule {
         GateController,
         CheckinController,
         OfflineController,
+        FreezeController,
       ],
       providers: [
         { provide: ENV, useValue: env },
@@ -63,6 +67,8 @@ export class AppModule implements NestModule {
         OfflineService,
         OfflineRepository,
         OfflineKeys,
+        FreezeService,
+        FreezeRepository,
         {
           provide: TicketSecrets,
           inject: [ENV],

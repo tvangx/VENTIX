@@ -13,6 +13,7 @@ model Listing {
   ticketId         String   @map("ticket_id") @db.Uuid
   sellerId         String   @map("seller_id") @db.Uuid
   eventId          String   @map("event_id") @db.Uuid
+  organizerId      String?  @map("organizer_id") @db.Uuid
   originalPriceVnd BigInt   @map("original_price_vnd")
   askPriceVnd      BigInt   @map("ask_price_vnd")
   maxPercent       Int      @default(120) @map("max_percent")
@@ -33,6 +34,45 @@ model PriceCapRule {
   version    Int      @default(1)
 
   @@map("price_cap_rules")
+}
+
+model ListingOperation {
+  id               String   @id @db.Uuid
+  sellerId         String   @map("seller_id") @db.Uuid
+  scope            String
+  requestKey       String   @map("request_key") @db.Uuid
+  fingerprint      String   @db.VarChar(64)
+  kind             String
+  state            String   @default("PENDING")
+  ticketId         String   @map("ticket_id") @db.Uuid
+  listingId        String   @map("listing_id") @db.Uuid
+  askPriceVnd      BigInt   @map("ask_price_vnd")
+  eventId          String?  @map("event_id") @db.Uuid
+  organizerId      String?  @map("organizer_id") @db.Uuid
+  originalPriceVnd BigInt?  @map("original_price_vnd")
+  maxPercent       Int?     @map("max_percent")
+  response         Json?
+  failureCode      String?  @map("failure_code")
+  failureStatus    Int?     @map("failure_status")
+  attempts         Int      @default(0)
+  nextAttemptAt    DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz
+  traceId          String?  @map("trace_id")
+  version          Int      @default(1)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@unique([sellerId, scope, requestKey], map: "uq_listing_operation_request")
+  @@map("listing_operations")
+}
+
+model ResaleTicketInvalidation {
+  id        String   @id @db.Uuid
+  status    String
+  version   Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@map("resale_ticket_invalidations")
 }
 
 model OutboxEvent {
