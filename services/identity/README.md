@@ -149,3 +149,10 @@ chạy riêng vì cần Docker và image MinIO hạ tầng hiện có.
 `openapi.json` được commit để Vũ sinh client. Bộ Postman 18 request và environment
 trống mật khẩu nằm ở `docs/api/identity/`, cùng hướng dẫn cookie, tenant, Google
 callback và upload. Không cần DB để export OpenAPI.
+
+# Core KYC đang chuẩn bị — S-305
+
+Nhánh S-305 đang chuẩn bị thư viện mã hóa CCCD/tên AES-256-GCM và HMAC lookup,
+cùng state OTP Redis qua Lua. Core được kiểm tra bằng unit và Redis Testcontainers.
+Chưa nối các lớp này vào HTTP, profile DB hoặc kênh gửi OTP. Cần chọn email hoặc
+SMS trước khi hoàn tất luồng KYC. Theo dõi `docs/agent/runs/S-305.md`.

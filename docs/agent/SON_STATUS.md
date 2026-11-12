@@ -19,7 +19,9 @@ S-303 In review ở PR [#73](https://github.com/tvangx/VENTIX/pull/73) trên `fe
 
 Đối chiếu ngày 2026-11-12 cho thấy PR #70 và #71 có build/security xanh. PR #70 rerun thành công sau timeout test auth-guard ở lượt CI đầu. Các PR vẫn chờ review trước merge main.
 
-S-304 đang chuẩn bị In review trên `feat/resale-s304-schema-price-cap`, base S-303. Unit 8/8, integration 11 test đã chạy và concurrency 1/1 pass. Quote dùng giá API Ticket, luồng tạo/freeze listing thuộc S-404. Xem [run report](runs/S-304.md).
+S-304 In review ở PR [#75](https://github.com/tvangx/VENTIX/pull/75), nhánh `feat/resale-s304-schema-price-cap`, base S-303. Unit 8/8, integration 11/11 và concurrency 1/1 pass. Quote dùng giá API Ticket, luồng tạo/freeze listing thuộc S-404. Xem [run report](runs/S-304.md).
+
+S-305 Doing trên `feat/identity-s305-kyc`. Core mã hóa 3 unit và Redis OTP 3 integration pass, gồm 50 request cạnh tranh. Kênh gửi OTP đang chờ lựa chọn của người dùng, HTTP/DB/delivery chưa được tích hợp. Xem [run report](runs/S-305.md).
 
 ## Snapshot bàn giao tuần 1 — 2026-10-25
 
