@@ -130,21 +130,32 @@ describe("S-303 revocation", () => {
     expect(await context.deliver(cancel)).toBe("processed");
   });
 
-  it("keeps unsupported cancellation reasons in DLQ until the contract is approved", async () => {
-    const order = confirmedOrder();
-    await context.deliver(order);
-    const cancel = cancellation(order);
-    expect(
-      await context.deliver({ ...cancel, data: { ...cancel.data, reason: "USER_CANCELLED" } }),
-    ).toBe("dead-lettered");
-    expect(context.dead.at(-1)?.error).toContain("TICKET_REVOCATION_REASON_CONTRACT_PENDING");
-    expect(
-      (
-        await context.repo.pool.query(
-          "SELECT * FROM tickets WHERE order_id=$1 AND status='ACTIVE'",
-          [order.data.order_id],
-        )
-      ).rowCount,
-    ).toBe(4);
-  });
+  it.each(["USER_CANCELLED", "EXPIRED", "LATE_PAYMENT", "STOCK_REJECTED", "PAYMENT_FAILED"])(
+    "emits v2 with original cancellation reason %s and deduplicates replay",
+    async (reason) => {
+      const order = confirmedOrder();
+      await context.deliver(order);
+      const cancel = cancellation(order);
+      const message = { ...cancel, data: { ...cancel.data, reason } };
+      expect(await context.deliver(message)).toBe("processed");
+      expect(await context.deliver({ ...message, message_id: randomUUID() })).toBe("processed");
+      expect(
+        (
+          await context.repo.pool.query(
+            "SELECT * FROM tickets WHERE order_id=$1 AND status='REVOKED'",
+            [order.data.order_id],
+          )
+        ).rowCount,
+      ).toBe(4);
+      const events = await context.repo.pool.query(
+        "SELECT payload FROM outbox_events WHERE event_type='TicketRevoked' AND message_key IN (SELECT id::text FROM tickets WHERE order_id=$1)",
+        [order.data.order_id],
+      );
+      expect(events.rowCount).toBe(4);
+      for (const event of events.rows) {
+        expect(event.payload.version).toBe(2);
+        expect(event.payload.data.reason).toBe(reason);
+      }
+    },
+  );
 });

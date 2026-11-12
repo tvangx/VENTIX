@@ -119,6 +119,39 @@ describe("S-301 real Kafka worker", () => {
         async () =>
           [...issued.values()].filter((message) => message.type === "TicketRevoked").length === 4,
       );
+      const cancelledOrder = confirmedOrder();
+      await producer.send({
+        topic: Topics.BOOKING_ORDERS,
+        acks: -1,
+        messages: [{ key: cancelledOrder.data.order_id, value: JSON.stringify(cancelledOrder) }],
+      });
+      await eventually(
+        async () =>
+          (
+            await context.repo.pool.query("SELECT id FROM tickets WHERE order_id=$1", [
+              cancelledOrder.data.order_id,
+            ])
+          ).rowCount === 4,
+      );
+      const cancel = newMessage("OrderCancelled", {
+        order_id: cancelledOrder.data.order_id,
+        event_id: cancelledOrder.data.event_id,
+        reason: "USER_CANCELLED",
+      });
+      await producer.send({
+        topic: Topics.BOOKING_ORDERS,
+        acks: -1,
+        messages: [{ key: cancelledOrder.data.order_id, value: JSON.stringify(cancel) }],
+      });
+      await eventually(
+        async () =>
+          [...issued.values()].filter(
+            (message) =>
+              message.type === "TicketRevoked" &&
+              message.version === 2 &&
+              message.data.reason === "USER_CANCELLED",
+          ).length === 4,
+      );
     } finally {
       await observer.disconnect();
       await producer.disconnect();

@@ -61,8 +61,8 @@ Chạy `test`, `test:int`, `test:conc` trong bảng lệnh. Integration/concurre
 
 TOTP dùng SHA1, 6 chữ số, mốc Unix và bước 30 giây. Hàm verify chấp nhận lệch ±1 bước theo ADR-0007. Thư viện thuần hỗ trợ SHA256/SHA512 và 8 chữ số phục vụ vector [RFC 6238 Appendix B](https://www.rfc-editor.org/rfc/rfc6238). API cấp token hiện tại dùng secret từ S-301. API provisioning wallet offline thuộc bàn giao riêng. Kiểm tra một lần sử dụng tại cổng nằm ở S-402.
 
-## Draft thu hồi — S-303
+## Thu hồi — S-303
 
 Consumer bổ sung payment.events để nhận RefundCompleted và chuyển vé sang REFUNDED. OrderCancelled với reason EVENT_CANCELLED chuyển vé sang REVOKED. Trạng thái REFUNDED giữ ưu tiên khi cancellation đến sau. Secret được thu hồi và TicketRevoked vào Outbox trong cùng transaction Inbox. Khóa advisory theo order serialize issue/refund/cancel giữa các topic, bảng ticket_order_invalidations chặn confirmation đến sau thu hồi.
 
-S-303 đang chờ quyết định [hợp đồng reason #72](https://github.com/tvangx/VENTIX/issues/72). Các reason USER_CANCELLED, EXPIRED, LATE_PAYMENT, STOCK_REJECTED, PAYMENT_FAILED hiện đi DLQ với TICKET_REVOCATION_REASON_CONTRACT_PENDING. Cần hoàn tất hợp đồng và test cho các reason này trước merge hoặc vận hành draft.
+Theo [hợp đồng reason #72](https://github.com/tvangx/VENTIX/issues/72), USER_CANCELLED, EXPIRED, LATE_PAYMENT, STOCK_REJECTED, PAYMENT_FAILED được phát nguyên trạng trong TicketRevoked v2. REFUNDED và EVENT_CANCELLED tiếp tục dùng v1. Cập nhật parser consumer trước producer v2 theo PR hợp đồng #74. Tuấn review version và rollout trên PR trước khi triển khai môi trường thật.

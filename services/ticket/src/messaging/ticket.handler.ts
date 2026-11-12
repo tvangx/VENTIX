@@ -121,8 +121,6 @@ export class TicketHandler {
   ): Promise<void> {
     const orderId = message.data.order_id;
     const refunded = message.type === "RefundCompleted";
-    if (message.type === "OrderCancelled" && message.data.reason !== "EVENT_CANCELLED")
-      throw new PermanentError("TICKET_REVOCATION_REASON_CONTRACT_PENDING");
     const status = refunded ? "REFUNDED" : "REVOKED";
     const eventId = message.type === "OrderCancelled" ? message.data.event_id : null;
     if (eventId) {
@@ -154,14 +152,15 @@ export class TicketHandler {
       "UPDATE ticket_secrets SET revoked_at=now() WHERE revoked_at IS NULL AND ticket_id IN (SELECT id FROM tickets WHERE order_id=$1::uuid)",
       [orderId],
     );
-    const reason = refunded ? "REFUNDED" : "EVENT_CANCELLED";
+    const reason = message.type === "RefundCompleted" ? "REFUNDED" : message.data.reason;
+    const eventVersion = reason === "REFUNDED" || reason === "EVENT_CANCELLED" ? 1 : 2;
     for (const ticket of tickets)
       await this.outbox.add(
         executor,
         newMessage(
           "TicketRevoked",
           { ticket_id: ticket.id, reason },
-          { trace_id: message.trace_id, tenant_id: message.tenant_id },
+          { version: eventVersion, trace_id: message.trace_id, tenant_id: message.tenant_id },
         ),
         ticket.id,
       );
