@@ -48,6 +48,7 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | S-206 | Sơn   | API nội bộ `seat-classes`                                 | T-203b                                   |
 | S-301 | Sơn   | Ticket consume `OrderConfirmed`                           | G2; In review, xem runs/S-301.md          |
 | S-401 | Sơn   | Gate, phân công Staff, gói xác thực mã hóa có TTL         | V-401; In review, xem runs/S-401.md       |
+| S-402 | Sơn   | Check-in online, unique accepted và log append-only      | In review, xem runs/S-402.md             |
 | V-305 | Vũ    | Merch reserve/commit theo `OrderCreated`/`OrderConfirmed` | G2                                       |
 | V-306 | Vũ    | API nội bộ `quotes` (SKU lẻ)                              | T-301 (có thể dùng server giả)           |
 | S-405 | Sơn   | Resale mua (+ `ResaleOrderAwaitingPayment`)               | T-405                                    |

@@ -59,31 +59,6 @@ export class GateRepository {
     return gate;
   }
 
-  async cached(executor: SqlExecutor, actorId: string, scope: string, requestKey: string) {
-    await executor.query("SELECT pg_advisory_xact_lock(hashtextextended($1::text,0))", [
-      JSON.stringify([actorId, scope, requestKey]),
-    ]);
-    const [row] = await executor.query<{ fingerprint: string; response: unknown }>(
-      "SELECT fingerprint,response FROM ticket_requests WHERE actor_id=$1::uuid AND scope=$2 AND request_key=$3::uuid",
-      [actorId, scope, requestKey],
-    );
-    return row;
-  }
-
-  async remember(
-    executor: SqlExecutor,
-    actorId: string,
-    scope: string,
-    requestKey: string,
-    fingerprint: string,
-    response: unknown,
-  ) {
-    await executor.query(
-      "INSERT INTO ticket_requests (id,actor_id,scope,request_key,fingerprint,response) VALUES ($1::uuid,$2::uuid,$3,$4::uuid,$5,$6::jsonb)",
-      [uuidv7(), actorId, scope, requestKey, fingerprint, JSON.stringify(response)],
-    );
-  }
-
   async create(
     executor: SqlExecutor,
     eventId: string,
