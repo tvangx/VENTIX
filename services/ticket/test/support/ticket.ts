@@ -117,8 +117,8 @@ export async function fixture(overrides: Record<string, unknown> = {}) {
     dead,
     deliver,
     admin,
-    token: (userId: string) =>
-      new SignJWT({ roles: ["USER"] })
+    token: (userId: string, roles = ["USER"], organizerId?: string) =>
+      new SignJWT({ roles, ...(organizerId ? { organizer_id: organizerId } : {}) })
         .setProtectedHeader({ alg: "RS256" })
         .setSubject(userId)
         .setIssuer("ticket-test")

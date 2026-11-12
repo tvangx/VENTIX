@@ -35,6 +35,8 @@ export const envSchema = z
       .default("info"),
     DATABASE_URL: z.string().url(),
     TICKET_WORKERS_ENABLED: z.enum(["true", "false"]).default("false"),
+    TICKET_PACKAGE_TTL_SECONDS: z.coerce.number().int().min(60).max(1800).default(600),
+    TICKET_PACKAGE_MAX_TICKETS: z.coerce.number().int().min(1).max(100000).default(10000),
     KAFKA_BROKERS: z
       .string()
       .regex(/^[^,\s]+(?::\d+)?(\s*,\s*[^,\s]+(?::\d+)?)*$/)

@@ -25,6 +25,8 @@ describe("S-301 real Kafka worker", () => {
           Topics.BOOKING_ORDERS,
           Topics.TICKET_EVENTS,
           Topics.PAYMENT_EVENTS,
+          Topics.EVENT_LIFECYCLE,
+          `${Topics.EVENT_LIFECYCLE}.dlq`,
           `${Topics.PAYMENT_EVENTS}.dlq`,
           `${Topics.BOOKING_ORDERS}.dlq`,
         ].map((topic) => ({ topic, numPartitions: 1 })),
@@ -70,8 +72,26 @@ describe("S-301 real Kafka worker", () => {
     });
     await producer.connect();
     const order = confirmedOrder();
+    const lifecycle = newMessage("EventUpdated", {
+      event_id: order.data.event_id,
+      organizer_id: order.tenant_id!,
+      event_version: 1,
+    });
     const replay = { ...order, message_id: randomUUID() };
     try {
+      await producer.send({
+        topic: Topics.EVENT_LIFECYCLE,
+        acks: -1,
+        messages: [{ key: order.data.event_id, value: JSON.stringify(lifecycle) }],
+      });
+      await eventually(
+        async () =>
+          (
+            await context.repo.pool.query("SELECT id FROM ticket_events WHERE id=$1", [
+              order.data.event_id,
+            ])
+          ).rowCount === 1,
+      );
       await producer.send({
         topic: Topics.BOOKING_ORDERS,
         acks: -1,
