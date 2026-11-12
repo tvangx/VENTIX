@@ -1,5 +1,6 @@
 import { Inject, Injectable, OnApplicationShutdown } from "@nestjs/common";
-import { pgDatabase } from "@ticketing/outbox-inbox";
+import { pgDatabase, SqlExecutor } from "@ticketing/outbox-inbox";
+import { uuidv7 } from "uuidv7";
 import { Pool } from "pg";
 import { ENV } from "../../app.tokens";
 import type { Env } from "../../config/env.schema";
@@ -54,5 +55,30 @@ export class TicketRepository implements OnApplicationShutdown {
 
   async onApplicationShutdown(): Promise<void> {
     await this.pool.end();
+  }
+
+  async cachedRequest(executor: SqlExecutor, actorId: string, scope: string, requestKey: string) {
+    await executor.query("SELECT pg_advisory_xact_lock(hashtextextended($1::text,0))", [
+      JSON.stringify([actorId, scope, requestKey]),
+    ]);
+    const [row] = await executor.query<{ fingerprint: string; response: unknown }>(
+      "SELECT fingerprint,response FROM ticket_requests WHERE actor_id=$1::uuid AND scope=$2 AND request_key=$3::uuid",
+      [actorId, scope, requestKey],
+    );
+    return row;
+  }
+
+  async rememberRequest(
+    executor: SqlExecutor,
+    actorId: string,
+    scope: string,
+    requestKey: string,
+    fingerprint: string,
+    response: unknown,
+  ) {
+    await executor.query(
+      "INSERT INTO ticket_requests (id,actor_id,scope,request_key,fingerprint,response) VALUES ($1::uuid,$2::uuid,$3,$4::uuid,$5,$6::jsonb)",
+      [uuidv7(), actorId, scope, requestKey, fingerprint, JSON.stringify(response)],
+    );
   }
 }

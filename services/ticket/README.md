@@ -93,3 +93,28 @@ Payload chứa metadata trên, cấu hình `totp={algorithm:"SHA1",digits:6,peri
 `TICKET_PACKAGE_TTL_SECONDS` mặc định 600, khoảng 60–1800. `TICKET_PACKAGE_MAX_TICKETS` mặc định 10.000, khoảng 1–100.000. Vượt giới hạn trả `409 PACKAGE_TOO_LARGE`. Thiếu/hỏng secret trả `503 TICKET_SECRET_UNAVAILABLE`. Replay cùng key trả package cũ sau khi xác minh quyền. Hết hạn trả `409 PACKAGE_EXPIRED`, cần key mới. Cùng key khác nội dung trả `409 IDEMPOTENCY_KEY_REUSED`.
 
 V-401 thực hiện private key thiết bị, khóa non-extractable dẫn xuất từ phiên/PIN, IndexedDB mã hóa, xóa khi hết sự kiện/đăng xuất. S-401 kiểm tra crypto bằng WebCrypto trong Node và API trên PostgreSQL/Kafka local. Cửa sổ offline và thu hồi theo ADR-0007, delta thuộc S-403. Chi tiết đề xuất giao diện ở `docs/adr/0015-staff-verification-packages.md`.
+
+## S-402 Check-in online
+
+`POST /v1/check-ins` cần JWT Staff, organizer claim và assignment hiện hành của cổng. Header `Idempotency-Key` là UUID. Body dùng QR từ wallet S-302.
+
+```json
+{
+  "event_id": "<event UUID>",
+  "gate_id": "<gate UUID>",
+  "qr": {
+    "version": 1,
+    "ticket_id": "<ticket UUID>",
+    "secret_version": 1,
+    "token": "123456"
+  }
+}
+```
+
+Response HTTP 200 có `scan_id`, `ticket_id`, `result`, `scanned_at`. Các result gồm `ACCEPTED`, `DUPLICATE`, `WRONG_EVENT`, `WRONG_GATE`, `INVALID`. Vé FROZEN/REVOKED/REFUNDED, sai TOTP hoặc secret_version trả INVALID. Vé đã CHECKED_IN trả DUPLICATE. Giờ xác thực lấy từ PostgreSQL, TOTP SHA1 6 chữ số, bước 30 giây, cửa sổ ±1.
+
+Thiếu/hỏng secret hiện hành trả `503 TICKET_SECRET_UNAVAILABLE`. Sai quyền trả 403, event/gate không khớp hoặc event hủy trả 409. Input QR sai cấu trúc hoặc thiếu key trả 400. Cùng key khác nội dung trả `409 IDEMPOTENCY_KEY_REUSED`. Replay cùng key trả cùng scan_id và kết quả sau khi kiểm tra quyền hiện hành, tạo một lần ghi nhận duy nhất.
+
+Một transaction khóa gate và ticket, cập nhật ACTIVE→CHECKED_IN có điều kiện/version, INSERT `checkin_logs`, thêm `TicketCheckedIn` Outbox và receipt. Index `uq_checkin_accepted` bảo đảm một vé có một log ACCEPTED. Log dùng ID vé nullable để ghi lượt quét ID chưa có trong DB, vẫn giữ `scanned_ticket_id` của request. Token TOTP được dùng để xác thực tại request, log và response chứa ID/kết quả.
+
+`checkin_logs` chỉ INSERT. Migration thu hồi UPDATE/DELETE/TRUNCATE của ticket_user và có trigger append-only. Metric `ticket_online_checkin_responses_total{result}` đếm response đã commit, bao gồm replay. Sự kiện giữ trace/request ID và topic/key theo source `TicketCheckedIn` hiện hành.

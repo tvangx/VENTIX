@@ -17,6 +17,10 @@ import { TicketController } from "./modules/tickets/ticket.controller";
 import { GateController } from "./modules/gates/gate.controller";
 import { GateService } from "./modules/gates/gate.service";
 import { GateRepository } from "./modules/gates/gate.repository";
+import { TicketIdempotency } from "./modules/tickets/ticket-idempotency";
+import { CheckinController } from "./modules/checkin/checkin.controller";
+import { CheckinService } from "./modules/checkin/checkin.service";
+import { CheckinRepository } from "./modules/checkin/checkin.repository";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -38,6 +42,7 @@ export class AppModule implements NestModule {
         WhoamiController,
         TicketController,
         GateController,
+        CheckinController,
       ],
       providers: [
         { provide: ENV, useValue: env },
@@ -47,6 +52,9 @@ export class AppModule implements NestModule {
         TicketService,
         GateService,
         GateRepository,
+        TicketIdempotency,
+        CheckinService,
+        CheckinRepository,
         {
           provide: TicketSecrets,
           inject: [ENV],

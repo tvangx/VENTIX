@@ -3,12 +3,11 @@ import { AuthUser } from "@ticketing/auth-guard";
 import { ProblemException, requestContext } from "@ticketing/common";
 import { newMessage } from "@ticketing/event-contracts";
 import { OutboxService, SqlExecutor } from "@ticketing/outbox-inbox";
-import { createHash } from "node:crypto";
-import { z } from "zod";
 import { uuidv7 } from "uuidv7";
 import { ENV } from "../../app.tokens";
 import { Env } from "../../config/env.schema";
 import { TicketSecrets } from "../tickets/ticket-secrets";
+import { TicketIdempotency } from "../tickets/ticket-idempotency";
 import { GateContext, GateRepository } from "./gate.repository";
 import {
   AssignmentView,
@@ -26,38 +25,9 @@ export class GateService {
   constructor(
     private readonly repo: GateRepository,
     private readonly secrets: TicketSecrets,
+    private readonly idempotency: TicketIdempotency,
     @Inject(ENV) private readonly env: Env,
   ) {}
-
-  private async request<T>(
-    executor: SqlExecutor,
-    user: AuthUser,
-    scope: string,
-    key: string,
-    payload: unknown,
-    perform: () => Promise<T>,
-  ): Promise<T> {
-    if (!z.string().uuid().safeParse(key).success)
-      throw new ProblemException(
-        "IDEMPOTENCY_KEY_REQUIRED",
-        400,
-        "A UUID Idempotency-Key is required",
-      );
-    const fingerprint = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
-    const cached = await this.repo.cached(executor, user.userId, scope, key);
-    if (cached) {
-      if (cached.fingerprint !== fingerprint)
-        throw new ProblemException(
-          "IDEMPOTENCY_KEY_REUSED",
-          409,
-          "Request key was used with different input",
-        );
-      return cached.response as T;
-    }
-    const response = await perform();
-    await this.repo.remember(executor, user.userId, scope, key, fingerprint, response);
-    return response;
-  }
 
   private async audit(
     executor: SqlExecutor,
@@ -87,7 +57,7 @@ export class GateService {
     try {
       return await this.repo.tickets.db.transaction(async (executor) => {
         const organizerId = await this.repo.event(executor, input.event_id, user);
-        return this.request(executor, user, "gate-create", key, input, async () => {
+        return this.idempotency.run(executor, user, "gate-create", key, input, async () => {
           const gate = await this.repo.create(executor, input.event_id, organizerId, input.name);
           await this.audit(executor, user, organizerId, gate.id, "GATE_CREATED");
           return gate;
@@ -113,7 +83,7 @@ export class GateService {
   ): Promise<AssignmentView> {
     return this.repo.tickets.db.transaction(async (executor) => {
       const gate = await this.repo.gate(executor, gateId, user, false);
-      return this.request(
+      return this.idempotency.run(
         executor,
         user,
         `gate-staff:${gateId}`,
@@ -143,7 +113,7 @@ export class GateService {
     const ids = [...ticketIds].sort();
     return this.repo.tickets.db.transaction(async (executor) => {
       const gate = await this.repo.gate(executor, gateId, user, false);
-      return this.request(executor, user, `gate-tickets:${gateId}`, key, ids, async () => {
+      return this.idempotency.run(executor, user, `gate-tickets:${gateId}`, key, ids, async () => {
         await this.repo.assignTickets(executor, gate, ids);
         await this.audit(executor, user, gate.organizer_id, gateId, "GATE_TICKETS_ASSIGNED");
         return { gate_id: gateId, assigned_count: ids.length };
@@ -166,7 +136,7 @@ export class GateService {
     const publicKey = packageKey(publicKeyPem).export({ type: "spki", format: "pem" }).toString();
     return this.repo.tickets.db.transaction(async (executor) => {
       const gate = await this.repo.gate(executor, gateId, user, true);
-      const response = await this.request(
+      const response = await this.idempotency.run(
         executor,
         user,
         `gate-package:${gateId}`,

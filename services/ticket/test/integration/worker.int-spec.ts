@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { newMessage, parseMessage, Topics } from "@ticketing/event-contracts";
 import { confirmedOrder, fixture } from "../support/ticket";
 import { startKafka } from "../support/kafka";
+import { scanFixture } from "../support/checkin";
 
 async function eventually(check: () => Promise<boolean>): Promise<void> {
   const deadline = Date.now() + 30000;
@@ -26,6 +27,7 @@ describe("S-301 real Kafka worker", () => {
           Topics.TICKET_EVENTS,
           Topics.PAYMENT_EVENTS,
           Topics.EVENT_LIFECYCLE,
+          Topics.AUDIT_EVENTS,
           `${Topics.EVENT_LIFECYCLE}.dlq`,
           `${Topics.PAYMENT_EVENTS}.dlq`,
           `${Topics.BOOKING_ORDERS}.dlq`,
@@ -175,6 +177,44 @@ describe("S-301 real Kafka worker", () => {
     } finally {
       await observer.disconnect();
       await producer.disconnect();
+    }
+  });
+
+  it("publishes online TicketCheckedIn through the real Outbox relay once", async () => {
+    const setup = await scanFixture(context);
+    const input = await setup.input();
+    const observer = broker.kafka.consumer({ groupId: `checkin-observer-${randomUUID()}` });
+    const seen = new Map<string, ReturnType<typeof parseMessage>>();
+    await observer.connect();
+    try {
+      await observer.subscribe({ topic: Topics.TICKET_EVENTS, fromBeginning: true });
+      await observer.run({
+        eachMessage: async ({ message }) => {
+          const parsed = parseMessage(JSON.parse(message.value!.toString()));
+          if (parsed.type === "TicketCheckedIn" && parsed.data.ticket_id === input.qr.ticket_id) {
+            expect(message.key?.toString()).toBe(input.qr.ticket_id);
+            seen.set(parsed.message_id, parsed);
+          }
+        },
+      });
+      expect((await setup.scan(input).expect(200)).body.result).toBe("ACCEPTED");
+      expect((await setup.scan(input).expect(200)).body.result).toBe("DUPLICATE");
+      await eventually(async () => seen.size === 1);
+      await eventually(
+        async () =>
+          (
+            await context.repo.pool.query(
+              "SELECT id FROM outbox_events WHERE event_type='TicketCheckedIn' AND message_key=$1 AND published_at IS NOT NULL",
+              [input.qr.ticket_id],
+            )
+          ).rowCount === 1,
+      );
+      expect([...seen.values()][0]).toMatchObject({
+        type: "TicketCheckedIn",
+        data: { event_id: input.event_id, gate_id: input.gate_id, offline: false },
+      });
+    } finally {
+      await observer.disconnect();
     }
   });
 });
