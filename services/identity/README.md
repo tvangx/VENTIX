@@ -150,9 +150,20 @@ chạy riêng vì cần Docker và image MinIO hạ tầng hiện có.
 trống mật khẩu nằm ở `docs/api/identity/`, cùng hướng dẫn cookie, tenant, Google
 callback và upload. Không cần DB để export OpenAPI.
 
-# Core KYC đang chuẩn bị — S-305
+## KYC qua email — S-305
 
-Nhánh S-305 đang chuẩn bị thư viện mã hóa CCCD/tên AES-256-GCM và HMAC lookup,
-cùng state OTP Redis qua Lua. Core được kiểm tra bằng unit và Redis Testcontainers.
-Chưa nối các lớp này vào HTTP, profile DB hoặc kênh gửi OTP. Cần chọn email hoặc
-SMS trước khi hoàn tất luồng KYC. Theo dõi `docs/agent/runs/S-305.md`.
+Bật `KYC_ENABLED=true` và cấu hình `KYC_REDIS_URL`, `KYC_ENCRYPTION_KEYS` (JSON key ring base64 32 byte), `KYC_ACTIVE_KEY_ID`, `KYC_HMAC_PEPPER` (khóa 32 byte riêng), cùng SMTP theo `.env.example`. Mặc định KYC tắt, các endpoint KYC trả 503 nếu chưa cấu hình. Production yêu cầu SMTP TLS bằng `KYC_SMTP_SECURE=true` hoặc STARTTLS bắt buộc qua `KYC_SMTP_REQUIRE_TLS=true`.
+
+- `POST /v1/kyc/challenges` nhận `id_number` 12 chữ số và `full_name`, yêu cầu JWT và `Idempotency-Key` UUID. OTP 6 chữ số gửi tới email của user ACTIVE trong DB. Không nhận địa chỉ nhận từ client. Response chỉ có `challenge_id` và `expires_at`.
+- `POST /v1/kyc/verify` nhận `challenge_id` và `code`, yêu cầu JWT và `Idempotency-Key`. OTP đúng tạo hồ sơ, xác nhận email và ghi AuditRecorded Outbox trong cùng transaction. Unique HMAC trong DB chặn cùng CCCD trên nhiều tài khoản. Hồ sơ đã verified giữ nguyên định danh.
+- `GET /v1/kyc/me` trả `verified` và `kycHash` của caller. `GET /v1/internal/users/{userId}/kyc` dùng `X-Internal-Key` từ `INTERNAL_API_KEY`, phục vụ giới hạn vé qua API. Backend gọi trực tiếp trong mạng nội bộ, áp dụng chặn `/internal` ở Kong theo ADR-0010.
+
+OTP có TTL mặc định 300 giây, cooldown 60 giây, tối đa 5 lần thử. Tạo challenge cùng idempotency key/nội dung trong TTL giữ nguyên challenge và không gửi lại email. Key trùng nhưng khác nội dung trả 409. Lỗi SMTP vô hiệu challenge và giữ cooldown. OTP chỉ dùng sau khi SMTP xác nhận gửi. Chứng cứ consume trong DB và kết quả idempotent bảo đảm retry sau commit dù Redis đã xóa hoặc hết hạn, đồng thời chặn dùng lại với key mới.
+
+CCCD/tên và payload Redis mã hóa AES-256-GCM, nonce ngẫu nhiên, AAD gắn user/field/key ID. Redis chỉ giữ HMAC OTP. Giữ khóa cũ trong key ring khi chuyển active key, giữ pepper HMAC ổn định để bảo toàn uniqueness. Không có endpoint xuất PII plaintext. KYC trong task này xác minh quyền truy cập email và dữ liệu tự khai, tích hợp đối soát giấy tờ/eKYC chưa được định nghĩa.
+
+Bật `IDENTITY_OUTBOX_ENABLED=true` và cấu hình `KAFKA_BROKERS` để relay AuditRecorded sang Kafka. Khi relay tắt, sự kiện nằm bền vững trong Outbox. Relay dùng pool riêng và dừng trước khi đóng pool.
+
+Local dùng Mailpit SMTP ở `127.0.0.1:11025` theo stack VENTIX hiện tại. Test dùng container riêng với image `KYC_TEST_MAILPIT_IMAGE=axllent/mailpit:v1.33.0` đã pull thành công. Có thể thay hostname/port bằng SMTP dev của bạn. Nodemailer tắt debug/file/URL content access và đặt timeout kết nối, theo [tài liệu SMTP](https://nodemailer.com/smtp).
+
+Run report ở `docs/agent/runs/S-305.md`. Test KYC dùng PostgreSQL 16, Redis 7.4, Mailpit và Kafka thật, với dữ liệu tổng hợp.

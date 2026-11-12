@@ -40,6 +40,10 @@ describe("S-305 Redis OTP core", () => {
     expect(await redis.ttl(otp.key(challenge.userId))).toBeLessThanOrEqual(300);
     expect(await redis.ttl(`kyc:cooldown:{usr:${challenge.userId}}`)).toBeGreaterThan(0);
     expect(await otp.verify(challenge.userId, challenge.challengeId, challenge.codeHash)).toEqual([
+      "PENDING",
+    ]);
+    await otp.delivery(challenge.userId, challenge.challengeId, "SENT");
+    expect(await otp.verify(challenge.userId, challenge.challengeId, challenge.codeHash)).toEqual([
       "VERIFIED",
       challenge.encryptedPayload,
     ]);
@@ -48,6 +52,7 @@ describe("S-305 Redis OTP core", () => {
   it("limits attempts atomically, isolates users and rejects missing/expired challenges", async () => {
     const challenge = input();
     await otp.create(challenge);
+    await otp.delivery(challenge.userId, challenge.challengeId, "SENT");
     expect(await otp.verify(randomUUID(), challenge.challengeId, challenge.codeHash)).toEqual([
       "EXPIRED",
     ]);
@@ -82,6 +87,7 @@ describe("S-305 Redis OTP core", () => {
     expect(requests.filter((result) => result[0] === "CREATED")).toHaveLength(1);
     expect(requests.filter((result) => result[0] === "RATE_LIMITED")).toHaveLength(49);
     const actualId = requests.find((result) => result[0] === "CREATED")![1];
+    await otp.delivery(challenge.userId, actualId, "SENT");
     const attempts = await Promise.all(
       Array.from({ length: 50 }, () => otp.verify(challenge.userId, actualId, "wrong")),
     );
