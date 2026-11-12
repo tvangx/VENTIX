@@ -29,7 +29,7 @@ export default tseslint.config(
     rules: { "react-refresh/only-export-components": "off" },
   },
   {
-    files: ["vite.config.ts"],
+    files: ["vite.config.ts", "scripts/**/*.mjs"],
     languageOptions: { globals: globals.node },
   },
 );

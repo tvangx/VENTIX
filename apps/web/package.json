@@ -10,7 +10,11 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev:mock": "vite --mode mock",
+    "gen:api": "node scripts/gen-api.mjs",
+    "gen:api:check": "node scripts/gen-api.mjs --check",
+    "msw:init": "msw init public --no-save && prettier --write public/mockServiceWorker.js"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.5.0",
@@ -35,6 +39,8 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.13.0",
+    "msw": "2.15.0",
+    "openapi-typescript": "7.13.0",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.5",
     "vitest": "^4.1.12"
