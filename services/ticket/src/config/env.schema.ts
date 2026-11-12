@@ -35,6 +35,14 @@ export const envSchema = z
       .default("info"),
     DATABASE_URL: z.string().url(),
     TICKET_WORKERS_ENABLED: z.enum(["true", "false"]).default("false"),
+    NFT_WORKER_ENABLED: z.enum(["true", "false"]).default("false"),
+    NFT_PROVIDER: z.literal("MOCK").default("MOCK"),
+    NFT_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+    NFT_POLL_MS: z.coerce.number().int().min(10).max(60000).default(1000),
+    NFT_TIMEOUT_MS: z.coerce.number().int().min(10).max(60000).default(10000),
+    NFT_LEASE_MS: z.coerce.number().int().min(100).max(300000).default(30000),
+    NFT_RETRY_BASE_MS: z.coerce.number().int().min(10).max(60000).default(1000),
+    NFT_RETRY_MAX_MS: z.coerce.number().int().min(10).max(3600000).default(60000),
     KAFKA_BROKERS: z
       .string()
       .regex(/^[^,\s]+(?::\d+)?(\s*,\s*[^,\s]+(?::\d+)?)*$/)
@@ -50,6 +58,20 @@ export const envSchema = z
   })
   .superRefine((env, ctx) => {
     refineAuthEnv(env, ctx);
+    if (env.NFT_LEASE_MS <= env.NFT_TIMEOUT_MS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["NFT_LEASE_MS"],
+        message: "Lease must exceed provider timeout",
+      });
+    }
+    if (env.NFT_RETRY_MAX_MS < env.NFT_RETRY_BASE_MS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["NFT_RETRY_MAX_MS"],
+        message: "Retry maximum must be at least its base",
+      });
+    }
     if (
       env.TICKET_WORKERS_ENABLED === "true" ||
       env.TICKET_ENCRYPTION_KEYS ||

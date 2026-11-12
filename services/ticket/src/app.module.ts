@@ -12,6 +12,9 @@ import { TicketRepository } from "./modules/tickets/ticket.repository";
 import { TicketSecrets } from "./modules/tickets/ticket-secrets";
 import { TicketHandler } from "./messaging/ticket.handler";
 import { TicketWorker } from "./messaging/ticket-worker";
+import { NftWorker } from "./modules/nft/nft-worker";
+import { NftHandler } from "./modules/nft/nft.handler";
+import { NftRepository } from "./modules/nft/nft.repository";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -44,6 +47,9 @@ export class AppModule implements NestModule {
         },
         TicketHandler,
         TicketWorker,
+        NftHandler,
+        NftRepository,
+        NftWorker,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],
