@@ -29,6 +29,13 @@ import {
 import { OrganizersRepository } from "./modules/organizers/organizers.repository";
 import { OrganizersService } from "./modules/organizers/organizers.service";
 import { DocumentsStorage } from "./modules/organizers/documents.storage";
+import { KycController, InternalKycController } from "./modules/kyc/kyc.controller";
+import { KycService } from "./modules/kyc/kyc.service";
+import { KycRepository } from "./modules/kyc/kyc.repository";
+import { KycRuntime } from "./modules/kyc/kyc-runtime";
+import { KycMailer } from "./modules/kyc/kyc-mailer";
+import { KycCrypto } from "./modules/kyc/kyc-crypto";
+import { IdentityOutbox } from "./modules/kyc/identity-outbox";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -55,6 +62,8 @@ export class AppModule implements NestModule {
         TenantContextController,
         OrganizersController,
         AdminOrganizersController,
+        KycController,
+        InternalKycController,
       ],
       providers: [
         { provide: ENV, useValue: env },
@@ -74,6 +83,21 @@ export class AppModule implements NestModule {
         OrganizersRepository,
         OrganizersService,
         DocumentsStorage,
+        KycService,
+        KycRepository,
+        KycRuntime,
+        KycMailer,
+        IdentityOutbox,
+        {
+          provide: KycCrypto,
+          inject: [ENV],
+          useFactory: (config: Env) =>
+            new KycCrypto(
+              config.KYC_ENCRYPTION_KEYS ?? {},
+              config.KYC_ACTIVE_KEY_ID ?? "",
+              config.KYC_HMAC_PEPPER ?? "",
+            ),
+        },
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],

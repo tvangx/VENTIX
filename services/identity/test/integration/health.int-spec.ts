@@ -68,6 +68,15 @@ describe("service template (integration, Postgres via Testcontainers)", () => {
     expect(res.body).toEqual({ userId: "11111111-1111-4111-8111-111111111111", roles: ["USER"] });
   });
 
+  it("keeps KYC unavailable until configured", async () => {
+    await request(app.getHttpServer()).get("/v1/kyc/me").expect(401);
+    const response = await request(app.getHttpServer())
+      .get("/v1/kyc/me")
+      .set("Authorization", `Bearer ${await sign()}`)
+      .expect(503);
+    expect(response.body.code).toBe("KYC_UNAVAILABLE");
+  });
+
   it("GET /metrics exposes Prometheus metrics", async () => {
     const res = await request(app.getHttpServer()).get("/metrics").expect(200);
     expect(res.text).toContain("http_request_duration_seconds");
