@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { parseMessage, Topics } from "@ticketing/event-contracts";
+import { newMessage, parseMessage, Topics } from "@ticketing/event-contracts";
 import { confirmedOrder, fixture } from "../support/ticket";
 import { startKafka } from "../support/kafka";
+import { scanFixture } from "../support/checkin";
+import { offlineFixture } from "../support/offline";
 
 async function eventually(check: () => Promise<boolean>): Promise<void> {
   const deadline = Date.now() + 30000;
@@ -21,9 +23,16 @@ describe("S-301 real Kafka worker", () => {
     await admin.connect();
     try {
       await admin.createTopics({
-        topics: [Topics.BOOKING_ORDERS, Topics.TICKET_EVENTS, `${Topics.BOOKING_ORDERS}.dlq`].map(
-          (topic) => ({ topic, numPartitions: 1 }),
-        ),
+        topics: [
+          Topics.BOOKING_ORDERS,
+          Topics.TICKET_EVENTS,
+          Topics.PAYMENT_EVENTS,
+          Topics.EVENT_LIFECYCLE,
+          Topics.AUDIT_EVENTS,
+          `${Topics.EVENT_LIFECYCLE}.dlq`,
+          `${Topics.PAYMENT_EVENTS}.dlq`,
+          `${Topics.BOOKING_ORDERS}.dlq`,
+        ].map((topic) => ({ topic, numPartitions: 1 })),
         waitForLeaders: true,
       });
     } finally {
@@ -57,15 +66,35 @@ describe("S-301 real Kafka worker", () => {
         }
         const parsed = parseMessage(JSON.parse(message.value!.toString()));
         expect(message.key?.toString()).toBe(
-          parsed.type === "TicketIssued" ? parsed.data.ticket_id : "unexpected",
+          parsed.type === "TicketIssued" || parsed.type === "TicketRevoked"
+            ? parsed.data.ticket_id
+            : "unexpected",
         );
         issued.set(parsed.message_id, parsed);
       },
     });
     await producer.connect();
     const order = confirmedOrder();
+    const lifecycle = newMessage("EventUpdated", {
+      event_id: order.data.event_id,
+      organizer_id: order.tenant_id!,
+      event_version: 1,
+    });
     const replay = { ...order, message_id: randomUUID() };
     try {
+      await producer.send({
+        topic: Topics.EVENT_LIFECYCLE,
+        acks: -1,
+        messages: [{ key: order.data.event_id, value: JSON.stringify(lifecycle) }],
+      });
+      await eventually(
+        async () =>
+          (
+            await context.repo.pool.query("SELECT id FROM ticket_events WHERE id=$1", [
+              order.data.event_id,
+            ])
+          ).rowCount === 1,
+      );
       await producer.send({
         topic: Topics.BOOKING_ORDERS,
         acks: -1,
@@ -93,9 +122,141 @@ describe("S-301 real Kafka worker", () => {
       expect(dead).toEqual(["{broken"]);
       expect((await context.repo.pool.query("SELECT * FROM tickets")).rowCount).toBe(4);
       expect([...issued.values()].every((message) => message.type === "TicketIssued")).toBe(true);
+      const refund = newMessage("RefundCompleted", {
+        refund_id: randomUUID(),
+        order_id: order.data.order_id,
+        payment_id: order.data.payment_id,
+        amount_vnd: order.data.total_amount_vnd,
+      });
+      await producer.send({
+        topic: Topics.PAYMENT_EVENTS,
+        acks: -1,
+        messages: [{ key: order.data.order_id, value: JSON.stringify(refund) }],
+      });
+      await eventually(
+        async () =>
+          (await context.repo.pool.query("SELECT * FROM tickets WHERE status='REFUNDED'"))
+            .rowCount === 4,
+      );
+      await eventually(
+        async () =>
+          [...issued.values()].filter((message) => message.type === "TicketRevoked").length === 4,
+      );
+      const cancelledOrder = confirmedOrder();
+      await producer.send({
+        topic: Topics.BOOKING_ORDERS,
+        acks: -1,
+        messages: [{ key: cancelledOrder.data.order_id, value: JSON.stringify(cancelledOrder) }],
+      });
+      await eventually(
+        async () =>
+          (
+            await context.repo.pool.query("SELECT id FROM tickets WHERE order_id=$1", [
+              cancelledOrder.data.order_id,
+            ])
+          ).rowCount === 4,
+      );
+      const cancel = newMessage("OrderCancelled", {
+        order_id: cancelledOrder.data.order_id,
+        event_id: cancelledOrder.data.event_id,
+        reason: "USER_CANCELLED",
+      });
+      await producer.send({
+        topic: Topics.BOOKING_ORDERS,
+        acks: -1,
+        messages: [{ key: cancelledOrder.data.order_id, value: JSON.stringify(cancel) }],
+      });
+      await eventually(
+        async () =>
+          [...issued.values()].filter(
+            (message) =>
+              message.type === "TicketRevoked" &&
+              message.version === 2 &&
+              message.data.reason === "USER_CANCELLED",
+          ).length === 4,
+      );
     } finally {
       await observer.disconnect();
       await producer.disconnect();
+    }
+  });
+
+  it("publishes online TicketCheckedIn through the real Outbox relay once", async () => {
+    const setup = await scanFixture(context);
+    const input = await setup.input();
+    const observer = broker.kafka.consumer({ groupId: `checkin-observer-${randomUUID()}` });
+    const seen = new Map<string, ReturnType<typeof parseMessage>>();
+    await observer.connect();
+    try {
+      await observer.subscribe({ topic: Topics.TICKET_EVENTS, fromBeginning: true });
+      await observer.run({
+        eachMessage: async ({ message }) => {
+          const parsed = parseMessage(JSON.parse(message.value!.toString()));
+          if (parsed.type === "TicketCheckedIn" && parsed.data.ticket_id === input.qr.ticket_id) {
+            expect(message.key?.toString()).toBe(input.qr.ticket_id);
+            seen.set(parsed.message_id, parsed);
+          }
+        },
+      });
+      expect((await setup.scan(input).expect(200)).body.result).toBe("ACCEPTED");
+      expect((await setup.scan(input).expect(200)).body.result).toBe("DUPLICATE");
+      await eventually(async () => seen.size === 1);
+      await eventually(
+        async () =>
+          (
+            await context.repo.pool.query(
+              "SELECT id FROM outbox_events WHERE event_type='TicketCheckedIn' AND message_key=$1 AND published_at IS NOT NULL",
+              [input.qr.ticket_id],
+            )
+          ).rowCount === 1,
+      );
+      expect([...seen.values()][0]).toMatchObject({
+        type: "TicketCheckedIn",
+        data: { event_id: input.event_id, gate_id: input.gate_id, offline: false },
+      });
+    } finally {
+      await observer.disconnect();
+    }
+  });
+
+  it("publishes an offline TicketCheckedIn after a signed batch through Kafka", async () => {
+    const setup = await offlineFixture(context);
+    const batch = await setup.makeBatch();
+    const observer = broker.kafka.consumer({ groupId: `offline-observer-${randomUUID()}` });
+    const seen = new Map<string, ReturnType<typeof parseMessage>>();
+    await observer.connect();
+    try {
+      await observer.subscribe({ topic: Topics.TICKET_EVENTS, fromBeginning: true });
+      await observer.run({
+        eachMessage: async ({ message }) => {
+          const parsed = parseMessage(JSON.parse(message.value!.toString()));
+          if (
+            parsed.type === "TicketCheckedIn" &&
+            parsed.data.ticket_id === batch.scans[0].ticket_id
+          ) {
+            expect(message.key?.toString()).toBe(batch.scans[0].ticket_id);
+            seen.set(parsed.message_id, parsed);
+          }
+        },
+      });
+      expect((await setup.sync(batch).expect(200)).body.batch.items[0].result).toBe("ACCEPTED");
+      await eventually(async () => seen.size === 1);
+      await eventually(
+        async () =>
+          (
+            await context.repo.pool.query(
+              "SELECT id FROM outbox_events WHERE event_type='TicketCheckedIn' AND message_key=$1 AND published_at IS NOT NULL",
+              [batch.scans[0].ticket_id],
+            )
+          ).rowCount === 1,
+      );
+      expect([...seen.values()][0]).toMatchObject({
+        type: "TicketCheckedIn",
+        tenant_id: setup.organizerId,
+        data: { offline: true, scanned_at: batch.scans[0].scanned_at },
+      });
+    } finally {
+      await observer.disconnect();
     }
   });
 });

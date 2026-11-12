@@ -9,6 +9,7 @@ export class TicketSecrets {
   constructor(
     private readonly keys: Record<string, string>,
     private readonly activeKeyId: string,
+    private readonly purpose = "ticket-secret-v1",
   ) {}
 
   private key(keyId: string): Buffer {
@@ -20,7 +21,7 @@ export class TicketSecrets {
   }
 
   private context(ticketId: string, version: number, keyId: string): Buffer {
-    return Buffer.from(JSON.stringify(["ticket-secret-v1", ticketId, version, keyId]));
+    return Buffer.from(JSON.stringify([this.purpose, ticketId, version, keyId]));
   }
 
   encrypt(ticketId: string, version: number, secret: Buffer): EncryptedSecret {
