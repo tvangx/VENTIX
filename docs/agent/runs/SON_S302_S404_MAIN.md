@@ -2,6 +2,8 @@
 
 Ngày 2026-11-12. Nhánh `chore/son-s302-s404-main`, worktree riêng từ origin/main 0977e9d. Người giao việc đã yêu cầu làm xếp chồng và đưa vào main sau CI/phê duyệt, đồng thời giữ từng PR task.
 
+PR [#85](https://github.com/tvangx/VENTIX/pull/85) đưa nhánh tích hợp lên main. GitHub GraphQL báo REVIEW_REQUIRED/BLOCKED với 0 review tại thời điểm mở PR. CI của PR này được theo dõi riêng.
+
 ## Đối chiếu trước tích hợp
 
 - S-301 đã vào main qua #70. `git diff be78d1d origin/main -- services/ticket` rỗng, xác nhận source Ticket S-301 trên main bằng base gốc của chuỗi xếp chồng.
@@ -28,4 +30,11 @@ Ngày 2026-11-12. Nhánh `chore/son-s302-s404-main`, worktree riêng từ origin
 - Typecheck và unit đang chạy tuần tự. Pipeline đầu đã được dừng sau build/lint và trong typecheck để giảm tải máy, sau đó chạy lại typecheck. Các package Jest chạy --runInBand trong lượt mới, test Vitest dùng entry point hiện hành.
 - Typecheck chạy lại 20/20 task pass, 6 task dùng cache. Unit 312/312 pass trên 16 package, Jest chạy tuần tự/in-band và Vitest theo script hiện hành. Tổng gồm service-template 4, Booking 76, Event 12, Finance 9, Identity 23, Merch 4, Notification 4, Payment 21, Resale 9, Ticket 22, Common 10, Outbox/Inbox 20, Auth Guard 20, contracts 29 và Web 49. Staff PWA trả exit 0 với 0 test theo cấu hình hiện hành.
 - GitHub cho thấy PR tài liệu S-405 #83 đã được merge vào base tại 7c6d577 trong lúc kiểm chứng. Đã merge tiếp commit này, ghép hunk SON_STATUS và ghi rõ S-405 code đang chờ hợp đồng #82. Chính sách escrow và precheck đã có trong PR riêng #83. Source nghiệp vụ vẫn bằng chuỗi S-404.
-- Concurrency Ticket 11/11 và Resale 4/4 đã pass trên nhánh S-404, đang chạy lại tuần tự trên worktree tích hợp. Các ca HTTP mới có 50 request, cùng các ca race check-in/offline hiện hành.
+- Concurrency chạy lại trên worktree tích hợp có Ticket 11/11 và Resale 4/4 pass. Các ca HTTP mới có 50 request, cùng các ca race check-in/offline hiện hành. Fixture Ticket phát MaxListenersExceededWarning khi Supertest khởi tạo server đồng thời, các assertion và số request vẫn hoàn tất.
+
+## Giới hạn và việc cần review
+
+- Các kết quả trên là kiểm chứng local trên nhánh tích hợp. CI GitHub #85 và phê duyệt main có trạng thái riêng, main đang REVIEW_REQUIRED.
+- Hợp đồng TicketRevoked v2 của #74 nằm trong diff main, được đánh dấu CONTRACT CHANGE ở đầu PR. Các trường v1 vẫn được kiểm chứng trong contracts test.
+- Mã lõi cần hai người đọc theo AGENTS. Retention/production và phần Payment refund resale #82 cần nhóm xử lý theo phạm vi sở hữu.
+- S-405 ở trạng thái Blocked theo #82. PR tài liệu #83 đã merge vào base, code S-405 chưa triển khai. Chính sách escrow người giao việc xác nhận được đồng bộ vào ADR-0017, plan và architecture.

@@ -2,7 +2,7 @@
 
 ## Đối chiếu khi tiếp tục ngày 2026-11-12
 
-- Nhánh tích hợp `chore/son-s302-s404-main` được tạo từ main 0977e9d và merge chuỗi tại b98d7c8 để mở PR main. Source Event tuần 2/V-103 của main và source S-302–404 được đối chiếu sau resolve. Xem [run report tích hợp](runs/SON_S302_S404_MAIN.md).
+- Nhánh tích hợp `chore/son-s302-s404-main` được tạo từ main 0977e9d, merge chuỗi tại b98d7c8 và tài liệu #83 tại 7c6d577, mở PR main [#85](https://github.com/tvangx/VENTIX/pull/85). Source Event tuần 2/V-103 của main và source S-302–404 được đối chiếu sau resolve. Local 312 unit, Ticket 68 integration/11 concurrency, Resale 23 integration/4 concurrency, build 16/16 và lint/typecheck/format pass. Main đang REVIEW_REQUIRED. Xem [run report tích hợp](runs/SON_S302_S404_MAIN.md).
 - S-404 #81 có build/security xanh ở attempt 3 và đã merge nhánh tích hợp b98d7c8. Hai lượt CI trước timeout JWKS cũ, source/threshold giữ qua retry. PR tài liệu S-405 [#83](https://github.com/tvangx/VENTIX/pull/83) đã được merge vào base tại 7c6d577, gồm báo cáo điều kiện và chính sách escrow. Phần code S-405 đang chờ hợp đồng hoàn tiền ở #82.
 - S-405 Bị chặn ở precheck hợp đồng hoàn tiền resale, đề nghị Tuấn tại Issue [#82](https://github.com/tvangx/VENTIX/issues/82) theo lựa chọn người giao việc. T-302 #56 và T-405 #61 đã merge main, source Payment có MOCK/RESALE. Chính sách giải ngân đã được xác nhận trong ADR-0017. Xem [run report S-405](runs/S-405.md).
 
