@@ -9,7 +9,7 @@
 
 ## Snapshot đối chiếu GitHub ngày 2026-11-11
 
-S-404 In review trên `feat/resale-s404-listings-freeze`, base tích hợp S-401 tại 6721156. Freeze đồng bộ idempotent, durable operation/recovery, tìm kiếm và Inbox/Outbox. Ticket 22 unit, 68 integration, 11 concurrency pass. Resale 9 unit, 23 integration, 4 concurrency pass. Migration/OpenAPI/format/build 16/16 pass. Xem [run report](runs/S-404.md).
+S-404 In review ở PR [#81](https://github.com/tvangx/VENTIX/pull/81) trên `feat/resale-s404-listings-freeze`, base tích hợp S-401 tại 6721156. Freeze đồng bộ idempotent, durable operation/recovery, tìm kiếm và Inbox/Outbox. Ticket 22 unit, 68 integration, 11 concurrency pass. Resale 9 unit, 23 integration, 4 concurrency pass. Migration/OpenAPI/format/build 16/16 pass. Lint/typecheck/unit toàn repo mỗi lệnh 20/20 task pass. Xem [run report](runs/S-404.md).
 
 - S-101 đã merge main qua #36; S-102–S-107 đã vào main qua #65 (`66c63b7`). Bảng tuần 1 bên dưới là snapshot lịch sử, không phải trạng thái hiện tại.
 - S-201–S-206 đã merge nhánh tích hợp qua #60/#62/#64/#66/#67/#68. PR [#69](https://github.com/tvangx/VENTIX/pull/69) đưa tuần 2 lên main: build/security xanh, chưa có review, GitHub báo blocked tại thời điểm đối chiếu. Chưa merge main.
