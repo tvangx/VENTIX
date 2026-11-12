@@ -12,6 +12,8 @@ import { TicketRepository } from "./modules/tickets/ticket.repository";
 import { TicketSecrets } from "./modules/tickets/ticket-secrets";
 import { TicketHandler } from "./messaging/ticket.handler";
 import { TicketWorker } from "./messaging/ticket-worker";
+import { TicketService } from "./modules/tickets/ticket.service";
+import { TicketController } from "./modules/tickets/ticket.controller";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -27,12 +29,13 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController],
+      controllers: [HealthController, MetricsController, WhoamiController, TicketController],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
         TicketRepository,
+        TicketService,
         {
           provide: TicketSecrets,
           inject: [ENV],

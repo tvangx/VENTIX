@@ -71,6 +71,108 @@
         "summary": "Return the authenticated principal",
         "tags": ["whoami"]
       }
+    },
+    "/v1/tickets": {
+      "get": {
+        "operationId": "TicketController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID or pagination parameters"
+          },
+          "401": {
+            "description": "JWT required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the authenticated user's tickets",
+        "tags": ["tickets"]
+      }
+    },
+    "/v1/tickets/{ticketId}/token": {
+      "get": {
+        "operationId": "TicketController_token",
+        "parameters": [
+          {
+            "name": "ticketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID or pagination parameters"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "404": {
+            "description": "Ticket absent or owned by another user"
+          },
+          "409": {
+            "description": "Ticket is not ACTIVE"
+          },
+          "503": {
+            "description": "Current ticket secret unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a current TOTP and QR payload for an owned active ticket",
+        "tags": ["tickets"]
+      }
     }
   },
   "info": {
@@ -119,6 +221,117 @@
           }
         },
         "required": ["userId", "roles"]
+      },
+      "TicketView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seat_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "item_type": {
+            "type": "string",
+            "enum": ["TICKET_SEAT", "TICKET_GA"]
+          },
+          "ref_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unit_price_vnd": {
+            "type": "string",
+            "example": "100000",
+            "description": "Integer VND as a decimal string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "FROZEN", "CHECKED_IN", "REVOKED", "REFUNDED"]
+          },
+          "secret_version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "order_id",
+          "event_id",
+          "seat_id",
+          "item_type",
+          "ref_id",
+          "unit_price_vnd",
+          "status",
+          "secret_version"
+        ]
+      },
+      "TicketPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketView"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": ["items", "next_cursor"]
+      },
+      "TicketToken": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "secret_version": {
+            "type": "number"
+          },
+          "token": {
+            "type": "string",
+            "example": "012345"
+          },
+          "step_seconds": {
+            "type": "number",
+            "example": 30
+          },
+          "server_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "qr_payload": {
+            "type": "string",
+            "description": "JSON QR v1 containing version, ticket_id, secret_version, token"
+          }
+        },
+        "required": [
+          "ticket_id",
+          "secret_version",
+          "token",
+          "step_seconds",
+          "server_time",
+          "expires_at",
+          "qr_payload"
+        ]
       }
     }
   }

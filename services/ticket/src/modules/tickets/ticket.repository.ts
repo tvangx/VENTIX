@@ -3,6 +3,14 @@ import { pgDatabase } from "@ticketing/outbox-inbox";
 import { Pool } from "pg";
 import { ENV } from "../../app.tokens";
 import type { Env } from "../../config/env.schema";
+import type { TicketView } from "./ticket.dto";
+
+interface OwnedSecret {
+  status: string;
+  secret_version: number;
+  secret_enc: Buffer | null;
+  key_id: string | null;
+}
 
 @Injectable()
 export class TicketRepository implements OnApplicationShutdown {
@@ -17,6 +25,31 @@ export class TicketRepository implements OnApplicationShutdown {
     });
     this.pool.on("error", () => undefined);
     this.db = pgDatabase(this.pool);
+  }
+
+  async listOwned(
+    userId: string,
+    cursor: string | undefined,
+    limit: number,
+  ): Promise<TicketView[]> {
+    const result = await this.pool.query<TicketView>(
+      `SELECT id, order_id, event_id, seat_id, item_type, ref_id, unit_price_vnd::text, status, secret_version
+       FROM tickets WHERE owner_user_id=$1::uuid AND ($2::uuid IS NULL OR id>$2::uuid)
+       ORDER BY id LIMIT $3`,
+      [userId, cursor ?? null, limit],
+    );
+    return result.rows;
+  }
+
+  async ownedSecret(userId: string, ticketId: string): Promise<OwnedSecret | undefined> {
+    const result = await this.pool.query<OwnedSecret>(
+      `SELECT ticket.status, ticket.secret_version, secret.secret_enc, secret.key_id
+       FROM tickets ticket LEFT JOIN ticket_secrets secret
+       ON secret.ticket_id=ticket.id AND secret.version=ticket.secret_version AND secret.revoked_at IS NULL
+       WHERE ticket.id=$1::uuid AND ticket.owner_user_id=$2::uuid`,
+      [ticketId, userId],
+    );
+    return result.rows[0];
   }
 
   async onApplicationShutdown(): Promise<void> {
