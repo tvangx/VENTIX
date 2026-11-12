@@ -26,7 +26,7 @@ export async function createApp(env: Env, logger: Logger): Promise<INestApplicat
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
   app.useGlobalFilters(new ProblemJsonFilter(logger));
-  app.enableShutdownHooks(); // SIGTERM: ngừng nhận request → đóng Prisma qua onModuleDestroy
+  app.enableShutdownHooks(); // SIGTERM: ngừng nhận request → dừng relay trước khi đóng Prisma
 
   SwaggerModule.setup("docs", app, buildOpenApi(app));
   return app;

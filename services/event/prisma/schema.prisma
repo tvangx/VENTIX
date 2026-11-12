@@ -5,15 +5,19 @@ generator client {
 }
 
 model Venue {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String   @db.VarChar(255)
-  address   String   @db.VarChar(512)
-  capacity  Int
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  version   Int      @default(0)
-  events    Event[]
+  id          String   @id @default(uuid()) @db.Uuid
+  // ref:identity_db, không FK chéo DB.
+  organizerId String   @map("organizer_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  address     String   @db.VarChar(512)
+  capacity    Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version     Int      @default(0)
+  events      Event[]
 
+  @@unique([id, organizerId])
+  @@index([organizerId, id])
   @@map("venues")
 }
 
@@ -31,13 +35,14 @@ model Event {
   version       Int             @default(0)
   createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  venue         Venue           @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  venue         Venue           @relation(fields: [venueId, organizerId], references: [id, organizerId], onDelete: Restrict)
   ticketClasses TicketClass[]
   salePhases    SalePhase[]
   seatMaps      SeatMap[]
   approvals     EventApproval[]
 
-  @@index([organizerId])
+  @@index([organizerId, id])
+  @@index([venueId, organizerId])
   @@index([status, startAt, id])
   @@map("events")
 }
@@ -75,6 +80,7 @@ model SalePhase {
   event        Event    @relation(fields: [eventId], references: [id], onDelete: Restrict)
 
   @@index([eventId, startsAt])
+  @@index([eventId, id])
   @@map("sale_phases")
 }
 
@@ -178,6 +184,18 @@ model ProcessedEvent {
 
   @@id([messageId, consumer])
   @@map("processed_events")
+}
+
+model IdempotencyRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  organizerId String   @map("organizer_id") @db.Uuid
+  key         String   @db.Uuid
+  requestHash String   @map("request_hash") @db.VarChar(64)
+  response    Json
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([organizerId, key])
+  @@map("idempotency_keys")
 }
 
 datasource db {

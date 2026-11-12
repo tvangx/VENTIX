@@ -18,14 +18,15 @@ describe("S-107 Event schema on PostgreSQL", () => {
       map = randomUUID(),
       zone = randomUUID(),
       block = randomUUID(),
-      seat = randomUUID();
+      seat = randomUUID(),
+      organizer = randomUUID();
     await db.pool.query(
-      "INSERT INTO venues(id,name,address,capacity,updated_at) VALUES($1,'Venue','Test address',100,now())",
-      [venue],
+      "INSERT INTO venues(id,organizer_id,name,address,capacity,updated_at) VALUES($1,$2,'Venue','Test address',100,now())",
+      [venue, organizer],
     );
     await db.pool.query(
       "INSERT INTO events(id,organizer_id,venue_id,title,description,start_at,end_at,updated_at) VALUES($1,$2,$3,'Event','Test',now()+interval '1 day',now()+interval '2 days',now())",
-      [event, randomUUID(), venue],
+      [event, organizer, venue],
     );
     await db.pool.query(
       "INSERT INTO ticket_classes(id,event_id,name,price_vnd,capacity,kind,updated_at) VALUES($1,$2,'VIP',100000,100,'SEATED',now())",
