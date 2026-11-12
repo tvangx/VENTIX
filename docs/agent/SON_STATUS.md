@@ -2,6 +2,8 @@
 
 ## Đối chiếu khi tiếp tục ngày 2026-11-12
 
+- S-405 Bị chặn ở precheck hợp đồng hoàn tiền resale, đề nghị Tuấn tại Issue [#82](https://github.com/tvangx/VENTIX/issues/82) theo lựa chọn người giao việc. T-302 #56 và T-405 #61 đã merge main, source Payment có MOCK/RESALE. Chính sách giải ngân đã được xác nhận trong ADR-0017. Xem [run report S-405](runs/S-405.md).
+
 - #69 và #70 đã merge main, origin/main hiện 0977e9d sau PR #78 của Vũ.
 - #71–77 đã merge vào các base branch xếp chồng. #79 và #80 có CI xanh, đã merge thường vào nhánh S-401 tại ff8d9a1 và 6721156. Code S-302–S-403 đang ở nhánh tích hợp. Cần PR tích hợp lên main sau khi CI/review đủ.
 - S-402 In review ở PR [#79](https://github.com/tvangx/VENTIX/pull/79), nhánh feat/ticket-s402-online-checkin. Source cuối gồm UUID case-insensitive có unit 19/19, integration 47/47, concurrency 7/7 pass, OpenAPI/format/build 16/16 pass. Xem [run report](runs/S-402.md).
