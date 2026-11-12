@@ -278,13 +278,32 @@ export const TicketTransferred = envelope(
   }),
 );
 
-export const TicketRevoked = envelope(
+export const TicketRevokedV1 = envelope(
   "TicketRevoked",
   z.object({
     ticket_id: id,
     reason: z.enum(["REFUNDED", "TRANSFERRED", "ADMIN", "EVENT_CANCELLED"]),
   }),
 );
+
+export const TicketRevokedV2 = envelope(
+  "TicketRevoked",
+  TicketRevokedV1.shape.data.extend({
+    reason: z.enum([
+      "REFUNDED",
+      "TRANSFERRED",
+      "ADMIN",
+      "EVENT_CANCELLED",
+      "USER_CANCELLED",
+      "EXPIRED",
+      "LATE_PAYMENT",
+      "STOCK_REJECTED",
+      "PAYMENT_FAILED",
+    ]),
+  }),
+  2,
+);
+export const TicketRevoked = z.union([TicketRevokedV1, TicketRevokedV2]);
 
 export const TicketCheckedIn = envelope(
   "TicketCheckedIn",
