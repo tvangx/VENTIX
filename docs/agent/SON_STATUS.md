@@ -15,7 +15,9 @@ PR S-301 [#70](https://github.com/tvangx/VENTIX/pull/70) đã mở ngày 2026-11
 
 S-302 In review trên `feat/ticket-s302-totp-wallet`, base nhánh S-301, PR [#71](https://github.com/tvangx/VENTIX/pull/71). Unit 16/16, wallet HTTP 3/3, concurrency 2/2, lint/typecheck/build pass. Xem [run report](runs/S-302.md).
 
-S-303 đang chuẩn bị draft trên `feat/ticket-s303-revoke-refunded`, base S-302. Bị chặn bởi quyết định hợp đồng TicketRevoked reason, đề xuất [#72](https://github.com/tvangx/VENTIX/issues/72) theo lựa chọn người dùng. Xem [run report](runs/S-303.md). S-304 trở đi chưa bắt đầu do điều kiện dừng AGENTS mục 9.
+S-303 có draft PR [#73](https://github.com/tvangx/VENTIX/pull/73) trên `feat/ticket-s303-revoke-refunded`, base S-302. Bị chặn bởi quyết định hợp đồng TicketRevoked reason, đề xuất [#72](https://github.com/tvangx/VENTIX/issues/72) theo lựa chọn người dùng. Unit 16/16, integration 23/23 và concurrency 3/3 pass. Xem [run report](runs/S-303.md). S-304 trở đi chưa bắt đầu do điều kiện dừng AGENTS mục 9.
+
+Đối chiếu ngày 2026-11-12 cho thấy PR #70 và #71 có build/security xanh. PR #70 rerun thành công sau timeout test auth-guard ở lượt CI đầu. Các PR vẫn chờ review trước merge main.
 
 ## Snapshot bàn giao tuần 1 — 2026-10-25
 
