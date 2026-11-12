@@ -13,6 +13,14 @@ export class TicketHandler {
 
   async handle(executor: SqlExecutor, message: ParsedMessage): Promise<void> {
     if (
+      message.type === "EventApproved" ||
+      message.type === "EventUpdated" ||
+      message.type === "EventCancelled"
+    ) {
+      await this.lifecycle(executor, message);
+      return;
+    }
+    if (
       message.type !== "OrderConfirmed" &&
       message.type !== "OrderCancelled" &&
       message.type !== "RefundCompleted"
@@ -115,6 +123,34 @@ export class TicketHandler {
       }
     }
   }
+  private async lifecycle(
+    executor: SqlExecutor,
+    message: Extract<ParsedMessage, { type: "EventApproved" | "EventUpdated" | "EventCancelled" }>,
+  ): Promise<void> {
+    const data = message.data;
+    if (message.tenant_id && message.tenant_id !== data.organizer_id)
+      throw new PermanentError("EVENT_TENANT_CONFLICT");
+    const version = "event_version" in data ? data.event_version : 0;
+    if (version < 0) throw new PermanentError("INVALID_EVENT_VERSION");
+    const rows = await executor.query<{ id: string }>(
+      `INSERT INTO ticket_events (id,organizer_id,source_version,cancelled) VALUES ($1::uuid,$2::uuid,$3,$4)
+       ON CONFLICT (id) DO UPDATE SET source_version=GREATEST(ticket_events.source_version,EXCLUDED.source_version),
+       cancelled=ticket_events.cancelled OR EXCLUDED.cancelled,version=ticket_events.version+1,updated_at=now()
+       WHERE ticket_events.organizer_id=EXCLUDED.organizer_id
+       AND (EXCLUDED.source_version>ticket_events.source_version OR EXCLUDED.cancelled AND NOT ticket_events.cancelled)
+       RETURNING id`,
+      [data.event_id, data.organizer_id, version, message.type === "EventCancelled"],
+    );
+    if (rows.length === 0) {
+      const [existing] = await executor.query<{ organizer_id: string }>(
+        "SELECT organizer_id FROM ticket_events WHERE id=$1::uuid",
+        [data.event_id],
+      );
+      if (existing?.organizer_id !== data.organizer_id)
+        throw new PermanentError("EVENT_ORGANIZER_CONFLICT");
+    }
+  }
+
   private async invalidate(
     executor: SqlExecutor,
     message: Extract<ParsedMessage, { type: "OrderCancelled" | "RefundCompleted" }>,

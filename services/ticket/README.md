@@ -66,3 +66,30 @@ TOTP dùng SHA1, 6 chữ số, mốc Unix và bước 30 giây. Hàm verify ch�
 Consumer bổ sung payment.events để nhận RefundCompleted và chuyển vé sang REFUNDED. OrderCancelled với reason EVENT_CANCELLED chuyển vé sang REVOKED. Trạng thái REFUNDED giữ ưu tiên khi cancellation đến sau. Secret được thu hồi và TicketRevoked vào Outbox trong cùng transaction Inbox. Khóa advisory theo order serialize issue/refund/cancel giữa các topic, bảng ticket_order_invalidations chặn confirmation đến sau thu hồi.
 
 Theo [hợp đồng reason #72](https://github.com/tvangx/VENTIX/issues/72), USER_CANCELLED, EXPIRED, LATE_PAYMENT, STOCK_REJECTED, PAYMENT_FAILED được phát nguyên trạng trong TicketRevoked v2. REFUNDED và EVENT_CANCELLED tiếp tục dùng v1. Cập nhật parser consumer trước producer v2 theo PR hợp đồng #74. Tuấn review version và rollout trên PR trước khi triển khai môi trường thật.
+
+## S-401 Gate và gói xác thực Staff
+
+Ticket worker nhận thêm `event.lifecycle`, dựng `ticket_events` để ràng buộc event/organizer. Bật `TICKET_WORKERS_ENABLED=true` với key ring hợp lệ để nhận lifecycle và phát audit Outbox. Event chưa đồng bộ trả `409 EVENT_NOT_READY`, event đã hủy chặn quản lý cổng và tải gói.
+
+Organizer cùng tenant hoặc Admin dùng các API sau. Mỗi POST cần UUID `Idempotency-Key`.
+
+| API                                            | Nội dung                                                                        |
+| ---------------------------------------------- | ------------------------------------------------------------------------------- |
+| `POST /v1/gates`                               | `{event_id,name}` tạo cổng                                                      |
+| `POST /v1/gates/:gateId/staff`                 | `{staff_user_id}` phân công hoặc kích hoạt lại Staff                            |
+| `POST /v1/gates/:gateId/staff/revoke`          | `{staff_user_id}` thu hồi phân công                                             |
+| `POST /v1/gates/:gateId/tickets`               | `{ticket_ids:[...]}` gắn 1–1000 vé cùng event vào cổng, chặn vé đã có cổng khác |
+| `GET /v1/gates/me?limit=50&cursor=<uuid>`      | Staff xem cổng đang được phân công, giới hạn 1–100                              |
+| `POST /v1/gates/:gateId/verification-packages` | Staff gửi `{public_key_pem}` để tải snapshot mã hóa                             |
+
+Staff cần JWT có role `STAFF`, `organizer_id` khớp event và assignment hiện hành. Admin/Organizer quản lý phân công bằng UUID tham chiếu Identity. Role Staff được kiểm tra khi tải. Thu hồi assignment chặn cả replay package đã phát. HTTP dùng `Cache-Control: private, no-store`. Môi trường vận hành cần TLS.
+
+Package dùng định dạng `ticket-verification-v1`, thuật toán `RSA-OAEP-256+A256GCM`. Thiết bị gửi RSA SPKI public key 2048–4096 bit. Mỗi package có khóa AES-256 và nonce 12 byte riêng. Response có `encrypted_key`, `nonce`, `aad`, `ciphertext` dạng base64, cùng `package_id`, `event_id`, `gate_id`, `issued_at`, `expires_at`. Ciphertext nối tag GCM 16 byte, tương thích WebCrypto.
+
+Giải mã `encrypted_key` bằng RSA-OAEP SHA-256, import khóa AES-GCM rồi decrypt với `iv=nonce`, `additionalData=aad`, `tagLength=128`. AAD là UTF-8 JSON array `["ticket-verification-v1", package_id, event_id, gate_id, issued_at, expires_at]`. Client đối chiếu metadata ngoài/AAD/payload và event/cổng đã chọn, kiểm tra hạn dùng trước mỗi lượt quét.
+
+Payload chứa metadata trên, cấu hình `totp={algorithm:"SHA1",digits:6,period_seconds:30,window:1}` và `tickets=[{ticket_id,status,secret_version,secret}]`. Secret là base64, chỉ lấy phiên bản hiện hành chưa thu hồi của vé ACTIVE đúng event/cổng. Tên khách, owner ID và thông tin KYC thuộc các dữ liệu riêng của service.
+
+`TICKET_PACKAGE_TTL_SECONDS` mặc định 600, khoảng 60–1800. `TICKET_PACKAGE_MAX_TICKETS` mặc định 10.000, khoảng 1–100.000. Vượt giới hạn trả `409 PACKAGE_TOO_LARGE`. Thiếu/hỏng secret trả `503 TICKET_SECRET_UNAVAILABLE`. Replay cùng key trả package cũ sau khi xác minh quyền. Hết hạn trả `409 PACKAGE_EXPIRED`, cần key mới. Cùng key khác nội dung trả `409 IDEMPOTENCY_KEY_REUSED`.
+
+V-401 thực hiện private key thiết bị, khóa non-extractable dẫn xuất từ phiên/PIN, IndexedDB mã hóa, xóa khi hết sự kiện/đăng xuất. S-401 kiểm tra crypto bằng WebCrypto trong Node và API trên PostgreSQL/Kafka local. Cửa sổ offline và thu hồi theo ADR-0007, delta thuộc S-403. Chi tiết đề xuất giao diện ở `docs/adr/0015-staff-verification-packages.md`.
