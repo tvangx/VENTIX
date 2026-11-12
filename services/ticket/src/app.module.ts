@@ -21,6 +21,10 @@ import { TicketIdempotency } from "./modules/tickets/ticket-idempotency";
 import { CheckinController } from "./modules/checkin/checkin.controller";
 import { CheckinService } from "./modules/checkin/checkin.service";
 import { CheckinRepository } from "./modules/checkin/checkin.repository";
+import { OfflineController } from "./modules/offline/offline.controller";
+import { OfflineService } from "./modules/offline/offline.service";
+import { OfflineRepository } from "./modules/offline/offline.repository";
+import { OfflineKeys } from "./modules/offline/offline-keys";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -43,6 +47,7 @@ export class AppModule implements NestModule {
         TicketController,
         GateController,
         CheckinController,
+        OfflineController,
       ],
       providers: [
         { provide: ENV, useValue: env },
@@ -55,6 +60,9 @@ export class AppModule implements NestModule {
         TicketIdempotency,
         CheckinService,
         CheckinRepository,
+        OfflineService,
+        OfflineRepository,
+        OfflineKeys,
         {
           provide: TicketSecrets,
           inject: [ENV],

@@ -17,6 +17,13 @@ export interface ScannedTicket {
   key_id: string | null;
 }
 
+export interface OfflineScanContext {
+  batchId: string;
+  deviceId: string;
+  sourceScanId: string;
+  fingerprint: string;
+}
+
 @Injectable()
 export class CheckinRepository {
   async ticket(executor: SqlExecutor, id: string): Promise<ScannedTicket | undefined> {
@@ -45,11 +52,12 @@ export class CheckinRepository {
     ticketId: string | null,
     result: CheckinResult,
     scannedAt: Date,
+    offline?: OfflineScanContext,
   ): Promise<CheckinResponse> {
     const id = uuidv7();
     await executor.query(
-      `INSERT INTO checkin_logs (id,ticket_id,scanned_ticket_id,gate_id,event_id,organizer_id,staff_user_id,result,scanned_at)
-      VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6::uuid,$7::uuid,$8,$9::timestamptz)`,
+      `INSERT INTO checkin_logs (id,ticket_id,scanned_ticket_id,gate_id,event_id,organizer_id,staff_user_id,result,scanned_at,offline,batch_id,device_id,source_scan_id,source_fingerprint)
+      VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6::uuid,$7::uuid,$8,$9::timestamptz,$10,$11::uuid,$12::uuid,$13::uuid,$14)`,
       [
         id,
         ticketId,
@@ -60,6 +68,11 @@ export class CheckinRepository {
         user.userId,
         result,
         scannedAt,
+        offline !== undefined,
+        offline?.batchId ?? null,
+        offline?.deviceId ?? null,
+        offline?.sourceScanId ?? null,
+        offline?.fingerprint ?? null,
       ],
     );
     return { scan_id: id, ticket_id: scannedTicketId, result, scanned_at: scannedAt.toISOString() };

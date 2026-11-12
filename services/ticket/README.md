@@ -118,3 +118,36 @@ Thiếu/hỏng secret hiện hành trả `503 TICKET_SECRET_UNAVAILABLE`. Sai qu
 Một transaction khóa gate và ticket, cập nhật ACTIVE→CHECKED_IN có điều kiện/version, INSERT `checkin_logs`, thêm `TicketCheckedIn` Outbox và receipt. Index `uq_checkin_accepted` bảo đảm một vé có một log ACCEPTED. Log dùng ID vé nullable để ghi lượt quét ID chưa có trong DB, vẫn giữ `scanned_ticket_id` của request. Token TOTP được dùng để xác thực tại request, log và response chứa ID/kết quả.
 
 `checkin_logs` chỉ INSERT. Migration thu hồi UPDATE/DELETE/TRUNCATE của ticket_user và có trigger append-only. Metric `ticket_online_checkin_responses_total{result}` đếm response đã commit, bao gồm replay. Sự kiện giữ trace/request ID và topic/key theo source `TicketCheckedIn` hiện hành.
+
+## S-403 Đồng bộ offline có HMAC
+
+Sau khi tải verification package, Staff gọi `POST /v1/offline-devices` với `{gate_id,package_id,public_key_pem}` và UUID `Idempotency-Key`. Public key RSA phải khớp key đã dùng tải package của chính Staff/cổng, package còn hạn. Response có `device_id`, `package_id`, `event_id`, `gate_id`, `issued_at`, `expires_at`, `server_time`, `algorithm=HMAC-SHA256`, `encrypted_key`, `oaep_label`.
+
+Mỗi device session có HMAC key 32 byte. Dùng RSA-OAEP SHA-256 với `label=base64decode(oaep_label)` để giải mã `encrypted_key`. Label là UTF-8 JSON array `["ticket-offline-device-v1",device_id,staff_user_id,event_id,gate_id,package_id,issued_at,expires_at]`. Client đối chiếu label với metadata và JWT của mình, rồi import key vào WebCrypto HMAC SHA-256, `extractable=false`. Server lưu key mã hóa AES-GCM với key_id, AAD domain riêng `ticket-offline-device-v1`.
+
+`server_time` là giờ DB hiện hành, được làm mới cả khi replay enrollment. Các trường device/key/package của replay giữ cùng giá trị. Thiết bị tính độ lệch đồng hồ theo server_time tại thời điểm nhận response, dùng giờ đã hiệu chỉnh khi ghi scanned_at và xét TTL. `issued_at`/`expires_at` là cửa sổ quét của package. Timestamp quét phải từ issued_at đến trước expires_at, giới hạn tương lai tối đa 30 giây so với server để bù một bước TOTP. Batch lịch sử được upload sau khi package hết hạn, khi timestamp quét vẫn nằm trong cửa sổ và quyền Staff/tenant/assignment hiện hành hợp lệ.
+
+`POST /v1/offline-sync` nhận `batch_id`, `device_id`, `package_id`, `event_id`, `gate_id`, `scans`, `signature`. Header `Idempotency-Key` bằng batch_id. Batch gồm 1–500 scan, mỗi scan có `scan_id` UUID do thiết bị sinh, `ticket_id`, `secret_version`, `token` 6 số, `scanned_at` UTC dạng `YYYY-MM-DDTHH:mm:ss.sssZ`.
+
+Payload ký HMAC là bytes UTF-8 của JSON array sau, UUID được chuyển chữ thường, các scan giữ thứ tự client.
+
+```text
+["ticket-offline-sync-v1",batch_id,device_id,event_id,gate_id,package_id,
+ [[scan_id,ticket_id,secret_version,token,scanned_at], ...]]
+```
+
+`signature` dùng base64 chuẩn của HMAC-SHA256 32 byte. Chữ ký sai trả `403 INVALID_OFFLINE_SIGNATURE` trước khi ghi batch/log/trạng thái. Context sai trả `409 OFFLINE_CONTEXT_MISMATCH`, timestamp ngoài cửa sổ trả `400 OFFLINE_SCAN_OUTSIDE_WINDOW`. Key mã hóa bị hỏng/thiếu trả `503 OFFLINE_KEY_UNAVAILABLE`.
+
+Response có `batch={batch_id,device_id,record_count,conflict_count,received_at,items}` và `revocations`. Item có `source_scan_id`, `scan_id` server, `ticket_id`, `result`, `scanned_at`, dùng các result của S-402. TOTP được kiểm tra tại timestamp quét đã ký, kết hợp trạng thái/secret_version hiện hành. Hai thiết bị quét cùng vé được ghi ACCEPTED/DUPLICATE theo thứ tự commit. Source scan ID cùng device có nội dung cố định, gửi lại qua batch mới trả log cũ. Đổi nội dung batch/source ID đã có trả `409 OFFLINE_BATCH_ID_REUSED` hoặc `409 OFFLINE_SCAN_ID_REUSED`.
+
+Quyền Staff/tenant/assignment được kiểm tra khi sync và replay. Thu hồi phân công chặn cả hai. Sau event cancel, thiết bị đã đăng ký có thể sync để nhận thu hồi, các lượt quét được ghi INVALID. Nhánh online và enrollment chặn event đã hủy.
+
+`batch` là receipt ổn định, `revocations` lấy mới trong mỗi response kể cả replay. Delta có `revoked_ticket_ids`, `ticket_updates=[{ticket_id,status,secret_version,revoked}]`, `next_cursor`. Client xóa vé có revoked=true và ngừng dùng secret cũ khi version khác, tải package mới khi cần phiên bản hiện hành. Vé ACTIVE từng đổi secret có thể xuất hiện lại với revoked=false và version mới. Những cập nhật lặp được áp dụng idempotent.
+
+Đọc hết delta bằng `GET /v1/offline-devices/:deviceId/revocations?limit=1000&cursor=<uuid>`, giới hạn 1–1000. Mỗi chu kỳ sync mới bắt đầu lại trang đầu để lấy trạng thái hiện hành, tránh bỏ sót transaction commit muộn qua watermark thời gian. Device chỉ đọc delta của cổng được phân công.
+
+Log, chuyển trạng thái, TicketCheckedIn offline=true và receipt batch cùng transaction. Ticket rows khóa theo ID trước khi xử lý batch. Partial unique `uq_offline_source_scan` chống replay, `uq_checkin_accepted` giữ một ACCEPTED mỗi vé. FK batch deferred cho phép INSERT log rồi INSERT receipt batch một lần ở cuối transaction.
+
+Batch append-only có trigger và quyền SQL hạn chế. Cột id được cấp UPDATE riêng để PostgreSQL lấy KEY SHARE khi kiểm tra FK, trigger chặn cả `UPDATE id=id`. Test kiểm tra UPDATE dữ liệu/DELETE bị từ chối và trigger từ chối mọi sửa ID. Quyền khóa hàng này được mô tả trong tài liệu PostgreSQL. [PostgreSQL 16 SELECT](https://www.postgresql.org/docs/16/sql-select.html)
+
+Metric `ticket_offline_scan_responses_total{result}` đếm item trong response đã commit, bao gồm replay. Phần PIN/IndexedDB/hàng đợi và hiển thị conflict ở Staff PWA thuộc V-401/V-402. Vòng đời lưu trữ khóa thiết bị/receipt cần được nhóm thống nhất khi chuẩn bị production.
