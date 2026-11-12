@@ -3,7 +3,8 @@
 ## Đối chiếu khi tiếp tục ngày 2026-11-12
 
 - Nhánh tích hợp `chore/son-s302-s404-main` được tạo từ main 0977e9d và merge chuỗi tại b98d7c8 để mở PR main. Source Event tuần 2/V-103 của main và source S-302–404 được đối chiếu sau resolve. Xem [run report tích hợp](runs/SON_S302_S404_MAIN.md).
-- S-404 #81 có build/security xanh ở attempt 3 và đã merge nhánh tích hợp b98d7c8. Hai lượt CI trước timeout JWKS cũ, source/threshold giữ qua retry. S-405 có draft [#83](https://github.com/tvangx/VENTIX/pull/83), đang chờ hợp đồng hoàn tiền resale ở [#82](https://github.com/tvangx/VENTIX/issues/82). Chính sách escrow đã được xác nhận và ghi ở ADR-0017 trong nhánh S-405.
+- S-404 #81 có build/security xanh ở attempt 3 và đã merge nhánh tích hợp b98d7c8. Hai lượt CI trước timeout JWKS cũ, source/threshold giữ qua retry. PR tài liệu S-405 [#83](https://github.com/tvangx/VENTIX/pull/83) đã được merge vào base tại 7c6d577, gồm báo cáo điều kiện và chính sách escrow. Phần code S-405 đang chờ hợp đồng hoàn tiền ở #82.
+- S-405 Bị chặn ở precheck hợp đồng hoàn tiền resale, đề nghị Tuấn tại Issue [#82](https://github.com/tvangx/VENTIX/issues/82) theo lựa chọn người giao việc. T-302 #56 và T-405 #61 đã merge main, source Payment có MOCK/RESALE. Chính sách giải ngân đã được xác nhận trong ADR-0017. Xem [run report S-405](runs/S-405.md).
 
 - #69 và #70 đã merge main, origin/main hiện 0977e9d sau PR #78 của Vũ.
 - #71–77 đã merge vào các base branch xếp chồng. #79 và #80 có CI xanh, đã merge thường vào nhánh S-401 tại ff8d9a1 và 6721156. Code S-302–S-403 đang ở nhánh tích hợp. Cần PR tích hợp lên main sau khi CI/review đủ.
