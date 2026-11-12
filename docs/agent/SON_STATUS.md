@@ -21,7 +21,7 @@ S-303 In review ở PR [#73](https://github.com/tvangx/VENTIX/pull/73) trên `fe
 
 S-304 In review ở PR [#75](https://github.com/tvangx/VENTIX/pull/75), nhánh `feat/resale-s304-schema-price-cap`, base S-303. Unit 8/8, integration 11/11 và concurrency 1/1 pass. Quote dùng giá API Ticket, luồng tạo/freeze listing thuộc S-404. Xem [run report](runs/S-304.md).
 
-S-305 đã cài đặt đầy đủ trên PR [#76](https://github.com/tvangx/VENTIX/pull/76), nhánh `feat/identity-s305-kyc`, đang hoàn tất kiểm chứng trước In review. Người dùng chọn email tài khoản + Mailpit local. Identity 23 unit, 48 integration và 3 concurrency pass; 12 test auth/KYC chạy lại pass sau fingerprint idempotency độc lập JWT. SMTP Mailpit và audit Kafka đã kiểm tra thật, KYC vẫn là email + thông tin tự khai. Xem [run report](runs/S-305.md).
+S-305 In review trên PR [#76](https://github.com/tvangx/VENTIX/pull/76), nhánh `feat/identity-s305-kyc`. Người dùng chọn email tài khoản + Mailpit local. Identity 23 unit, 49 integration và 3 concurrency pass trên source cuối, bao gồm fingerprint idempotency độc lập JWT. SMTP Mailpit và audit Kafka đã kiểm tra thật, KYC vẫn là email + thông tin tự khai. Xem [run report](runs/S-305.md).
 
 ## Snapshot bàn giao tuần 1 — 2026-10-25
 
