@@ -21,7 +21,7 @@ S-303 In review ở PR [#73](https://github.com/tvangx/VENTIX/pull/73) trên `fe
 
 S-304 In review ở PR [#75](https://github.com/tvangx/VENTIX/pull/75), nhánh `feat/resale-s304-schema-price-cap`, base S-303. Unit 8/8, integration 11/11 và concurrency 1/1 pass. Quote dùng giá API Ticket, luồng tạo/freeze listing thuộc S-404. Xem [run report](runs/S-304.md).
 
-S-305 Doing trên `feat/identity-s305-kyc`. Core mã hóa 3 unit và Redis OTP 3 integration pass, gồm 50 request cạnh tranh. Kênh gửi OTP đang chờ lựa chọn của người dùng, HTTP/DB/delivery chưa được tích hợp. Xem [run report](runs/S-305.md).
+S-305 Doing ở draft PR [#76](https://github.com/tvangx/VENTIX/pull/76), nhánh `feat/identity-s305-kyc`. Toàn bộ Identity 21 unit pass, Redis OTP 3 integration và health 7 integration pass, gồm 50 request cạnh tranh. Kênh gửi OTP đang chờ lựa chọn của người dùng, HTTP/DB/delivery chưa được tích hợp. Xem [run report](runs/S-305.md).
 
 ## Snapshot bàn giao tuần 1 — 2026-10-25
 
