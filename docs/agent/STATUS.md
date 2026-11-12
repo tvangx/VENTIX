@@ -46,7 +46,7 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | ----- | ----- | --------------------------------------------------------- | ---------------------------------------- |
 | S-203 | Sơn   | Duyệt event + outbox `EventApproved`                      | T-203                                    |
 | S-206 | Sơn   | API nội bộ `seat-classes`                                 | T-203b                                   |
-| S-301 | Sơn   | Ticket consume `OrderConfirmed`                           | G2                                       |
+| S-301 | Sơn   | Ticket consume `OrderConfirmed`                           | G2; In review, xem runs/S-301.md          |
 | V-305 | Vũ    | Merch reserve/commit theo `OrderCreated`/`OrderConfirmed` | G2                                       |
 | V-306 | Vũ    | API nội bộ `quotes` (SKU lẻ)                              | T-301 (có thể dùng server giả)           |
 | S-405 | Sơn   | Resale mua (+ `ResaleOrderAwaitingPayment`)               | T-405                                    |

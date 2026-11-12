@@ -1,5 +1,20 @@
 # Trạng thái task — Sơn
 
+## Đối chiếu GitHub ngày 2026-11-11
+
+- S-101 đã merge main qua #36; S-102–S-107 đã vào main qua #65 (`66c63b7`). Bảng tuần 1 bên dưới là snapshot lịch sử, không phải trạng thái hiện tại.
+- S-201–S-206 đã merge nhánh tích hợp qua #60/#62/#64/#66/#67/#68. PR [#69](https://github.com/tvangx/VENTIX/pull/69) đưa tuần 2 lên main: build/security xanh, chưa có review, GitHub báo blocked tại thời điểm đối chiếu. Chưa merge main.
+- S-301 chỉ phụ thuộc T-103/T-301a đã Done trên main, được phép bắt đầu độc lập theo bàn giao.
+- Phạm vi lô còn lại theo plan: S-301–305, S-401–405, S-501–505, S-601–604. Mỗi task một nhánh/PR; kiểm tra phụ thuộc và approval trước task kế tiếp. Không làm lại tuần 1–2.
+
+| ID    | Tuần | Tên                            | Trạng thái | Nhánh                          | Ghi chú                                                                                |
+| ----- | ---- | ------------------------------ | ---------- | ------------------------------ | -------------------------------------------------------------------------------------- |
+| S-301 | 3    | Phát hành vé từ OrderConfirmed | In review  | feat/ticket-s301-issue-tickets | [Run report](runs/S-301.md); 8 unit, 15 integration, 2 concurrency pass; chờ CI/review |
+
+PR S-301 [#70](https://github.com/tvangx/VENTIX/pull/70) đã mở ngày 2026-11-12. CI đang chạy, review còn thiếu. S-302 chờ phụ thuộc S-301 hoàn tất theo AGENTS mục 9.
+
+## Snapshot bàn giao tuần 1 — 2026-10-25
+
 Sơn giao làm theo lô S-101–S-107 ngày 2026-10-25. Mỗi task có nhánh riêng;
 nhánh sau có thể dựa trên nhánh trước để kiểm thử tích hợp trước khi review.
 In review chỉ có nghĩa cài đặt và kiểm thử local; Done chờ người review và merge.

@@ -8,6 +8,10 @@ import { DbModule } from "./db/db-health.service";
 import { HealthController } from "./health/health.controller";
 import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
+import { TicketRepository } from "./modules/tickets/ticket.repository";
+import { TicketSecrets } from "./modules/tickets/ticket-secrets";
+import { TicketHandler } from "./messaging/ticket.handler";
+import { TicketWorker } from "./messaging/ticket-worker";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -28,6 +32,18 @@ export class AppModule implements NestModule {
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        TicketRepository,
+        {
+          provide: TicketSecrets,
+          inject: [ENV],
+          useFactory: (config: Env) =>
+            new TicketSecrets(
+              config.TICKET_ENCRYPTION_KEYS ?? {},
+              config.TICKET_ACTIVE_KEY_ID ?? "",
+            ),
+        },
+        TicketHandler,
+        TicketWorker,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],

@@ -1361,6 +1361,12 @@ importers:
       '@ticketing/common':
         specifier: workspace:*
         version: link:../../packages/common
+      '@ticketing/event-contracts':
+        specifier: workspace:*
+        version: link:../../packages/event-contracts
+      '@ticketing/outbox-inbox':
+        specifier: workspace:*
+        version: link:../../packages/outbox-inbox
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1373,6 +1379,9 @@ importers:
       helmet:
         specifier: ^8.0.0
         version: 8.3.0
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.1
         version: 8.23.1
@@ -1388,6 +1397,9 @@ importers:
       rxjs:
         specifier: ^7.8.1
         version: 7.8.2
+      uuidv7:
+        specifier: ^1.0.2
+        version: 1.2.1
       zod:
         specifier: ^3.23.8
         version: 3.25.76
