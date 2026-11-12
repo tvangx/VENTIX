@@ -12,8 +12,29 @@ export class TicketHandler {
   constructor(private readonly secrets: TicketSecrets) {}
 
   async handle(executor: SqlExecutor, message: ParsedMessage): Promise<void> {
-    if (message.type !== "OrderConfirmed") return;
+    if (
+      message.type !== "OrderConfirmed" &&
+      message.type !== "OrderCancelled" &&
+      message.type !== "RefundCompleted"
+    )
+      return;
+    await executor.query("SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))", [
+      message.data.order_id,
+    ]);
+    if (message.type !== "OrderConfirmed") {
+      await this.invalidate(executor, message);
+      return;
+    }
     const order = message.data;
+    const invalidations = await executor.query<{ event_id: string | null }>(
+      "SELECT event_id FROM ticket_order_invalidations WHERE order_id=$1::uuid",
+      [order.order_id],
+    );
+    if (invalidations.length > 0) {
+      if (invalidations[0].event_id && invalidations[0].event_id !== order.event_id)
+        throw new PermanentError("ORDER_EVENT_CONFLICT");
+      return;
+    }
     const items = [...order.items].sort((first, second) =>
       first.order_item_id.localeCompare(second.order_item_id),
     );
@@ -93,5 +114,55 @@ export class TicketHandler {
         );
       }
     }
+  }
+  private async invalidate(
+    executor: SqlExecutor,
+    message: Extract<ParsedMessage, { type: "OrderCancelled" | "RefundCompleted" }>,
+  ): Promise<void> {
+    const orderId = message.data.order_id;
+    const refunded = message.type === "RefundCompleted";
+    const status = refunded ? "REFUNDED" : "REVOKED";
+    const eventId = message.type === "OrderCancelled" ? message.data.event_id : null;
+    if (eventId) {
+      const conflicting = await executor.query<{ id: string }>(
+        "SELECT id FROM tickets WHERE order_id=$1::uuid AND event_id<>$2::uuid LIMIT 1",
+        [orderId, eventId],
+      );
+      if (conflicting.length > 0) throw new PermanentError("ORDER_EVENT_CONFLICT");
+      const previous = await executor.query<{ event_id: string | null }>(
+        "SELECT event_id FROM ticket_order_invalidations WHERE order_id=$1::uuid",
+        [orderId],
+      );
+      if (previous[0]?.event_id && previous[0].event_id !== eventId)
+        throw new PermanentError("ORDER_EVENT_CONFLICT");
+    }
+    await executor.query(
+      `INSERT INTO ticket_order_invalidations (order_id,status,event_id) VALUES ($1::uuid,$2,$3::uuid)
+       ON CONFLICT (order_id) DO UPDATE SET status=CASE WHEN ticket_order_invalidations.status='REFUNDED' THEN 'REFUNDED' ELSE EXCLUDED.status END,
+       event_id=COALESCE(ticket_order_invalidations.event_id,EXCLUDED.event_id), updated_at=now(), version=ticket_order_invalidations.version+1
+       WHERE ticket_order_invalidations.status<>EXCLUDED.status OR ticket_order_invalidations.event_id IS NULL AND EXCLUDED.event_id IS NOT NULL`,
+      [orderId, status, eventId],
+    );
+    const tickets = await executor.query<{ id: string }>(
+      `UPDATE tickets SET status=$2, version=version+1, updated_at=now()
+       WHERE order_id=$1::uuid AND status<>$2 AND status<>'REFUNDED' RETURNING id`,
+      [orderId, status],
+    );
+    await executor.query(
+      "UPDATE ticket_secrets SET revoked_at=now() WHERE revoked_at IS NULL AND ticket_id IN (SELECT id FROM tickets WHERE order_id=$1::uuid)",
+      [orderId],
+    );
+    const reason = message.type === "RefundCompleted" ? "REFUNDED" : message.data.reason;
+    const eventVersion = reason === "REFUNDED" || reason === "EVENT_CANCELLED" ? 1 : 2;
+    for (const ticket of tickets)
+      await this.outbox.add(
+        executor,
+        newMessage(
+          "TicketRevoked",
+          { ticket_id: ticket.id, reason },
+          { version: eventVersion, trace_id: message.trace_id, tenant_id: message.tenant_id },
+        ),
+        ticket.id,
+      );
   }
 }
