@@ -29,6 +29,24 @@ export class ListingQuery {
   limit: number = 20;
 }
 
+export class ListingSearchQuery extends ListingQuery {
+  @ApiPropertyOptional({ format: "uuid" }) @IsOptional() @IsUUID() event_id?: string;
+  @ApiPropertyOptional({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(Number.MAX_SAFE_INTEGER)
+  min_price_vnd?: number;
+  @ApiPropertyOptional({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(Number.MAX_SAFE_INTEGER)
+  max_price_vnd?: number;
+}
+
 export class QuoteResponse {
   @ApiProperty({ format: "uuid" }) ticket_id!: string;
   @ApiProperty({ format: "uuid" }) event_id!: string;

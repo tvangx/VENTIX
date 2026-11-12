@@ -3,11 +3,13 @@
 ## Đối chiếu khi tiếp tục ngày 2026-11-12
 
 - #69 và #70 đã merge main, origin/main hiện 0977e9d sau PR #78 của Vũ.
-- #71–77 đã merge vào các base branch xếp chồng. #79 có CI xanh và đã merge thường vào nhánh S-401 tại ff8d9a1. Code S-302–S-402 chưa vào main. Cần PR tích hợp lên main sau khi CI/review đủ.
+- #71–77 đã merge vào các base branch xếp chồng. #79 và #80 có CI xanh, đã merge thường vào nhánh S-401 tại ff8d9a1 và 6721156. Code S-302–S-403 đang ở nhánh tích hợp. Cần PR tích hợp lên main sau khi CI/review đủ.
 - S-402 In review ở PR [#79](https://github.com/tvangx/VENTIX/pull/79), nhánh feat/ticket-s402-online-checkin. Source cuối gồm UUID case-insensitive có unit 19/19, integration 47/47, concurrency 7/7 pass, OpenAPI/format/build 16/16 pass. Xem [run report](runs/S-402.md).
 - S-403 In review ở PR [#80](https://github.com/tvangx/VENTIX/pull/80), nhánh feat/ticket-s403-offline-sync, base S-401 chứa #79. Protocol HMAC, device key, sync/delta, unit 22/22, toàn integration 61/61, concurrency 10/10 và build 16/16 pass. Offline integration cuối 13/13 pass, Kafka offline=true đã kiểm tra thật. Xem [run report](runs/S-403.md).
 
 ## Snapshot đối chiếu GitHub ngày 2026-11-11
+
+S-404 In review trên `feat/resale-s404-listings-freeze`, base tích hợp S-401 tại 6721156. Freeze đồng bộ idempotent, durable operation/recovery, tìm kiếm và Inbox/Outbox. Ticket 22 unit, 68 integration, 11 concurrency pass. Resale 9 unit, 23 integration, 4 concurrency pass. Migration/OpenAPI/format/build 16/16 pass. Xem [run report](runs/S-404.md).
 
 - S-101 đã merge main qua #36; S-102–S-107 đã vào main qua #65 (`66c63b7`). Bảng tuần 1 bên dưới là snapshot lịch sử, không phải trạng thái hiện tại.
 - S-201–S-206 đã merge nhánh tích hợp qua #60/#62/#64/#66/#67/#68. PR [#69](https://github.com/tvangx/VENTIX/pull/69) đưa tuần 2 lên main: build/security xanh, chưa có review, GitHub báo blocked tại thời điểm đối chiếu. Chưa merge main.

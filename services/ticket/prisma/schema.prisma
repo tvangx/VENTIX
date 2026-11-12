@@ -50,6 +50,7 @@ model Ticket {
   issuance      TicketIssuance @relation(fields: [orderId], references: [orderId], onDelete: Restrict)
   secrets       TicketSecret[]
   checkins      CheckinLog[]
+  freezes       TicketFreeze[]
 
   @@unique([orderItemId, unitIndex], map: "uq_ticket_order_item_unit")
   @@index([orderId])
@@ -69,6 +70,22 @@ model TicketSecret {
 
   @@unique([ticketId, version], map: "uq_ticket_secret_version")
   @@map("ticket_secrets")
+}
+
+model TicketFreeze {
+  id               String   @id @db.Uuid
+  ticketId         String   @map("ticket_id") @db.Uuid
+  sellerId         String   @map("seller_id") @db.Uuid
+  eventId          String   @map("event_id") @db.Uuid
+  organizerId      String?  @map("organizer_id") @db.Uuid
+  originalPriceVnd BigInt   @map("original_price_vnd")
+  status           String
+  version          Int      @default(1)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz
+  ticket           Ticket   @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+
+  @@map("ticket_freezes")
 }
 
 model TicketEvent {

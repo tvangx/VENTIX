@@ -1,9 +1,10 @@
-# Ticket DB — S-403
+# Ticket DB — S-404
 
 ```mermaid
 erDiagram
   ticket_issuances ||--o{ tickets : issues
   tickets ||--o{ ticket_secrets : versions
+  tickets ||--o{ ticket_freezes : binds
   ticket_events ||--o{ gates : owns
   gates o|--o{ tickets : assigned
   gates ||--o{ staff_assignments : staffs
@@ -30,6 +31,16 @@ erDiagram
     bytea secret_enc
     varchar key_id
     timestamptz revoked_at
+  }
+  ticket_freezes {
+    uuid id PK "listing reference"
+    uuid ticket_id FK
+    uuid seller_id
+    uuid event_id
+    uuid organizer_id
+    bigint original_price_vnd
+    text status
+    int version
   }
   ticket_events {
     uuid id PK

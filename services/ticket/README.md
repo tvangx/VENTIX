@@ -1,5 +1,11 @@
 # Ticket service
 
+## Freeze nội bộ cho resale S-404
+
+`POST /v1/internal/tickets/:ticketId/freeze` và `/unfreeze` nhận `{listing_id,seller_id}`, header UUID `Idempotency-Key` bằng listing_id và `X-Internal-Key`. Env INTERNAL_API_KEY có tối thiểu 16 ký tự, thiếu key chặn endpoint. Giao diện service-to-service trả snapshot giá gốc/event/organizer, trạng thái binding và vé. Xác thực key constant-time theo ADR-0010.
+
+Freeze chỉ áp dụng vé ACTIVE của seller, chặn event đã hủy. Cùng binding FROZEN có thể replay, binding RELEASED trả 409 khi freeze lại. Release theo listing ID giữ tombstone để chặn request freeze đến muộn. Binding khác không mở khóa vé đang giữ. Vé terminal hoặc event đã hủy giữ trạng thái khi release. State/binding và AuditRecorded Outbox cùng transaction, unique partial giữ một binding FROZEN mỗi ticket. Xem ADR-0016 và resale-listing sequence.
+
 S-301 phát hành vé từ `OrderConfirmed` theo ADR-0009, dùng `ticket_db` riêng.
 
 ## Chạy local
