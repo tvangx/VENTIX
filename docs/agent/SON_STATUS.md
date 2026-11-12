@@ -11,6 +11,8 @@
 | ----- | ---- | ------------------------------ | ---------- | ------------------------------ | -------------------------------------------------------------------------------------- |
 | S-301 | 3    | Phát hành vé từ OrderConfirmed | In review  | feat/ticket-s301-issue-tickets | [Run report](runs/S-301.md); 8 unit, 15 integration, 2 concurrency pass; chờ CI/review |
 
+PR S-301 [#70](https://github.com/tvangx/VENTIX/pull/70) đã mở ngày 2026-11-12. CI đang chạy, review còn thiếu. S-302 chờ phụ thuộc S-301 hoàn tất theo AGENTS mục 9.
+
 ## Snapshot bàn giao tuần 1 — 2026-10-25
 
 Sơn giao làm theo lô S-101–S-107 ngày 2026-10-25. Mỗi task có nhánh riêng;
