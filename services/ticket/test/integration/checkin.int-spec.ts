@@ -62,6 +62,26 @@ describe("S-402 online check-in", () => {
     expect(JSON.stringify(events.rows)).not.toContain('"token"');
   });
 
+  it("normalizes case-insensitive UUID inputs before checking event and idempotency", async () => {
+    const setup = await scanFixture(context);
+    const input = await setup.input();
+    const key = randomUUID();
+    const result = await setup
+      .scan(
+        {
+          ...input,
+          event_id: input.event_id.toUpperCase(),
+          gate_id: input.gate_id.toUpperCase(),
+          qr: { ...input.qr, ticket_id: input.qr.ticket_id.toUpperCase() },
+        },
+        key,
+      )
+      .expect(200);
+    expect(result.body.result).toBe("ACCEPTED");
+    expect(result.body.ticket_id).toBe(input.qr.ticket_id);
+    expect((await setup.scan(input, key).expect(200)).body).toEqual(result.body);
+  });
+
   it("checks current staff role, tenant and assignment before every request and replay", async () => {
     const setup = await scanFixture(context);
     const body = await setup.input();

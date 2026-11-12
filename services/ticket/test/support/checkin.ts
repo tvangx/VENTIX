@@ -32,11 +32,7 @@ export async function scanFixture(context: Awaited<ReturnType<typeof fixture>>) 
       secret.fill(0);
     }
   };
-  const scan = (
-    body: Awaited<ReturnType<typeof input>>,
-    key = randomUUID(),
-    token = setup.staffToken,
-  ) =>
+  const scan = (body: Record<string, unknown>, key = randomUUID(), token = setup.staffToken) =>
     request(setup.server)
       .post("/v1/check-ins")
       .auth(token, { type: "bearer" })

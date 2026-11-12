@@ -4,7 +4,7 @@
 
 - #69 và #70 đã merge main, origin/main hiện 0977e9d sau PR #78 của Vũ.
 - #71–77 đã merge vào các base branch xếp chồng. Code S-302–S-401 hiện có trên origin/feat/identity-s305-kyc tại f5b5bf0 và chưa vào main. Cần PR tích hợp lên main sau khi CI/review đủ.
-- S-402 In review trên feat/ticket-s402-online-checkin. Unit 19/19, integration 46/46, concurrency 7/7 pass, OpenAPI/format/build 16/16 pass. Xem [run report](runs/S-402.md).
+- S-402 In review ở PR [#79](https://github.com/tvangx/VENTIX/pull/79), nhánh feat/ticket-s402-online-checkin. Source cuối gồm UUID case-insensitive có unit 19/19, integration 47/47, concurrency 7/7 pass, OpenAPI/format/build 16/16 pass. Xem [run report](runs/S-402.md).
 
 ## Snapshot đối chiếu GitHub ngày 2026-11-11
 
