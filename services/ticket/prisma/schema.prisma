@@ -8,6 +8,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model TicketOrderInvalidation {
+  orderId   String   @id @map("order_id") @db.Uuid
+  status    String
+  eventId   String?  @map("event_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+  version   Int      @default(1)
+
+  @@map("ticket_order_invalidations")
+}
+
 model TicketIssuance {
   orderId     String   @id @map("order_id") @db.Uuid
   fingerprint String   @db.VarChar(64)

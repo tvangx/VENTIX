@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { parseMessage, Topics } from "@ticketing/event-contracts";
+import { newMessage, parseMessage, Topics } from "@ticketing/event-contracts";
 import { confirmedOrder, fixture } from "../support/ticket";
 import { startKafka } from "../support/kafka";
 
@@ -21,9 +21,13 @@ describe("S-301 real Kafka worker", () => {
     await admin.connect();
     try {
       await admin.createTopics({
-        topics: [Topics.BOOKING_ORDERS, Topics.TICKET_EVENTS, `${Topics.BOOKING_ORDERS}.dlq`].map(
-          (topic) => ({ topic, numPartitions: 1 }),
-        ),
+        topics: [
+          Topics.BOOKING_ORDERS,
+          Topics.TICKET_EVENTS,
+          Topics.PAYMENT_EVENTS,
+          `${Topics.PAYMENT_EVENTS}.dlq`,
+          `${Topics.BOOKING_ORDERS}.dlq`,
+        ].map((topic) => ({ topic, numPartitions: 1 })),
         waitForLeaders: true,
       });
     } finally {
@@ -57,7 +61,9 @@ describe("S-301 real Kafka worker", () => {
         }
         const parsed = parseMessage(JSON.parse(message.value!.toString()));
         expect(message.key?.toString()).toBe(
-          parsed.type === "TicketIssued" ? parsed.data.ticket_id : "unexpected",
+          parsed.type === "TicketIssued" || parsed.type === "TicketRevoked"
+            ? parsed.data.ticket_id
+            : "unexpected",
         );
         issued.set(parsed.message_id, parsed);
       },
@@ -93,6 +99,26 @@ describe("S-301 real Kafka worker", () => {
       expect(dead).toEqual(["{broken"]);
       expect((await context.repo.pool.query("SELECT * FROM tickets")).rowCount).toBe(4);
       expect([...issued.values()].every((message) => message.type === "TicketIssued")).toBe(true);
+      const refund = newMessage("RefundCompleted", {
+        refund_id: randomUUID(),
+        order_id: order.data.order_id,
+        payment_id: order.data.payment_id,
+        amount_vnd: order.data.total_amount_vnd,
+      });
+      await producer.send({
+        topic: Topics.PAYMENT_EVENTS,
+        acks: -1,
+        messages: [{ key: order.data.order_id, value: JSON.stringify(refund) }],
+      });
+      await eventually(
+        async () =>
+          (await context.repo.pool.query("SELECT * FROM tickets WHERE status='REFUNDED'"))
+            .rowCount === 4,
+      );
+      await eventually(
+        async () =>
+          [...issued.values()].filter((message) => message.type === "TicketRevoked").length === 4,
+      );
     } finally {
       await observer.disconnect();
       await producer.disconnect();
