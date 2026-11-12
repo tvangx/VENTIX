@@ -19,6 +19,8 @@ S-303 In review ở PR [#73](https://github.com/tvangx/VENTIX/pull/73) trên `fe
 
 Đối chiếu ngày 2026-11-12 cho thấy PR #70 và #71 có build/security xanh. PR #70 rerun thành công sau timeout test auth-guard ở lượt CI đầu. Các PR vẫn chờ review trước merge main.
 
+S-304 đang chuẩn bị In review trên `feat/resale-s304-schema-price-cap`, base S-303. Unit 8/8, integration 11 test đã chạy và concurrency 1/1 pass. Quote dùng giá API Ticket, luồng tạo/freeze listing thuộc S-404. Xem [run report](runs/S-304.md).
+
 ## Snapshot bàn giao tuần 1 — 2026-10-25
 
 Sơn giao làm theo lô S-101–S-107 ngày 2026-10-25. Mỗi task có nhánh riêng;
