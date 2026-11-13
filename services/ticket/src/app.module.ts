@@ -12,6 +12,25 @@ import { TicketRepository } from "./modules/tickets/ticket.repository";
 import { TicketSecrets } from "./modules/tickets/ticket-secrets";
 import { TicketHandler } from "./messaging/ticket.handler";
 import { TicketWorker } from "./messaging/ticket-worker";
+import { TicketService } from "./modules/tickets/ticket.service";
+import { TicketController } from "./modules/tickets/ticket.controller";
+import { GateController } from "./modules/gates/gate.controller";
+import { GateService } from "./modules/gates/gate.service";
+import { GateRepository } from "./modules/gates/gate.repository";
+import { TicketIdempotency } from "./modules/tickets/ticket-idempotency";
+import { CheckinController } from "./modules/checkin/checkin.controller";
+import { CheckinService } from "./modules/checkin/checkin.service";
+import { CheckinRepository } from "./modules/checkin/checkin.repository";
+import { OfflineController } from "./modules/offline/offline.controller";
+import { OfflineService } from "./modules/offline/offline.service";
+import { OfflineRepository } from "./modules/offline/offline.repository";
+import { OfflineKeys } from "./modules/offline/offline-keys";
+import { FreezeController } from "./modules/freezes/freeze.controller";
+import { FreezeService } from "./modules/freezes/freeze.service";
+import { FreezeRepository } from "./modules/freezes/freeze.repository";
+import { NftWorker } from "./modules/nft/nft-worker";
+import { NftHandler } from "./modules/nft/nft.handler";
+import { NftRepository } from "./modules/nft/nft.repository";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -27,12 +46,32 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController],
+      controllers: [
+        HealthController,
+        MetricsController,
+        WhoamiController,
+        TicketController,
+        GateController,
+        CheckinController,
+        OfflineController,
+        FreezeController,
+      ],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
         TicketRepository,
+        TicketService,
+        GateService,
+        GateRepository,
+        TicketIdempotency,
+        CheckinService,
+        CheckinRepository,
+        OfflineService,
+        OfflineRepository,
+        OfflineKeys,
+        FreezeService,
+        FreezeRepository,
         {
           provide: TicketSecrets,
           inject: [ENV],
@@ -44,6 +83,9 @@ export class AppModule implements NestModule {
         },
         TicketHandler,
         TicketWorker,
+        NftHandler,
+        NftRepository,
+        NftWorker,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],

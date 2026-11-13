@@ -8,6 +8,15 @@ import { DbModule } from "./db/db-health.service";
 import { HealthController } from "./health/health.controller";
 import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
+import { ListingController } from "./modules/listings/listing.controller";
+import { ListingService } from "./modules/listings/listing.service";
+import { ListingRepository } from "./modules/listings/listing.repository";
+import { TicketSource } from "./modules/listings/ticket-source";
+import { ListingOperationRepository } from "./modules/listings/listing-operation.repository";
+import { ListingOperationsService } from "./modules/listings/listing-operations.service";
+import { TicketFreezes } from "./modules/listings/ticket-freezes";
+import { ListingHandler } from "./messaging/listing.handler";
+import { ResaleWorker } from "./messaging/resale-worker";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -23,11 +32,19 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController],
+      controllers: [HealthController, MetricsController, WhoamiController, ListingController],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        ListingRepository,
+        ListingService,
+        TicketSource,
+        ListingOperationRepository,
+        ListingOperationsService,
+        TicketFreezes,
+        ListingHandler,
+        ResaleWorker,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],

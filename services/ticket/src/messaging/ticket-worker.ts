@@ -55,10 +55,18 @@ export class TicketWorker implements OnApplicationBootstrap, BeforeApplicationSh
       db: this.repo.db,
       groupId: "ticket-issuance-v1",
       consumerName: "ticket-issuance-v1",
-      topics: [Topics.BOOKING_ORDERS],
+      topics: [Topics.BOOKING_ORDERS, Topics.PAYMENT_EVENTS, Topics.EVENT_LIFECYCLE],
       logger: this.logger,
       handler: async (executor, message) => {
-        if (message.type !== "OrderConfirmed") return;
+        if (
+          message.type !== "OrderConfirmed" &&
+          message.type !== "OrderCancelled" &&
+          message.type !== "RefundCompleted" &&
+          message.type !== "EventApproved" &&
+          message.type !== "EventUpdated" &&
+          message.type !== "EventCancelled"
+        )
+          return;
         const context = {
           request_id: message.message_id,
           trace_id: message.trace_id ?? message.message_id,

@@ -71,6 +71,1001 @@
         "summary": "Return the authenticated principal",
         "tags": ["whoami"]
       }
+    },
+    "/v1/tickets": {
+      "get": {
+        "operationId": "TicketController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID or pagination parameters"
+          },
+          "401": {
+            "description": "JWT required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the authenticated user's tickets",
+        "tags": ["tickets"]
+      }
+    },
+    "/v1/tickets/{ticketId}/token": {
+      "get": {
+        "operationId": "TicketController_token",
+        "parameters": [
+          {
+            "name": "ticketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID or pagination parameters"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "404": {
+            "description": "Ticket absent or owned by another user"
+          },
+          "409": {
+            "description": "Ticket is not ACTIVE"
+          },
+          "503": {
+            "description": "Current ticket secret unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a current TOTP and QR payload for an owned active ticket",
+        "tags": ["tickets"]
+      }
+    },
+    "/v1/gates": {
+      "post": {
+        "operationId": "GateController_create",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GateView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or missing UUID Idempotency-Key"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Role, tenant or gate assignment denied"
+          },
+          "404": {
+            "description": "Gate unavailable"
+          },
+          "409": {
+            "description": "Event unavailable, assignment conflict, expired package or request key reused"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a gate for an event in the authenticated organizer tenant",
+        "tags": ["gates"]
+      }
+    },
+    "/v1/gates/me": {
+      "get": {
+        "operationId": "GateController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or missing UUID Idempotency-Key"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Role, tenant or gate assignment denied"
+          },
+          "404": {
+            "description": "Gate unavailable"
+          },
+          "409": {
+            "description": "Event unavailable, assignment conflict, expired package or request key reused"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List gates currently assigned to this staff member",
+        "tags": ["gates"]
+      }
+    },
+    "/v1/gates/{gateId}/staff": {
+      "post": {
+        "operationId": "GateController_assign",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignStaff"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or missing UUID Idempotency-Key"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Role, tenant or gate assignment denied"
+          },
+          "404": {
+            "description": "Gate unavailable"
+          },
+          "409": {
+            "description": "Event unavailable, assignment conflict, expired package or request key reused"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Assign staff to a gate",
+        "tags": ["gates"]
+      }
+    },
+    "/v1/gates/{gateId}/staff/revoke": {
+      "post": {
+        "operationId": "GateController_revoke",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignStaff"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or missing UUID Idempotency-Key"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Role, tenant or gate assignment denied"
+          },
+          "404": {
+            "description": "Gate unavailable"
+          },
+          "409": {
+            "description": "Event unavailable, assignment conflict, expired package or request key reused"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoke a staff gate assignment",
+        "tags": ["gates"]
+      }
+    },
+    "/v1/gates/{gateId}/tickets": {
+      "post": {
+        "operationId": "GateController_tickets",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignTickets"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketAssignmentView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or missing UUID Idempotency-Key"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Role, tenant or gate assignment denied"
+          },
+          "404": {
+            "description": "Gate unavailable"
+          },
+          "409": {
+            "description": "Event unavailable, assignment conflict, expired package or request key reused"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Assign previously unassigned event tickets to this gate",
+        "tags": ["gates"]
+      }
+    },
+    "/v1/gates/{gateId}/verification-packages": {
+      "post": {
+        "operationId": "GateController_verificationPackage",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVerificationPackage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationPackage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or missing UUID Idempotency-Key"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Role, tenant or gate assignment denied"
+          },
+          "404": {
+            "description": "Gate unavailable"
+          },
+          "409": {
+            "description": "Event unavailable, assignment conflict, expired package or request key reused"
+          },
+          "503": {
+            "description": "An active ticket secret could not be read"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Download a TTL-bound encrypted ticket package for an assigned gate",
+        "tags": ["gates"]
+      }
+    },
+    "/v1/check-ins": {
+      "post": {
+        "operationId": "CheckinController_scan",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckinInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid QR or missing UUID request key"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "STAFF role, matching organizer and active gate assignment required"
+          },
+          "404": {
+            "description": "Gate unavailable"
+          },
+          "409": {
+            "description": "Request key reused, gate event mismatch or cancelled event"
+          },
+          "503": {
+            "description": "Current ticket secret cannot be read"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify an online ticket QR and accept a ticket once",
+        "tags": ["check-in"]
+      }
+    },
+    "/v1/offline-devices": {
+      "post": {
+        "operationId": "OfflineController_register",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterOfflineDevice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflineDeviceView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, request key or scan timestamp"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Staff tenant/assignment or HMAC signature denied"
+          },
+          "404": {
+            "description": "Gate, package or owned device unavailable"
+          },
+          "409": {
+            "description": "Context mismatch, expired package or reused request/scan ID"
+          },
+          "503": {
+            "description": "Signing or ticket key unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Register a HMAC device session for an owned, current gate verification package",
+        "tags": ["offline-check-in"]
+      }
+    },
+    "/v1/offline-sync": {
+      "post": {
+        "operationId": "OfflineController_sync",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Must equal batch_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfflineBatchInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflineSyncResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, request key or scan timestamp"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Staff tenant/assignment or HMAC signature denied"
+          },
+          "404": {
+            "description": "Gate, package or owned device unavailable"
+          },
+          "409": {
+            "description": "Context mismatch, expired package or reused request/scan ID"
+          },
+          "503": {
+            "description": "Signing or ticket key unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify a signed offline batch, record scans idempotently and return current revocations",
+        "tags": ["offline-check-in"]
+      }
+    },
+    "/v1/offline-devices/{deviceId}/revocations": {
+      "get": {
+        "operationId": "OfflineController_revocations",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevocationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input, request key or scan timestamp"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "403": {
+            "description": "Staff tenant/assignment or HMAC signature denied"
+          },
+          "404": {
+            "description": "Gate, package or owned device unavailable"
+          },
+          "409": {
+            "description": "Context mismatch, expired package or reused request/scan ID"
+          },
+          "503": {
+            "description": "Signing or ticket key unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Page through current ticket revocations and secret-version changes for an owned device gate",
+        "tags": ["offline-check-in"]
+      }
+    },
+    "/v1/internal/tickets/{ticketId}/freeze": {
+      "post": {
+        "operationId": "FreezeController_freeze",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Must equal listing_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-Internal-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ticketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-internal-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreezeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreezeView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid IDs or request key"
+          },
+          "401": {
+            "description": "Internal service key required"
+          },
+          "404": {
+            "description": "Ticket absent or seller mismatch"
+          },
+          "409": {
+            "description": "Ticket unavailable or freeze reference closed/reused"
+          }
+        },
+        "summary": "Freeze an owned ACTIVE ticket for one resale listing",
+        "tags": ["internal-ticket-freezes"]
+      }
+    },
+    "/v1/internal/tickets/{ticketId}/unfreeze": {
+      "post": {
+        "operationId": "FreezeController_unfreeze",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Must equal listing_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-Internal-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ticketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-internal-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreezeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreezeView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid IDs or request key"
+          },
+          "401": {
+            "description": "Internal service key required"
+          },
+          "404": {
+            "description": "Ticket absent or seller mismatch"
+          },
+          "409": {
+            "description": "Ticket unavailable or freeze reference closed/reused"
+          }
+        },
+        "summary": "Release the matching listing freeze and close its reference idempotently",
+        "tags": ["internal-ticket-freezes"]
+      }
     }
   },
   "info": {
@@ -119,6 +1114,688 @@
           }
         },
         "required": ["userId", "roles"]
+      },
+      "TicketView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seat_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "item_type": {
+            "type": "string",
+            "enum": ["TICKET_SEAT", "TICKET_GA"]
+          },
+          "ref_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unit_price_vnd": {
+            "type": "string",
+            "example": "100000",
+            "description": "Integer VND as a decimal string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "FROZEN", "CHECKED_IN", "REVOKED", "REFUNDED"]
+          },
+          "secret_version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "order_id",
+          "event_id",
+          "seat_id",
+          "item_type",
+          "ref_id",
+          "unit_price_vnd",
+          "status",
+          "secret_version"
+        ]
+      },
+      "TicketPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketView"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": ["items", "next_cursor"]
+      },
+      "TicketToken": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "secret_version": {
+            "type": "number"
+          },
+          "token": {
+            "type": "string",
+            "example": "012345"
+          },
+          "step_seconds": {
+            "type": "number",
+            "example": 30
+          },
+          "server_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "qr_payload": {
+            "type": "string",
+            "description": "JSON QR v1 containing version, ticket_id, secret_version, token"
+          }
+        },
+        "required": [
+          "ticket_id",
+          "secret_version",
+          "token",
+          "step_seconds",
+          "server_time",
+          "expires_at",
+          "qr_payload"
+        ]
+      },
+      "CreateGate": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "required": ["event_id", "name"]
+      },
+      "GateView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "event_id", "name"]
+      },
+      "Object": {
+        "type": "object",
+        "properties": {}
+      },
+      "GatePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GateView"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["items", "next_cursor"]
+      },
+      "AssignStaff": {
+        "type": "object",
+        "properties": {
+          "staff_user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["staff_user_id"]
+      },
+      "AssignmentView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "staff_user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revoked_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": ["id", "gate_id", "staff_user_id", "revoked_at"]
+      },
+      "AssignTickets": {
+        "type": "object",
+        "properties": {
+          "ticket_ids": {
+            "minItems": 1,
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["ticket_ids"]
+      },
+      "TicketAssignmentView": {
+        "type": "object",
+        "properties": {
+          "gate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assigned_count": {
+            "type": "number"
+          }
+        },
+        "required": ["gate_id", "assigned_count"]
+      },
+      "CreateVerificationPackage": {
+        "type": "object",
+        "properties": {
+          "public_key_pem": {
+            "type": "string",
+            "description": "Device RSA SPKI public key in PEM, 2048–4096 bits",
+            "maxLength": 1500
+          }
+        },
+        "required": ["public_key_pem"]
+      },
+      "VerificationPackage": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": ["ticket-verification-v1"]
+          },
+          "algorithm": {
+            "type": "string",
+            "enum": ["RSA-OAEP-256+A256GCM"]
+          },
+          "package_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "encrypted_key": {
+            "type": "string",
+            "description": "Base64 RSA-OAEP SHA-256 encrypted AES key"
+          },
+          "nonce": {
+            "type": "string",
+            "description": "Base64 12-byte AES-GCM nonce"
+          },
+          "aad": {
+            "type": "string",
+            "description": "Base64 UTF-8 JSON metadata array authenticated by GCM"
+          },
+          "ciphertext": {
+            "type": "string",
+            "description": "Base64 AES-GCM ciphertext followed by 16-byte authentication tag"
+          }
+        },
+        "required": [
+          "format",
+          "algorithm",
+          "package_id",
+          "event_id",
+          "gate_id",
+          "issued_at",
+          "expires_at",
+          "encrypted_key",
+          "nonce",
+          "aad",
+          "ciphertext"
+        ]
+      },
+      "CheckinQr": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "enum": [1]
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "secret_version": {
+            "type": "number",
+            "minimum": 1
+          },
+          "token": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$"
+          }
+        },
+        "required": ["version", "ticket_id", "secret_version", "token"]
+      },
+      "CheckinInput": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "qr": {
+            "$ref": "#/components/schemas/CheckinQr"
+          }
+        },
+        "required": ["event_id", "gate_id", "qr"]
+      },
+      "CheckinResponse": {
+        "type": "object",
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "result": {
+            "type": "string",
+            "enum": ["ACCEPTED", "DUPLICATE", "WRONG_EVENT", "WRONG_GATE", "INVALID"]
+          },
+          "scanned_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["scan_id", "ticket_id", "result", "scanned_at"]
+      },
+      "RegisterOfflineDevice": {
+        "type": "object",
+        "properties": {
+          "gate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "package_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "public_key_pem": {
+            "type": "string",
+            "description": "Same RSA SPKI public key used to download the package"
+          }
+        },
+        "required": ["gate_id", "package_id", "public_key_pem"]
+      },
+      "OfflineDeviceView": {
+        "type": "object",
+        "properties": {
+          "server_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Current server clock for timestamp correction, refreshed on replay"
+          },
+          "device_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "package_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "algorithm": {
+            "type": "string",
+            "enum": ["HMAC-SHA256"]
+          },
+          "encrypted_key": {
+            "type": "string",
+            "description": "Base64 RSA-OAEP SHA-256 wrapped HMAC key"
+          },
+          "oaep_label": {
+            "type": "string",
+            "description": "Base64 OAEP label binding the key to this device/package"
+          }
+        },
+        "required": [
+          "server_time",
+          "device_id",
+          "package_id",
+          "event_id",
+          "gate_id",
+          "issued_at",
+          "expires_at",
+          "algorithm",
+          "encrypted_key",
+          "oaep_label"
+        ]
+      },
+      "OfflineScan": {
+        "type": "object",
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "secret_version": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "token": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$"
+          },
+          "scanned_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Canonical UTC ISO timestamp with milliseconds"
+          }
+        },
+        "required": ["scan_id", "ticket_id", "secret_version", "token", "scanned_at"]
+      },
+      "OfflineBatchInput": {
+        "type": "object",
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "device_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "package_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scans": {
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineScan"
+            }
+          },
+          "signature": {
+            "type": "string",
+            "description": "Canonical base64 HMAC-SHA256 signature"
+          }
+        },
+        "required": [
+          "batch_id",
+          "device_id",
+          "package_id",
+          "event_id",
+          "gate_id",
+          "scans",
+          "signature"
+        ]
+      },
+      "OfflineScanView": {
+        "type": "object",
+        "properties": {
+          "scan_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "result": {
+            "type": "string",
+            "enum": ["ACCEPTED", "DUPLICATE", "WRONG_EVENT", "WRONG_GATE", "INVALID"]
+          },
+          "scanned_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source_scan_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["scan_id", "ticket_id", "result", "scanned_at", "source_scan_id"]
+      },
+      "OfflineBatchView": {
+        "type": "object",
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "device_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "record_count": {
+            "type": "number"
+          },
+          "conflict_count": {
+            "type": "number"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OfflineScanView"
+            }
+          }
+        },
+        "required": [
+          "batch_id",
+          "device_id",
+          "record_count",
+          "conflict_count",
+          "received_at",
+          "items"
+        ]
+      },
+      "TicketUpdate": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "secret_version": {
+            "type": "number"
+          },
+          "revoked": {
+            "type": "boolean"
+          }
+        },
+        "required": ["ticket_id", "status", "secret_version", "revoked"]
+      },
+      "RevocationPage": {
+        "type": "object",
+        "properties": {
+          "revoked_ticket_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ticket_updates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketUpdate"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["revoked_ticket_ids", "ticket_updates", "next_cursor"]
+      },
+      "OfflineSyncResponse": {
+        "type": "object",
+        "properties": {
+          "batch": {
+            "$ref": "#/components/schemas/OfflineBatchView"
+          },
+          "revocations": {
+            "$ref": "#/components/schemas/RevocationPage"
+          }
+        },
+        "required": ["batch", "revocations"]
+      },
+      "FreezeInput": {
+        "type": "object",
+        "properties": {
+          "listing_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seller_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["listing_id", "seller_id"]
+      },
+      "FreezeView": {
+        "type": "object",
+        "properties": {
+          "listing_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seller_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizer_id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "original_price_vnd": {
+            "type": "string"
+          },
+          "freeze_status": {
+            "type": "string",
+            "enum": ["FROZEN", "RELEASED"]
+          },
+          "ticket_status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "listing_id",
+          "ticket_id",
+          "seller_id",
+          "event_id",
+          "organizer_id",
+          "original_price_vnd",
+          "freeze_status",
+          "ticket_status"
+        ]
       }
     }
   }
