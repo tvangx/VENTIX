@@ -1,5 +1,25 @@
 # Trạng thái task — Sơn
 
+## Đối chiếu trực tiếp ngày 2026-11-12 — S-502
+
+Thông tin phần này mới hơn các snapshot lịch sử bên dưới. Main `0977e9d` đã có tuần 1–2 (#36/#65/#69) và S-301 (#70). Không đổi các task đã triển khai thành Todo.
+
+| Task                 | Trạng thái đối chiếu                  | Phần còn lại                                                                                                                     |
+| -------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| S-302–305, S-401–404 | Đã triển khai trong chuỗi PR tích hợp | #85 OPEN/BLOCKED, build/security xanh trên d4276e7, 0 review; cần approval trước merge main                                      |
+| S-405                | Blocked                               | #83 chỉ tài liệu/policy, #82 OPEN chưa có hợp đồng refund resale                                                                 |
+| S-501                | Blocked                               | Phụ thuộc code S-405 và #82                                                                                                      |
+| S-502                | In review                             | Consumer TicketIssued, durable retry/lease, MockMinter; 13 unit, 25 integration, 3 concurrency pass; [run report](runs/S-502.md) |
+| S-503                | Todo                                  | Đối chiếu trạng thái vé và provider MOCK/tx_hash NULL của S-502                                                                  |
+| S-504                | Blocked trên main                     | S-305 đã có crypto, chờ #85; phần script rotation chưa có trên main                                                              |
+| S-505                | Todo                                  | T-402 #59 đã merge (7ea1b62); invoices/invoice_items có schema nhưng chưa có adapter/worker; chỉ vùng hóa đơn trong Finance      |
+| S-601                | Blocked                               | G3 chưa nghiệm thu; STATUS còn T-501–505 Todo và thiếu báo cáo gate                                                              |
+| S-602                | Chưa nghiệm thu                       | Cần lỗi cụ thể/tái hiện; không suy test unit pass thành hết lỗi toàn hệ thống                                                    |
+| S-603                | Todo                                  | Tài liệu phải phân biệt main với chuỗi #85 và resale chưa có S-405                                                               |
+| S-604                | Chờ phối hợp                          | Cần môi trường/kịch bản/lịch tập dượt và các thành viên; chưa có bằng chứng tập dượt                                             |
+
+User đã cho phép push/PR và merge các PR của Sơn khi đủ CI/review. Không bypass bảo vệ main hoặc merge task của người khác.
+
 ## Đối chiếu GitHub ngày 2026-11-11
 
 - S-101 đã merge main qua #36; S-102–S-107 đã vào main qua #65 (`66c63b7`). Bảng tuần 1 bên dưới là snapshot lịch sử, không phải trạng thái hiện tại.

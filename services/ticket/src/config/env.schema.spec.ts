@@ -11,6 +11,18 @@ const base = {
 };
 
 describe("envSchema", () => {
+  it("validates NFT timeouts, retries and provider independently from ticket secrets", () => {
+    expect(envSchema.parse({ ...base, NFT_WORKER_ENABLED: "true" }).NFT_PROVIDER).toBe("MOCK");
+    for (const invalid of [
+      { NFT_MAX_ATTEMPTS: 0 },
+      { NFT_MAX_ATTEMPTS: 21 },
+      { NFT_POLL_MS: 0 },
+      { NFT_TIMEOUT_MS: 30000, NFT_LEASE_MS: 30000 },
+      { NFT_RETRY_BASE_MS: 1000, NFT_RETRY_MAX_MS: 100 },
+      { NFT_PROVIDER: "AMOY" },
+    ])
+      expect(() => envSchema.parse({ ...base, ...invalid })).toThrow();
+  });
   it("requires an active 256-bit key before enabling ticket issuance", () => {
     expect(() => envSchema.parse({ ...base, TICKET_WORKERS_ENABLED: "true" })).toThrow();
     const keys = JSON.stringify({ local: randomBytes(32).toString("base64") });

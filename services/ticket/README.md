@@ -52,3 +52,13 @@ Metric `ticket_issuance_attempts_total` đếm lượt handler trước commit; 
 ## Kiểm thử S-301
 
 Chạy `test`, `test:int`, `test:conc` trong bảng lệnh. Integration/concurrency dùng PostgreSQL 16 riêng với role `ticket_user` NOSUPERUSER; worker integration dùng Kafka 3.8.0 riêng qua Testcontainers. Bao phủ GA, duplicate message/business key, rollback Outbox, xác thực ciphertext, key rotation và 50 tác vụ đồng thời. TOTP/QR, hoàn vé, gate/check-in, resale và NFT thuộc task tiếp theo.
+
+# NFT worker — S-502
+
+Sau migration, đặt `NFT_WORKER_ENABLED=true`, `NFT_PROVIDER=MOCK` và `KAFKA_BROKERS` để bật consumer riêng `ticket-nft-v1`. Cờ này độc lập với `TICKET_WORKERS_ENABLED`; phát hành vé vẫn cần key ring S-301. Mặc định worker NFT tắt.
+
+Consumer nhận TicketIssued v1, ghi durable job và Inbox cùng transaction. Poller xử lý từng job ngoài transaction phát hành; lease/version bảo vệ nhiều replica và restart. Timeout mặc định 10 giây, lease 30 giây, tối đa 5 attempts, retry có jitter từ 1 tới 60 giây. Xem toàn bộ biến trong `.env.example`; schema chặn lease không lớn hơn timeout hoặc provider chưa hỗ trợ.
+
+Kết quả nằm ở `nft_mints`: provider MOCK, tx_hash NULL, token_id/metadata_uri/mock_reference riêng. Đây là mô phỏng local, không phải NFT on-chain. Lỗi mint không thay đổi trạng thái hoặc secret của vé. Log có request_id/trace_id; metric `ticket_nft_attempts_total{outcome}` có nhãn hữu hạn. FAILED và LEASE_EXPIRED phải được điều tra, chưa có API replay quản trị.
+
+Kiểm thử bằng `pnpm --filter @ticketing/ticket test:int` và `test:conc` (Docker/Testcontainers), cùng unit `test --runInBand`. Test dùng PostgreSQL 16/Kafka thật và dữ liệu giả. Luồng, schema, giới hạn và đánh giá ERC-721/Amoy/Pinata nằm trong [sequence NFT](../../docs/sequence/nft-mint.md).
