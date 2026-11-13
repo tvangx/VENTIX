@@ -42,6 +42,8 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 
 ## Task của Sơn/Vũ ảnh hưởng đến việc của Tuấn (theo dõi, không do agent làm)
 
+S-603 In review tài liệu domain, xem [run report](runs/S-603.md). Lô Sơn #85/#86/#87/#88 có CI xanh tại lần đối chiếu 2026-11-13, chờ review. S-405/S-501 chờ #82, S-601 chờ xác nhận G3.
+
 | ID    | Người | Tên                                                       | Tuấn cần khi                             |
 | ----- | ----- | --------------------------------------------------------- | ---------------------------------------- |
 | S-203 | Sơn   | Duyệt event + outbox `EventApproved`                      | T-203                                    |
