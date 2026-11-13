@@ -1,5 +1,14 @@
 # Trạng thái task — Sơn
 
+## Đối chiếu lô tiếp tục — 2026-11-13
+
+- Tuần 1–2 và S-301 đã merge main qua #36/#65/#69/#70. Các snapshot cũ bên dưới giữ làm lịch sử.
+- S-302–S-305, S-401–S-404 đã triển khai trong [#85](https://github.com/tvangx/VENTIX/pull/85), CI xanh, chưa có approval, chưa merge main. Không làm lại.
+- S-502 [#86](https://github.com/tvangx/VENTIX/pull/86) và S-503 [#87](https://github.com/tvangx/VENTIX/pull/87): code/test local hoàn tất, CI build/security xanh, chờ review. #87 base nhánh #86.
+- S-405 chỉ có tài liệu/quyết định escrow ở #83; code và S-501 chờ hợp đồng refund resale [#82](https://github.com/tvangx/VENTIX/issues/82) đang mở. S-504 chờ S-305/#85.
+- S-505: In review, nhánh `feat/finance-s505-mock-invoices` độc lập từ main, T-402 đã merge #59. 12 unit, 27 integration, 4 concurrency pass; phân vùng hóa đơn mock trong Finance, không sửa ledger/VAT/refund/schema. [Run report](runs/S-505.md).
+- S-601 chờ G3, S-602 chưa có bug Sơn cụ thể đủ đầu vào; S-603 tài liệu độc lập là việc tiếp theo; S-604 cần lịch/môi trường tập dượt của team.
+
 ## Đối chiếu GitHub ngày 2026-11-11
 
 - S-101 đã merge main qua #36; S-102–S-107 đã vào main qua #65 (`66c63b7`). Bảng tuần 1 bên dưới là snapshot lịch sử, không phải trạng thái hiện tại.

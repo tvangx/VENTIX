@@ -50,6 +50,6 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | V-305 | Vũ    | Merch reserve/commit theo `OrderCreated`/`OrderConfirmed` | G2                                       |
 | V-306 | Vũ    | API nội bộ `quotes` (SKU lẻ)                              | T-301 (có thể dùng server giả)           |
 | S-405 | Sơn   | Resale mua (+ `ResaleOrderAwaitingPayment`)               | T-405                                    |
-| S-505 | Sơn   | Hóa đơn (dùng bảng `invoices` của T-402)                  | G3                                       |
+| S-505 | Sơn   | Hóa đơn (dùng bảng `invoices` của T-402)                  | G3; In review, mock, xem runs/S-505.md |
 | V-501 | Vũ    | Admin portal (refund, audit, DLQ)                         | T-401, T-402 (DLQ: có thể dùng Kafka UI) |
 | V-502 | Vũ    | Dashboard Organizer                                       | T-402 (SSE là [C], có thể polling)       |

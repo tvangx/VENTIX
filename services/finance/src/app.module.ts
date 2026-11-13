@@ -16,6 +16,8 @@ import { DlqService } from "./modules/dlq/dlq.service";
 import { FinanceHandler } from "./messaging/finance.handler";
 import { SeatPrefetch } from "./messaging/seat-prefetch";
 import { FinanceWorker } from "./messaging/finance-worker";
+import { InvoiceRepository } from "./modules/invoices/invoice.repository";
+import { InvoiceWorker } from "./modules/invoices/invoice-worker";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -43,6 +45,8 @@ export class AppModule implements NestModule {
         FinanceHandler,
         SeatPrefetch,
         FinanceWorker,
+        InvoiceRepository,
+        InvoiceWorker,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],
