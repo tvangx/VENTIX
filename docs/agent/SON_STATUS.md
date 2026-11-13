@@ -1,5 +1,11 @@
 # Trạng thái task — Sơn
 
+## Tiếp tục ngày 2026-11-13
+
+- S-502 [#86](https://github.com/tvangx/VENTIX/pull/86) có CI build/security xanh trên a274865, run 43228934149 attempt 2. Attempt 1 timeout JWKS cooldown của auth-guard; không đổi test/threshold. Chờ reviewer, chưa merge main.
+- S-503 In review trên `feat/ticket-s503-public-verify`, base S-502; public API + HTML tra cứu, projection không PII, rate limit per-process. Ticket 16 unit/34 integration/4 concurrency pass, build 16/16. [Run report](runs/S-503.md); ảnh desktop/mobile trong docs/test-reports/s503.
+- #85 vẫn OPEN/BLOCKED dù CI xanh; #82 OPEN. S-405/S-501 và S-504/G3 giữ điều kiện chờ như bảng đối chiếu bên dưới.
+
 ## Đối chiếu trực tiếp ngày 2026-11-12 — S-502
 
 Thông tin phần này mới hơn các snapshot lịch sử bên dưới. Main `0977e9d` đã có tuần 1–2 (#36/#65/#69) và S-301 (#70). Không đổi các task đã triển khai thành Todo.
