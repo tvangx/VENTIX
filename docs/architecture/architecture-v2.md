@@ -1098,7 +1098,7 @@ Bảng `eval_cases` là tập kiểm thử RAG, phục vụ đo chất lượng 
 1. Niêm yết: `resale-service` gọi sync `ticket-service` để **FREEZE** vé (idempotent). Fail → không tạo listing.
 2. Mua: buyer thanh toán → tiền vào **escrow** (`escrow_entries.HELD`).
 3. `ResaleCompleted` → `ticket-service`: chuyển `owner_user_id`, **tăng `secret_version`**, thu hồi secret cũ, phát `TicketTransferred`.
-4. Giải ngân escrow theo chính sách (ví dụ sau khi buyer check-in hoặc sau X giờ từ khi chuyển quyền); khiếu nại → Admin xử lý trước khi giải ngân.
+4. Giải ngân escrow khi buyer check-in thành công hoặc 24 giờ sau khi sự kiện kết thúc, điều kiện nào đến trước (ADR-0017, người giao việc xác nhận ngày 12/11/2026); khiếu nại đang mở → Admin xử lý trước khi giải ngân.
 5. Staff App nhận **delta thu hồi** (`revoked_ticket_ids`) mỗi lần sync; ghi nhận rủi ro cửa sổ offline như mục 6.1.
 
 ---
@@ -1274,7 +1274,7 @@ Lưu ý khi bảo vệ: `datn.md` có liệt kê tiêu chí về tích hợp AI.
 Đã chốt: máy 8–16 GB, Kong, VNPay sandbox, offline TOTP phương án A, AI để sau.
 - [ ] Đăng ký VNPay sandbox lấy `vnp_TmnCode` / `vnp_HashSecret`; thử `cloudflared` để nhận IPN trên máy dev.
 - [ ] Đo RAM thực tế của compose profile `core` và `full`.
-- [ ] Chốt chính sách giải ngân escrow (mục 6.2).
+- [x] Chốt chính sách giải ngân escrow (mục 6.2, ADR-0017, xác nhận ngày 12/11/2026).
 - [ ] Đóng băng OpenAPI + event contract v1; tạo ADR-001…ADR-008 tương ứng mục 0.
 - [ ] Chọn nơi đặt VPS demo (≥ 8 GB, đề xuất 16 GB) và dựng sớm để M1 deploy thử từ tuần 2–3.
 ## Đối chiếu domain Sơn — S-603

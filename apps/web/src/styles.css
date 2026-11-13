@@ -1,48 +1,82 @@
 @import "tailwindcss";
 
-/* Theme token theo shadcn/ui (base zinc). Bộ chuyển sáng/tối làm ở V-102. */
+/*
+ * Token theo quy chuẩn wireframe V-105 (trang "Theme sáng/tối"): "giấy" #F2EDE3 là nền sáng,
+ * "đêm" #0C0D1A là nền tối.
+ * "stage" là nền của header, trang đăng nhập và khối mở màn: giấy ở theme sáng, đêm ở theme tối.
+ * Tên token giữ theo shadcn/ui để component có sẵn dùng tiếp được.
+ */
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
+  --radius: 0.875rem;
+  --background: #f2ede3;
+  --foreground: #0c0d1a;
+  --card: #ffffff;
+  --card-foreground: #0c0d1a;
+  --field: #f2ede3;
+  --primary: #ff3b1f;
+  --primary-foreground: #0c0d1a;
+  --secondary: #0c0d1a;
+  --secondary-foreground: #f2ede3;
+  --muted: #d9d3c6;
+  --muted-foreground: #4b4c5c;
+  --accent: #e4ddcf;
+  --accent-foreground: #0c0d1a;
+  --destructive: #c42a12;
+  --border: #0c0d1a;
+  --input: #0c0d1a;
+  --ring: #2f45ff;
+  --link: #2f45ff;
+  --emphasis: #2f45ff;
+  --stage: #f2ede3;
+  --stage-foreground: #0c0d1a;
+  --stage-emphasis: #2f45ff;
+  --stage-muted: #d9d3c6;
+  /* Viền dưới header / quanh thẻ: mực đậm 2px trên nền giấy. */
+  --stage-rule: #0c0d1a;
+  --beam-yellow: 0.45;
+  --beam-blue: 0.12;
+  color-scheme: light;
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
+  --background: #0c0d1a;
+  --foreground: #f2ede3;
+  --card: #1b1d30;
+  --card-foreground: #f2ede3;
+  --field: #0c0d1a;
+  --primary: #ff3b1f;
+  --primary-foreground: #0c0d1a;
+  --secondary: #f2ede3;
+  --secondary-foreground: #0c0d1a;
+  --muted: #2a2c44;
+  --muted-foreground: #c4bfb4;
+  --accent: #2a2c44;
+  --accent-foreground: #f2ede3;
+  /* Đỏ #C42A12 không đủ tương phản trên nền đêm; dùng sắc sáng hơn cùng họ. */
+  --destructive: #ff7a62;
+  --border: #f2ede3;
+  --input: #f2ede3;
+  --ring: #b9c0ff;
+  --link: #b9c0ff;
+  --emphasis: #ffd23f;
+  color-scheme: dark;
+}
+
+.dark {
+  --stage: #0c0d1a;
+  --stage-foreground: #f2ede3;
+  --stage-emphasis: #ffd23f;
+  --stage-muted: #2a2c44;
+  --stage-rule: rgb(242 237 227 / 0.15);
+  --beam-yellow: 0.1;
+  --beam-blue: 0.16;
 }
 
 @theme inline {
+  --font-sans: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-serif: "Fraunces", Georgia, serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -50,6 +84,7 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-field: var(--field);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -62,13 +97,23 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-link: var(--link);
+  --color-emphasis: var(--emphasis);
+  --color-stage: var(--stage);
+  --color-stage-foreground: var(--stage-foreground);
+  --color-stage-emphasis: var(--stage-emphasis);
+  --color-stage-muted: var(--stage-muted);
+  --color-stage-rule: var(--stage-rule);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background font-sans text-foreground antialiased;
   }
 }

@@ -10,6 +10,18 @@ const base = {
 };
 
 describe("envSchema", () => {
+  it("validates invoice retry and lease bounds and defaults worker off", () => {
+    expect(loadEnv(envSchema, base).INVOICE_WORKER_ENABLED).toBe("false");
+    expect(() => loadEnv(envSchema, { ...base, INVOICE_LEASE_MS: "5000" })).toThrow(
+      /INVOICE_LEASE_MS/,
+    );
+    expect(() => loadEnv(envSchema, { ...base, INVOICE_RETRY_MAX_MS: "10" })).toThrow(
+      /INVOICE_RETRY_MAX_MS/,
+    );
+    expect(() => loadEnv(envSchema, { ...base, INVOICE_MAX_ATTEMPTS: "0" })).toThrow(
+      /INVOICE_MAX_ATTEMPTS/,
+    );
+  });
   it("từ chối VAT-exclusive theo quyết định T-402, không coi chuỗi false là truthy", () => {
     expect(() => loadEnv(envSchema, { ...base, PRICES_INCLUDE_VAT: "false" })).toThrow(
       /PRICES_INCLUDE_VAT/,

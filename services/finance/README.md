@@ -66,4 +66,21 @@ Docker test dùng image sẵn có postgres:16 và apache/kafka:3.8.0. Chạy tu�
 
 ## Schema và giới hạn
 
-Schema Prisma và migration là mô hình chi tiết finance. invoices/invoice_items đã có cho S-505; chưa có logic hóa đơn. Không làm payouts, SSE [C], partial refund hoặc hoàn tiền resale. Frontend polling REST theo V-502. Xem [ADR-0012](../../docs/adr/0012-finance-ledger-vat-audit.md) và [run report](../../docs/agent/runs/T-402.md).
+Schema Prisma và migration là mô hình chi tiết finance. Không làm payouts, SSE [C], partial refund hoặc hoàn tiền resale. Frontend polling REST theo V-502. Xem [ADR-0012](../../docs/adr/0012-finance-ledger-vat-audit.md) và [run report](../../docs/agent/runs/T-402.md).
+
+## S-505 — Hóa đơn mock
+
+`INVOICE_WORKER_ENABLED=true` bật worker độc lập, mặc định tắt. `IInvoiceAdapter` có duy nhất `MockAdapter`: không network, không secret, số `MOCK-<order UUID>` minh họa lần mua gốc, **không phải hóa đơn thuế/MISA**. Bật `FINANCE_WORKERS_ENABLED=true` để nhận đơn từ Kafka và relay audit; nếu chỉ bật invoice worker, nó xử lý snapshot đã có và audit nằm bền vững trong Outbox chờ relay.
+
+Worker chỉ đọc `finance_orders`/`revenue_records` trong DB Finance đã commit bởi Inbox T-402. Một CTE tạo invoice và item snapshot cùng transaction. UUID invoice bằng UUID order: khóa chính chống lặp ngay cả 50 worker cùng materialize. Writer này bỏ qua order đã có bất kỳ invoice nào; không hỗ trợ writer khác tự tạo invoice cho cùng order. Trước khi thêm adapter/writer thật cần bổ sung hợp đồng và unique order_id bằng migration riêng đã được duyệt. Không sửa ledger/refund, không tính lại VAT hoặc đọc DB Booking/Ticket. `amount_vnd` là gross, `vat_rate` là snapshot; tiền giữ chuỗi bigint tới adapter.
+
+| Trạng thái | Hành vi                                                                                               |
+| ---------- | ----------------------------------------------------------------------------------------------------- |
+| PENDING    | Chờ tới `updated_at` để thử (thời điểm tạo hoặc thời điểm retry tới hạn)                              |
+| ISSUING    | Claim `FOR UPDATE SKIP LOCKED`; `retry_count` đếm số lần gọi kể cả lần đầu, `updated_at` là lúc claim |
+| ISSUED     | Kết quả adapter và AuditRecorded `MOCK_INVOICE_ISSUED` ghi cùng transaction; trạng thái cuối          |
+| FAILED     | Hết số lần thử, kể cả worker chết ở lần cuối; không tự reset                                          |
+
+`version` chặn worker cũ ghi kết quả sau khi lease hết hạn/reclaim. Provider chạy ngoài transaction, có timeout/AbortSignal; adapter thật bắt buộc idempotent theo invoice UUID kể cả khi timeout nhưng provider đã thành công. Retry exponential + jitter có giới hạn; cấu hình `INVOICE_MAX_ATTEMPTS`, `INVOICE_TIMEOUT_MS`, `INVOICE_LEASE_MS` (lớn hơn timeout), `INVOICE_RETRY_BASE_MS`, `INVOICE_RETRY_MAX_MS`, `INVOICE_POLL_MS` đều validate. Không lưu/log thông báo lỗi thô từ provider. Metric `finance_invoice_attempts_total{outcome}` và log request_id/trace_id theo invoice UUID.
+
+Không có API mới hoặc thay đổi schema. Kiểm tra trạng thái bằng DB Finance local và audit API ADMIN hiện có. Hóa đơn mock đại diện sale snapshot kể cả sale được refund sau đó; đây không phải chính sách hóa đơn điều chỉnh. MISA sandbox/thật, hóa đơn điều chỉnh và replay thủ công FAILED cần quyết định riêng, chưa triển khai. Xem [run report S-505](../../docs/agent/runs/S-505.md).

@@ -27,6 +27,20 @@ Consumer booking T-203 yêu cầu lifecycle v2: lifecycle v1 đi DLQ ngay vì th
 để bảo đảm snapshot. Producer của Sơn cần chuyển sang v2 và phát lại dữ liệu v2 hợp lệ;
 không sửa version trên payload v1 thiếu trường. Xem [ADR-0011](../../docs/adr/0011-versioned-event-lifecycle.md).
 
+## TicketRevoked v2 — Issue #72 (CONTRACT CHANGE)
+
+`TicketRevokedV1` giữ bốn reason REFUNDED, TRANSFERRED, ADMIN, EVENT_CANCELLED.
+`TicketRevokedV2` thêm USER_CANCELLED, EXPIRED, LATE_PAYMENT, STOCK_REJECTED,
+PAYMENT_FAILED. Registry `TicketRevoked` và `parseMessage` đọc cả hai version.
+Topic vẫn `ticket.events`, key `ticket_id`.
+
+Producer S-303 dùng version 2 cho năm reason mới, version 1 cho reason cũ.
+Trước khi phát version 2, cập nhật thư viện/parser cho tất cả consumer của topic,
+đặc biệt notification, finance và resale. Consumer dùng schema cũ từ chối v2.
+Sau khi xác nhận consumer đã cập nhật mới bật producer mới. Replay DLQ phải giữ
+đúng message ID và version gốc. Tuấn review lựa chọn version/rollout trong PR hợp
+đồng liên quan issue #72, triển khai môi trường thật cần một lượt vận hành riêng.
+
 ## Dùng
 
 ```ts

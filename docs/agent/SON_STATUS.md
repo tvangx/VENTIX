@@ -19,7 +19,19 @@
 | ----- | ---- | ------------------------------ | ---------- | ------------------------------ | -------------------------------------------------------------------------------------- |
 | S-301 | 3    | Phát hành vé từ OrderConfirmed | In review  | feat/ticket-s301-issue-tickets | [Run report](runs/S-301.md); 8 unit, 15 integration, 2 concurrency pass; chờ CI/review |
 
-PR S-301 [#70](https://github.com/tvangx/VENTIX/pull/70) đã mở ngày 2026-11-12. CI đang chạy, review còn thiếu. S-302 chờ phụ thuộc S-301 hoàn tất theo AGENTS mục 9.
+PR S-301 [#70](https://github.com/tvangx/VENTIX/pull/70) đã mở ngày 2026-11-12. Người dùng cho phép tiếp tục S-302 từ nhánh S-301 trong lúc chờ reviewer, mỗi task giữ nhánh và PR riêng. Các PR sẽ merge theo phụ thuộc sau khi đủ CI và review.
+
+S-302 In review trên `feat/ticket-s302-totp-wallet`, base nhánh S-301, PR [#71](https://github.com/tvangx/VENTIX/pull/71). Unit 16/16, wallet HTTP 3/3, concurrency 2/2, lint/typecheck/build pass. Xem [run report](runs/S-302.md).
+
+S-303 In review ở PR [#73](https://github.com/tvangx/VENTIX/pull/73) trên `feat/ticket-s303-revoke-refunded`. Theo yêu cầu tiếp tục của người dùng, hợp đồng [#72](https://github.com/tvangx/VENTIX/issues/72) được triển khai ở PR [#74](https://github.com/tvangx/VENTIX/pull/74), base #71. PR #73 đổi base sang nhánh hợp đồng. Unit 16/16, integration 27/27, concurrency 3/3 pass, contract 29/29 pass. Xem [run report](runs/S-303.md). Tuấn review version/rollout sau khi code hoàn tất.
+
+Đối chiếu ngày 2026-11-12 cho thấy PR #70 và #71 có build/security xanh. PR #70 rerun thành công sau timeout test auth-guard ở lượt CI đầu. Các PR vẫn chờ review trước merge main.
+
+S-304 In review ở PR [#75](https://github.com/tvangx/VENTIX/pull/75), nhánh `feat/resale-s304-schema-price-cap`, base S-303. Unit 8/8, integration 11/11 và concurrency 1/1 pass. Quote dùng giá API Ticket, luồng tạo/freeze listing thuộc S-404. Xem [run report](runs/S-304.md).
+
+S-305 In review trên PR [#76](https://github.com/tvangx/VENTIX/pull/76), nhánh `feat/identity-s305-kyc`. Người dùng chọn email tài khoản + Mailpit local. Identity 23 unit, 49 integration và 3 concurrency pass trên source cuối, bao gồm fingerprint idempotency độc lập JWT. SMTP Mailpit và audit Kafka đã kiểm tra thật, KYC vẫn là email + thông tin tự khai. Xem [run report](runs/S-305.md).
+
+S-401 In review trên PR [#77](https://github.com/tvangx/VENTIX/pull/77), nhánh `feat/ticket-s401-staff-packages`, base S-305 #76. Gate/Staff/package, tenant binding lifecycle, AES-GCM/RSA-OAEP tương thích WebCrypto. Ticket 19 unit, 35 integration, 5 concurrency pass, build 16/16. Xem [run report](runs/S-401.md).
 
 ## Snapshot bàn giao tuần 1 — 2026-10-25
 

@@ -7,7 +7,7 @@
 > 1. Bắt đầu thứ Hai **12/10/2026**, kết thúc thứ Sáu **20/11/2026**. Nếu lệch, dời toàn bộ mốc tương ứng.
 > 2. Mỗi người có **~5 ngày công/tuần** (30 ngày/6 tuần). Kế hoạch chỉ xếp **~4–4,75 ngày/tuần** để chừa buffer cho review, họp, sửa lỗi. Nếu ai làm ít hơn, áp dụng đường cắt giảm ở mục 9 sớm hơn.
 > 3. Ước lượng đã tính có dùng AI hỗ trợ sinh code. Ước lượng là **ngày công**, chỉ là điểm xuất phát, hãy hiệu chỉnh sau tuần 1.
-> 4. Chính sách giải ngân escrow chưa được chốt. **Mặc định tạm:** giải ngân cho người bán khi người mua check-in thành công, hoặc 24 giờ sau khi sự kiện kết thúc (cái nào đến trước). Cần cả nhóm xác nhận trong tuần 1.
+> 4. Chính sách giải ngân escrow được người giao việc xác nhận ngày 12/11/2026 tại ADR-0017. Giải ngân cho người bán khi người mua check-in thành công, hoặc 24 giờ sau khi sự kiện kết thúc (cái nào đến trước). Khiếu nại đang mở chặn giải ngân.
 
 ---
 
