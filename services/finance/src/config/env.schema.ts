@@ -18,12 +18,31 @@ export const envSchema = z
     EVENT_SERVICE_URL: z.string().url().default("http://localhost:3002"),
     INTERNAL_API_KEY: z.string().min(16).optional(),
     FINANCE_POLL_MS: z.coerce.number().int().min(100).default(1000),
+    INVOICE_WORKER_ENABLED: z.enum(["true", "false"]).default("false"),
+    INVOICE_POLL_MS: z.coerce.number().int().min(100).default(1000),
+    INVOICE_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+    INVOICE_TIMEOUT_MS: z.coerce.number().int().positive().max(60000).default(5000),
+    INVOICE_LEASE_MS: z.coerce.number().int().positive().max(300000).default(30000),
+    INVOICE_RETRY_BASE_MS: z.coerce.number().int().positive().default(1000),
+    INVOICE_RETRY_MAX_MS: z.coerce.number().int().positive().max(3600000).default(60000),
     /** Đặt biến này mới bật OpenTelemetry. */
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
     ...authEnvShape,
   })
   .superRefine((env, ctx) => {
     refineAuthEnv(env, ctx);
+    if (env.INVOICE_LEASE_MS <= env.INVOICE_TIMEOUT_MS)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["INVOICE_LEASE_MS"],
+        message: "Must exceed provider timeout",
+      });
+    if (env.INVOICE_RETRY_MAX_MS < env.INVOICE_RETRY_BASE_MS)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["INVOICE_RETRY_MAX_MS"],
+        message: "Must be at least retry base",
+      });
     if (env.FINANCE_WORKERS_ENABLED === "true" && !env.INTERNAL_API_KEY)
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

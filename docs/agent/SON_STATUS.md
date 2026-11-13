@@ -1,24 +1,13 @@
 # Trạng thái task — Sơn
 
-## Đối chiếu trực tiếp ngày 2026-11-12 — S-502
+## Đối chiếu lô tiếp tục — 2026-11-13
 
-Thông tin phần này mới hơn các snapshot lịch sử bên dưới. Main `0977e9d` đã có tuần 1–2 (#36/#65/#69) và S-301 (#70). Không đổi các task đã triển khai thành Todo.
-
-| Task                 | Trạng thái đối chiếu                  | Phần còn lại                                                                                                                     |
-| -------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| S-302–305, S-401–404 | Đã triển khai trong chuỗi PR tích hợp | #85 OPEN/BLOCKED, build/security xanh trên d4276e7, 0 review; cần approval trước merge main                                      |
-| S-405                | Blocked                               | #83 chỉ tài liệu/policy, #82 OPEN chưa có hợp đồng refund resale                                                                 |
-| S-501                | Blocked                               | Phụ thuộc code S-405 và #82                                                                                                      |
-| S-502                | In review                             | Consumer TicketIssued, durable retry/lease, MockMinter; 13 unit, 25 integration, 3 concurrency pass; [run report](runs/S-502.md) |
-| S-503                | Todo                                  | Đối chiếu trạng thái vé và provider MOCK/tx_hash NULL của S-502                                                                  |
-| S-504                | Blocked trên main                     | S-305 đã có crypto, chờ #85; phần script rotation chưa có trên main                                                              |
-| S-505                | Todo                                  | T-402 #59 đã merge (7ea1b62); invoices/invoice_items có schema nhưng chưa có adapter/worker; chỉ vùng hóa đơn trong Finance      |
-| S-601                | Blocked                               | G3 chưa nghiệm thu; STATUS còn T-501–505 Todo và thiếu báo cáo gate                                                              |
-| S-602                | Chưa nghiệm thu                       | Cần lỗi cụ thể/tái hiện; không suy test unit pass thành hết lỗi toàn hệ thống                                                    |
-| S-603                | Todo                                  | Tài liệu phải phân biệt main với chuỗi #85 và resale chưa có S-405                                                               |
-| S-604                | Chờ phối hợp                          | Cần môi trường/kịch bản/lịch tập dượt và các thành viên; chưa có bằng chứng tập dượt                                             |
-
-User đã cho phép push/PR và merge các PR của Sơn khi đủ CI/review. Không bypass bảo vệ main hoặc merge task của người khác.
+- Tuần 1–2 và S-301 đã merge main qua #36/#65/#69/#70. Các snapshot cũ bên dưới giữ làm lịch sử.
+- S-302–S-305, S-401–S-404 đã triển khai trong [#85](https://github.com/tvangx/VENTIX/pull/85), CI xanh, chưa có approval, chưa merge main. Không làm lại.
+- S-502 [#86](https://github.com/tvangx/VENTIX/pull/86) và S-503 [#87](https://github.com/tvangx/VENTIX/pull/87): code/test local hoàn tất, CI build/security xanh, chờ review. #87 base nhánh #86.
+- S-405 chỉ có tài liệu/quyết định escrow ở #83; code và S-501 chờ hợp đồng refund resale [#82](https://github.com/tvangx/VENTIX/issues/82) đang mở. S-504 chờ S-305/#85.
+- S-505: In review [#88](https://github.com/tvangx/VENTIX/pull/88), nhánh `feat/finance-s505-mock-invoices` độc lập từ main, T-402 đã merge #59. 12 unit, 27 integration, 4 concurrency pass; phân vùng hóa đơn mock trong Finance, không sửa ledger/VAT/refund/schema. [Run report](runs/S-505.md).
+- S-601 chờ G3, S-602 chưa có bug Sơn cụ thể đủ đầu vào; S-603 tài liệu độc lập là việc tiếp theo; S-604 cần lịch/môi trường tập dượt của team.
 
 ## Đối chiếu GitHub ngày 2026-11-11
 
