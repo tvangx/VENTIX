@@ -49,9 +49,13 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 | S-203 | Sơn   | Duyệt event + outbox `EventApproved`                      | T-203                                    |
 | S-206 | Sơn   | API nội bộ `seat-classes`                                 | T-203b                                   |
 | S-301 | Sơn   | Ticket consume `OrderConfirmed`                           | G2; In review, xem runs/S-301.md          |
+| S-401 | Sơn   | Gate, phân công Staff, gói xác thực mã hóa có TTL         | V-401; In review, xem runs/S-401.md       |
+| S-402 | Sơn   | Check-in online, unique accepted và log append-only      | In review, xem runs/S-402.md             |
+| S-403 | Sơn   | Sync offline HMAC, chống trùng và delta thu hồi          | In review, xem runs/S-403.md             |
+| S-404 | Sơn   | Listing create/cancel/search, freeze và recovery        | In review #81, xem runs/S-404.md         |
 | V-305 | Vũ    | Merch reserve/commit theo `OrderCreated`/`OrderConfirmed` | G2                                       |
 | V-306 | Vũ    | API nội bộ `quotes` (SKU lẻ)                              | T-301 (có thể dùng server giả)           |
-| S-405 | Sơn   | Resale mua (+ `ResaleOrderAwaitingPayment`)               | T-405                                    |
+| S-405 | Sơn   | Resale mua (+ `ResaleOrderAwaitingPayment`)               | Blocked hợp đồng refund #82, xem runs/S-405.md |
 | S-505 | Sơn   | Hóa đơn (dùng bảng `invoices` của T-402)                  | G3                                       |
 | V-501 | Vũ    | Admin portal (refund, audit, DLQ)                         | T-401, T-402 (DLQ: có thể dùng Kafka UI) |
 | V-502 | Vũ    | Dashboard Organizer                                       | T-402 (SSE là [C], có thể polling)       |

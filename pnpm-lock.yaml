@@ -828,6 +828,12 @@ importers:
       '@ticketing/common':
         specifier: workspace:*
         version: link:../../packages/common
+      '@ticketing/event-contracts':
+        specifier: workspace:*
+        version: link:../../packages/event-contracts
+      '@ticketing/outbox-inbox':
+        specifier: workspace:*
+        version: link:../../packages/outbox-inbox
       argon2:
         specifier: 0.41.1
         version: 0.41.1
@@ -843,12 +849,21 @@ importers:
       helmet:
         specifier: ^8.0.0
         version: 8.3.0
+      ioredis:
+        specifier: 5.11.1
+        version: 5.11.1
       jose:
         specifier: ^5.10.0
         version: 5.10.0
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       multer:
         specifier: 2.5.0
         version: 2.5.0
+      nodemailer:
+        specifier: 10.5.0
+        version: 10.5.0
       pg:
         specifier: ^8.13.1
         version: 8.23.1
@@ -889,6 +904,9 @@ importers:
       '@types/node':
         specifier: ^20.16.0
         version: 20.19.43
+      '@types/nodemailer':
+        specifier: 8.0.2
+        version: 8.0.2
       '@types/pg':
         specifier: ^8.11.10
         version: 8.23.1
@@ -1273,6 +1291,12 @@ importers:
       '@ticketing/common':
         specifier: workspace:*
         version: link:../../packages/common
+      '@ticketing/event-contracts':
+        specifier: workspace:*
+        version: link:../../packages/event-contracts
+      '@ticketing/outbox-inbox':
+        specifier: workspace:*
+        version: link:../../packages/outbox-inbox
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1285,6 +1309,9 @@ importers:
       helmet:
         specifier: ^8.0.0
         version: 8.3.0
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.1
         version: 8.23.1
@@ -1300,6 +1327,9 @@ importers:
       rxjs:
         specifier: ^7.8.1
         version: 7.8.2
+      uuidv7:
+        specifier: ^1.0.2
+        version: 1.2.1
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -3140,6 +3170,9 @@ packages:
 
   '@types/node@20.19.43':
     resolution: {integrity: sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA==}
+
+  '@types/nodemailer@8.0.2':
+    resolution: {integrity: sha512-c7M5ox8p0nEOfbJ2E9Qcmt8/QCu/VzsiAhzBiZbvky2PhKZDHpKB3sQHBM5MEZNkCfBOaS6S9//AGPRTNB7IaA==}
 
   '@types/opossum@8.1.9':
     resolution: {integrity: sha512-Jm/tYxuJFefiwRYs+/EOsUP3ktk0c8siMgAHPLnA4PXF4wKghzcjqf88dY+Xii5jId5Txw4JV0FMKTpjbd7KJA==}
@@ -5505,6 +5538,10 @@ packages:
   node-releases@2.0.59:
     resolution: {integrity: sha512-5qr2okC4ItAI0hG5SaV0HoYMpnM/Y6+Oqr7AmPYy/2uEoGvS+GbSKLeRxSS1uAdu59yz0ouzcuXievSgg///WA==}
     engines: {node: '>=18'}
+
+  nodemailer@10.5.0:
+    resolution: {integrity: sha512-L/w/HH5MqpzMDuZD7fQdt/+KqymuvrpaApaIjAH2XA3ILePwlcvXCVVvP75xVrXCEt2ggK2marrrHHFB5Qu0kA==}
+    engines: {node: '>=20.0.0'}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -8797,6 +8834,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/nodemailer@8.0.2':
+    dependencies:
+      '@types/node': 20.19.43
+
   '@types/opossum@8.1.9':
     dependencies:
       '@types/node': 20.19.43
@@ -11445,6 +11486,8 @@ snapshots:
   node-int64@0.4.0: {}
 
   node-releases@2.0.59: {}
+
+  nodemailer@10.5.0: {}
 
   normalize-path@3.0.0: {}
 

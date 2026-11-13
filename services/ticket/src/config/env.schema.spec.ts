@@ -11,6 +11,14 @@ const base = {
 };
 
 describe("envSchema", () => {
+  it("bounds package TTL and ticket counts", () => {
+    const env = envSchema.parse(base);
+    expect(env.TICKET_PACKAGE_TTL_SECONDS).toBe(600);
+    expect(env.TICKET_PACKAGE_MAX_TICKETS).toBe(10000);
+    for (const value of [0, 59, 1801, 1.5])
+      expect(() => envSchema.parse({ ...base, TICKET_PACKAGE_TTL_SECONDS: value })).toThrow();
+    for (const value of [0, 100001, 1.5])
+      expect(() => envSchema.parse({ ...base, TICKET_PACKAGE_MAX_TICKETS: value })).toThrow();
   it("validates NFT timeouts, retries and provider independently from ticket secrets", () => {
     expect(envSchema.parse({ ...base, NFT_WORKER_ENABLED: "true" }).NFT_PROVIDER).toBe("MOCK");
     for (const invalid of [

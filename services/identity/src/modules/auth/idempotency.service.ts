@@ -16,11 +16,12 @@ export class IdempotencyService {
     key: string | undefined,
     payload: unknown,
     action: (tx: Prisma.TransactionClient) => Promise<Prisma.InputJsonObject>,
+    requestFingerprint?: string,
   ): Promise<Prisma.JsonValue> {
     if (!z.string().uuid().safeParse(key).success)
       throw new ProblemException("INVALID_IDEMPOTENCY_KEY", 400, "Idempotency-Key phải là UUID");
     const safeKey = key as string;
-    const requestHash = await this.keys.fingerprint(payload);
+    const requestHash = requestFingerprint ?? (await this.keys.fingerprint(payload));
     return this.prisma.$transaction(
       async (tx) => {
         await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${scope + safeKey}, 0))::text`;

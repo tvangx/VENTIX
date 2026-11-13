@@ -4,6 +4,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { Pool } from "pg";
+import { exportSPKI, generateKeyPair, SignJWT } from "jose";
 import { createLogger } from "@ticketing/common";
 import { newMessage } from "@ticketing/event-contracts";
 import { DeadLetter, InboxProcessor } from "@ticketing/outbox-inbox";
@@ -73,12 +74,13 @@ export async function fixture(overrides: Record<string, unknown> = {}) {
       await migrationPool.query(readFileSync(resolve(directory, entry, "migration.sql"), "utf8"));
   }
   await migrationPool.end();
+  const pair = await generateKeyPair("RS256");
   const env = envSchema.parse({
     NODE_ENV: "test",
     DATABASE_URL: databaseUrl.toString(),
     AUTH_ISSUER: "ticket-test",
     AUTH_AUDIENCE: "api",
-    AUTH_JWKS_URI: "http://127.0.0.1:1/jwks",
+    AUTH_PUBLIC_KEY_PEM: await exportSPKI(pair.publicKey),
     TICKET_ENCRYPTION_KEYS: JSON.stringify({ test: randomBytes(32).toString("base64") }),
     TICKET_ACTIVE_KEY_ID: "test",
     TICKET_WORKERS_ENABLED: "false",
@@ -115,6 +117,14 @@ export async function fixture(overrides: Record<string, unknown> = {}) {
     dead,
     deliver,
     admin,
+    token: (userId: string, roles = ["USER"], organizerId?: string) =>
+      new SignJWT({ roles, ...(organizerId ? { organizer_id: organizerId } : {}) })
+        .setProtectedHeader({ alg: "RS256" })
+        .setSubject(userId)
+        .setIssuer("ticket-test")
+        .setAudience("api")
+        .setExpirationTime("5m")
+        .sign(pair.privateKey),
     close: async () => {
       await app.close();
       await admin.end();

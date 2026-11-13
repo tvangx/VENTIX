@@ -71,6 +71,337 @@
         "summary": "Return the authenticated principal",
         "tags": ["whoami"]
       }
+    },
+    "/v1/listings/me": {
+      "get": {
+        "operationId": "ListingController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "JWT required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List current seller listings",
+        "tags": ["listings"]
+      }
+    },
+    "/v1/listings/quote": {
+      "post": {
+        "operationId": "ListingController_quote",
+        "parameters": [
+          {
+            "name": "authorization",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "404": {
+            "description": "Ticket not owned or absent"
+          },
+          "409": {
+            "description": "Ticket is not ACTIVE"
+          },
+          "422": {
+            "description": "Resale price exceeds cap"
+          },
+          "503": {
+            "description": "Ticket service unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Validate a resale price using the owned ticket's server price",
+        "tags": ["listings"]
+      }
+    },
+    "/v1/listings": {
+      "get": {
+        "operationId": "ListingController_search",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "event_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "min_price_vnd",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "type": "number"
+            }
+          },
+          {
+            "name": "max_price_vnd",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "JWT required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Search active listings by event and price using cursor pagination",
+        "tags": ["listings"]
+      },
+      "post": {
+        "operationId": "ListingController_create",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "404": {
+            "description": "Ticket absent or owned by another seller"
+          },
+          "409": {
+            "description": "Ticket/listing unavailable or request key reused"
+          },
+          "422": {
+            "description": "Asking price exceeds the current cap"
+          },
+          "503": {
+            "description": "Operation pending recovery; retry with the same key"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Freeze an owned ticket and create one active listing",
+        "tags": ["listings"]
+      }
+    },
+    "/v1/listings/{listingId}/cancel": {
+      "post": {
+        "operationId": "ListingController_cancel",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "listingId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "404": {
+            "description": "Owned listing absent"
+          },
+          "409": {
+            "description": "Sold listing or operation pending, request key reused"
+          },
+          "503": {
+            "description": "Cancellation pending recovery; retry with the same key"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel an owned listing and release its matching ticket freeze",
+        "tags": ["listings"]
+      }
     }
   },
   "info": {
@@ -119,6 +450,118 @@
           }
         },
         "required": ["userId", "roles"]
+      },
+      "ListingView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "original_price_vnd": {
+            "type": "string"
+          },
+          "ask_price_vnd": {
+            "type": "string"
+          },
+          "max_percent": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "SOLD", "CANCELLED", "EXPIRED"]
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "ticket_id",
+          "event_id",
+          "original_price_vnd",
+          "ask_price_vnd",
+          "max_percent",
+          "status",
+          "version"
+        ]
+      },
+      "ListingPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ListingView"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": ["items", "next_cursor"]
+      },
+      "QuoteRequest": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ask_price_vnd": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["ticket_id", "ask_price_vnd"]
+      },
+      "QuoteResponse": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "original_price_vnd": {
+            "type": "string",
+            "example": "100000"
+          },
+          "ask_price_vnd": {
+            "type": "string",
+            "example": "120000"
+          },
+          "maximum_price_vnd": {
+            "type": "string",
+            "example": "120000"
+          },
+          "max_percent": {
+            "type": "number",
+            "example": 120
+          }
+        },
+        "required": [
+          "ticket_id",
+          "event_id",
+          "original_price_vnd",
+          "ask_price_vnd",
+          "maximum_price_vnd",
+          "max_percent"
+        ]
       }
     }
   }
