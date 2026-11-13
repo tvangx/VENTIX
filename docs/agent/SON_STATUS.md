@@ -1,19 +1,26 @@
 # Trạng thái task — Sơn
 
-## Đối chiếu khi tiếp tục ngày 2026-11-12
+## Đối chiếu trực tiếp ngày 2026-11-12 — S-502
 
-- Nhánh tích hợp `chore/son-s302-s404-main` được tạo từ main 0977e9d, merge chuỗi tại b98d7c8 và tài liệu #83 tại 7c6d577, mở PR main [#85](https://github.com/tvangx/VENTIX/pull/85). Source Event tuần 2/V-103 của main và source S-302–404 được đối chiếu sau resolve. Local 312 unit, Ticket 68 integration/11 concurrency, Resale 23 integration/4 concurrency, build 16/16 và lint/typecheck/format pass. Main đang REVIEW_REQUIRED. Xem [run report tích hợp](runs/SON_S302_S404_MAIN.md).
-- S-404 #81 có build/security xanh ở attempt 3 và đã merge nhánh tích hợp b98d7c8. Hai lượt CI trước timeout JWKS cũ, source/threshold giữ qua retry. PR tài liệu S-405 [#83](https://github.com/tvangx/VENTIX/pull/83) đã được merge vào base tại 7c6d577, gồm báo cáo điều kiện và chính sách escrow. Phần code S-405 đang chờ hợp đồng hoàn tiền ở #82.
-- S-405 Bị chặn ở precheck hợp đồng hoàn tiền resale, đề nghị Tuấn tại Issue [#82](https://github.com/tvangx/VENTIX/issues/82) theo lựa chọn người giao việc. T-302 #56 và T-405 #61 đã merge main, source Payment có MOCK/RESALE. Chính sách giải ngân đã được xác nhận trong ADR-0017. Xem [run report S-405](runs/S-405.md).
+Thông tin phần này mới hơn các snapshot lịch sử bên dưới. Main `0977e9d` đã có tuần 1–2 (#36/#65/#69) và S-301 (#70). Không đổi các task đã triển khai thành Todo.
 
-- #69 và #70 đã merge main, origin/main hiện 0977e9d sau PR #78 của Vũ.
-- #71–77 đã merge vào các base branch xếp chồng. #79 và #80 có CI xanh, đã merge thường vào nhánh S-401 tại ff8d9a1 và 6721156. Code S-302–S-403 đang ở nhánh tích hợp. Cần PR tích hợp lên main sau khi CI/review đủ.
-- S-402 In review ở PR [#79](https://github.com/tvangx/VENTIX/pull/79), nhánh feat/ticket-s402-online-checkin. Source cuối gồm UUID case-insensitive có unit 19/19, integration 47/47, concurrency 7/7 pass, OpenAPI/format/build 16/16 pass. Xem [run report](runs/S-402.md).
-- S-403 In review ở PR [#80](https://github.com/tvangx/VENTIX/pull/80), nhánh feat/ticket-s403-offline-sync, base S-401 chứa #79. Protocol HMAC, device key, sync/delta, unit 22/22, toàn integration 61/61, concurrency 10/10 và build 16/16 pass. Offline integration cuối 13/13 pass, Kafka offline=true đã kiểm tra thật. Xem [run report](runs/S-403.md).
+| Task                 | Trạng thái đối chiếu                  | Phần còn lại                                                                                                                     |
+| -------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| S-302–305, S-401–404 | Đã triển khai trong chuỗi PR tích hợp | #85 OPEN/BLOCKED, build/security xanh trên d4276e7, 0 review; cần approval trước merge main                                      |
+| S-405                | Blocked                               | #83 chỉ tài liệu/policy, #82 OPEN chưa có hợp đồng refund resale                                                                 |
+| S-501                | Blocked                               | Phụ thuộc code S-405 và #82                                                                                                      |
+| S-502                | In review                             | Consumer TicketIssued, durable retry/lease, MockMinter; 13 unit, 25 integration, 3 concurrency pass; [run report](runs/S-502.md) |
+| S-503                | Todo                                  | Đối chiếu trạng thái vé và provider MOCK/tx_hash NULL của S-502                                                                  |
+| S-504                | Blocked trên main                     | S-305 đã có crypto, chờ #85; phần script rotation chưa có trên main                                                              |
+| S-505                | Todo                                  | T-402 #59 đã merge (7ea1b62); invoices/invoice_items có schema nhưng chưa có adapter/worker; chỉ vùng hóa đơn trong Finance      |
+| S-601                | Blocked                               | G3 chưa nghiệm thu; STATUS còn T-501–505 Todo và thiếu báo cáo gate                                                              |
+| S-602                | Chưa nghiệm thu                       | Cần lỗi cụ thể/tái hiện; không suy test unit pass thành hết lỗi toàn hệ thống                                                    |
+| S-603                | Todo                                  | Tài liệu phải phân biệt main với chuỗi #85 và resale chưa có S-405                                                               |
+| S-604                | Chờ phối hợp                          | Cần môi trường/kịch bản/lịch tập dượt và các thành viên; chưa có bằng chứng tập dượt                                             |
 
-## Snapshot đối chiếu GitHub ngày 2026-11-11
+User đã cho phép push/PR và merge các PR của Sơn khi đủ CI/review. Không bypass bảo vệ main hoặc merge task của người khác.
 
-S-404 In review ở PR [#81](https://github.com/tvangx/VENTIX/pull/81) trên `feat/resale-s404-listings-freeze`, base tích hợp S-401 tại 6721156. Freeze đồng bộ idempotent, durable operation/recovery, tìm kiếm và Inbox/Outbox. Ticket 22 unit, 68 integration, 11 concurrency pass. Resale 9 unit, 23 integration, 4 concurrency pass. Migration/OpenAPI/format/build 16/16 pass. Lint/typecheck/unit toàn repo mỗi lệnh 20/20 task pass. Xem [run report](runs/S-404.md).
+## Đối chiếu GitHub ngày 2026-11-11
 
 - S-101 đã merge main qua #36; S-102–S-107 đã vào main qua #65 (`66c63b7`). Bảng tuần 1 bên dưới là snapshot lịch sử, không phải trạng thái hiện tại.
 - S-201–S-206 đã merge nhánh tích hợp qua #60/#62/#64/#66/#67/#68. PR [#69](https://github.com/tvangx/VENTIX/pull/69) đưa tuần 2 lên main: build/security xanh, chưa có review, GitHub báo blocked tại thời điểm đối chiếu. Chưa merge main.

@@ -3,6 +3,8 @@
 Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human` (việc Tuấn tự làm).
 **Agent** chỉ được đổi `Todo → Doing → In review`. **Tuấn** chuyển sang `Done` sau khi merge.
 
+Đối chiếu phần Sơn ngày 2026-11-12: S-301 đã merge #70; S-302–S-404 ở #85 đang chờ reviewer dù CI xanh. S-502 đang triển khai độc lập trên main, xem [run report S-502](runs/S-502.md) và [SON_STATUS](SON_STATUS.md). T-402 #59 đã merge; snapshot In review trong bảng được giữ để Tuấn cập nhật Done. S-405/S-501 chờ #82; chưa nghiệm thu G3.
+
 | ID     | Tuần | Tên                                                                 | Phụ thuộc                  | Trạng thái | PR  | Ghi chú                                                |
 | ------ | ---- | ------------------------------------------------------------------- | -------------------------- | ---------- | --- | ------------------------------------------------------ |
 | T-101  | 1    | Monorepo                                                            | —                          | Done       | —   | Phase 0                                                |

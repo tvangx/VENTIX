@@ -28,6 +28,9 @@ import { OfflineKeys } from "./modules/offline/offline-keys";
 import { FreezeController } from "./modules/freezes/freeze.controller";
 import { FreezeService } from "./modules/freezes/freeze.service";
 import { FreezeRepository } from "./modules/freezes/freeze.repository";
+import { NftWorker } from "./modules/nft/nft-worker";
+import { NftHandler } from "./modules/nft/nft.handler";
+import { NftRepository } from "./modules/nft/nft.repository";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -80,6 +83,9 @@ export class AppModule implements NestModule {
         },
         TicketHandler,
         TicketWorker,
+        NftHandler,
+        NftRepository,
+        NftWorker,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],
