@@ -4,7 +4,7 @@
 
 - Tuần 1–2 và S-301 đã merge main qua #36/#65/#69/#70. Bảng snapshot cũ bên dưới giữ lịch sử.
 - S-302–S-305 và S-401–S-404 đã triển khai trong #85. #85/#86 S-502/#87 S-503/#88 S-505 đều CI build/security xanh tại lần đối chiếu, chưa có review. #87 base #86. Giữ trạng thái In review.
-- S-603 đang hoàn thiện [SRS/UC](../specs/son-domain-srs-uc.md), [ERD](../erd/son-domain-s603.md), [sequence](../sequence/son-domain-s603.md) và ADR-0007. [Run report](runs/S-603.md).
+- S-603 In review [#89](https://github.com/tvangx/VENTIX/pull/89), gồm [SRS/UC](../specs/son-domain-srs-uc.md), [ERD](../erd/son-domain-s603.md), [sequence](../sequence/son-domain-s603.md) và ADR-0007. [Run report](runs/S-603.md).
 - S-405/S-501 chờ hợp đồng #82 đang mở, S-504 chờ S-305/#85, S-601 chờ G3. STATUS ghi T-501–T-505 Todo, cần team xác nhận gate thực tế trước S-601.
 - S-602 chưa có bug Sơn hiện hành đủ đầu vào sau đối chiếu open issues. Các issue tuần 1 còn mở cần chủ dự án đối chiếu đóng theo merge, không coi là bug đang tái hiện. S-604 cần lịch, môi trường và người tham gia tập dượt, chưa có biên bản.
 
