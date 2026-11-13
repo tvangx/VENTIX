@@ -11,6 +11,16 @@ const base = {
 };
 
 describe("envSchema", () => {
+  it("bounds public verification rate configuration", () => {
+    expect(envSchema.parse(base).VERIFY_RATE_PER_PEER).toBe(60);
+    for (const invalid of [
+      { VERIFY_RATE_PER_PEER: 0 },
+      { VERIFY_RATE_TOTAL: 100001 },
+      { VERIFY_RATE_WINDOW_MS: 0 },
+    ]) {
+      expect(() => envSchema.parse({ ...base, ...invalid })).toThrow();
+    }
+  });
   it("validates NFT timeouts, retries and provider independently from ticket secrets", () => {
     expect(envSchema.parse({ ...base, NFT_WORKER_ENABLED: "true" }).NFT_PROVIDER).toBe("MOCK");
     for (const invalid of [

@@ -15,6 +15,10 @@ import { TicketWorker } from "./messaging/ticket-worker";
 import { NftWorker } from "./modules/nft/nft-worker";
 import { NftHandler } from "./modules/nft/nft.handler";
 import { NftRepository } from "./modules/nft/nft.repository";
+import { VerifyController } from "./modules/verify/verify.controller";
+import { VerifyService } from "./modules/verify/verify.service";
+import { VerifyRepository } from "./modules/verify/verify.repository";
+import { VerifyGuard } from "./modules/verify/verify.guard";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -30,7 +34,7 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController],
+      controllers: [HealthController, MetricsController, WhoamiController, VerifyController],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
@@ -50,6 +54,9 @@ export class AppModule implements NestModule {
         NftHandler,
         NftRepository,
         NftWorker,
+        VerifyService,
+        VerifyRepository,
+        VerifyGuard,
       ],
       // global + exports: để các module con (DbModule, …) inject được ENV/LOGGER.
       exports: [ENV, LOGGER],

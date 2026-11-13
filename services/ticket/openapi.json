@@ -71,6 +71,84 @@
         "summary": "Return the authenticated principal",
         "tags": ["whoami"]
       }
+    },
+    "/v1/public/tickets/{ticketId}": {
+      "get": {
+        "operationId": "VerifyController_lookup",
+        "parameters": [
+          {
+            "name": "ticketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicTicketDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID (problem+json)"
+          },
+          "404": {
+            "description": "Ticket not found (problem+json)"
+          },
+          "429": {
+            "description": "Rate limited; Retry-After header (problem+json)"
+          }
+        },
+        "summary": "Read public ticket state without owner or secret data",
+        "tags": ["public-verification"]
+      }
+    },
+    "/v1/verify": {
+      "get": {
+        "operationId": "VerifyController_page",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML form and optional lookup result",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "HTML form with invalid ticket ID error"
+          },
+          "404": {
+            "description": "HTML form with ticket not found error"
+          },
+          "429": {
+            "description": "Rate limited (problem+json)"
+          }
+        },
+        "summary": "Public server-rendered ticket verification form",
+        "tags": ["public-verification"]
+      }
     }
   },
   "info": {
@@ -119,6 +197,51 @@
           }
         },
         "required": ["userId", "roles"]
+      },
+      "PublicNftDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["NOT_REQUESTED", "PENDING", "MINTING", "MINTED", "FAILED"]
+          },
+          "provider": {
+            "type": "string",
+            "nullable": true,
+            "enum": ["MOCK"]
+          },
+          "token_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "tx_hash": {
+            "type": "string",
+            "nullable": true,
+            "description": "NULL for MOCK. No on-chain transaction is fabricated."
+          }
+        },
+        "required": ["status", "provider", "token_id", "tx_hash"]
+      },
+      "PublicTicketDto": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "FROZEN", "CHECKED_IN", "REVOKED", "REFUNDED"]
+          },
+          "active": {
+            "type": "boolean",
+            "description": "True only for ACTIVE; does not prove ownership or replace TOTP check-in."
+          },
+          "nft": {
+            "$ref": "#/components/schemas/PublicNftDto"
+          }
+        },
+        "required": ["ticket_id", "status", "active", "nft"]
       }
     }
   }
