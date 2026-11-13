@@ -1,7 +1,5 @@
 # Trạng thái task — Tuấn
 
-Sơn cập nhật 2026-11-13: S-502 #86 CI xanh, chờ review; S-503 In review trên nhánh riêng xếp trên S-502, xem [run report](runs/S-503.md). Ticket 16 unit/34 integration/4 concurrency pass. Không thay trạng thái Done của task Tuấn.
-
 Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human` (việc Tuấn tự làm).
 **Agent** chỉ được đổi `Todo → Doing → In review`. **Tuấn** chuyển sang `Done` sau khi merge.
 
