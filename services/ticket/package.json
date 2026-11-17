@@ -19,6 +19,7 @@
     "test:int": "node scripts/prisma-generate.js && jest --config jest.int.config.js --runInBand",
     "test:conc": "node scripts/prisma-generate.js && jest --config jest.conc.config.js --runInBand --passWithNoTests",
     "openapi:export": "pnpm build && node dist/tools/export-openapi.js",
+    "keys:rotate": "node dist/tools/rotate-ticket-keys.js",
     "prisma:migrate:create": "prisma migrate dev --create-only"
   },
   "dependencies": {

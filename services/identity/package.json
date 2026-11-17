@@ -20,6 +20,7 @@
     "test:storage": "node scripts/prisma-generate.js && jest --config jest.storage.config.js --runInBand",
     "test:conc": "node scripts/prisma-generate.js && jest --config jest.conc.config.js --runInBand --passWithNoTests",
     "openapi:export": "pnpm build && node dist/tools/export-openapi.js && prettier --write openapi.json",
+    "keys:rotate": "node dist/tools/rotate-kyc-keys.js",
     "prisma:migrate:create": "prisma migrate dev --create-only",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.js",

@@ -1,5 +1,9 @@
 # Trạng thái task — Sơn
 
+## Cập nhật S-504 — 2026-11-17
+
+- S-504 In review cho dữ liệu đã có trong Identity và Ticket. Địa chỉ giao hàng chờ phần lưu trữ Merch. Xem [run report](runs/S-504.md).
+
 ## Cập nhật S-602 — 2026-11-17
 
 - S-602 In review. Sửa lỗi ghép S-401/S-502 làm hỏng test cấu hình và Prisma schema của Ticket trên main. Xem [run report](runs/S-602.md).
