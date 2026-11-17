@@ -1,5 +1,9 @@
 # Trạng thái task — Sơn
 
+## Cập nhật S-503 — 2026-11-17
+
+- S-503 In review trên nhánh tích hợp mới. PR #87 đã merge vào nhánh S-502 sau khi #86 vào main. Xem [run report](runs/S-503.md).
+
 ## Cập nhật S-602 — 2026-11-17
 
 - S-602 In review. Sửa lỗi ghép S-401/S-502 làm hỏng test cấu hình và Prisma schema của Ticket trên main. Xem [run report](runs/S-602.md).
