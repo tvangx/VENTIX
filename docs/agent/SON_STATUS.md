@@ -1,5 +1,9 @@
 # Trạng thái task — Sơn
 
+## Cập nhật S-602 — 2026-11-17
+
+- S-602 In review. Sửa lỗi ghép S-401/S-502 làm hỏng test cấu hình và Prisma schema của Ticket trên main. Xem [run report](runs/S-602.md).
+
 ## Đối chiếu S-603 — 2026-11-13
 
 - Tuần 1–2 và S-301 đã merge main qua #36/#65/#69/#70. Bảng snapshot cũ bên dưới giữ lịch sử.
