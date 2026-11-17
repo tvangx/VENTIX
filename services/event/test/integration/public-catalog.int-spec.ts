@@ -30,6 +30,120 @@ describe("S-204 public catalog", () => {
     await redis?.stop();
   });
 
+  it("returns card data and combines date, price, sale filters and sorted cursors", async () => {
+    const [late, early, earlyPeer, unpriced] = Array.from({ length: 4 }, () => randomUUID()).sort();
+    const cardVenue = randomUUID();
+    const day = "2032-01-01T00:00:00Z";
+    const nextDay = "2032-01-02T00:00:00Z";
+    const earlier = "2032-01-01T18:00:00Z";
+    await app.db.pool.query(
+      "INSERT INTO venues (id,organizer_id,name,address,capacity,updated_at) VALUES ($1,$2,'Lotus Hall','Catalog District',100,now())",
+      [cardVenue, organizerId],
+    );
+    for (const [id, start] of [
+      [early, earlier],
+      [earlyPeer, earlier],
+      [unpriced, earlier],
+      [late, nextDay],
+    ]) {
+      await app.db.pool.query(
+        `INSERT INTO events (id,organizer_id,venue_id,title,description,status,start_at,end_at,updated_at)
+         VALUES ($1,$2,$3,'Catalog Showcase','Public list fixture','PUBLISHED',$4::timestamptz,$4::timestamptz + interval '1 hour',now())`,
+        [id, organizerId, cardVenue, start],
+      );
+    }
+    for (const [id, price, name] of [
+      [early, 300, "Standard"],
+      [early, 900, "VIP"],
+      [earlyPeer, 100, "GA"],
+      [late, 100, "GA"],
+    ]) {
+      await app.db.pool.query(
+        `INSERT INTO ticket_classes (id,event_id,name,price_vnd,capacity,kind,updated_at)
+         VALUES ($1,$2,$3,$4,100,'GA',now())`,
+        [randomUUID(), id, name, price],
+      );
+    }
+    const now = Date.now();
+    const future = new Date(now + 3_600_000);
+    for (const [id, start, end] of [
+      [early, future, new Date(+future + 3_600_000)],
+      [earlyPeer, new Date(now - 3_600_000), future],
+    ]) {
+      await app.db.pool.query(
+        `INSERT INTO sale_phases (id,event_id,starts_at,ends_at,queue_enabled,admit_rate,per_user_limit,require_kyc,updated_at)
+         VALUES ($1,$2,$3,$4,true,10,4,false,now())`,
+        [randomUUID(), id, start, end],
+      );
+    }
+    const request = (query: object) =>
+      app.http
+        .get("/v1/events")
+        .query({ q: "catalog district", ...query })
+        .expect(200);
+    const ids = (body: { items: Array<{ id: string }> }) => body.items.map(({ id }) => id);
+    const first = await request({
+      start_from: day,
+      start_before: nextDay,
+      sort: "start_at",
+      limit: 1,
+    });
+    expect(first.body.items[0]).toMatchObject({
+      id: early,
+      venue_name: "Lotus Hall",
+      venue_address: "Catalog District",
+      min_ticket_price_vnd: 300,
+      sale_status: "UPCOMING",
+      next_sale_starts_at: future.toISOString(),
+      sale_queue_enabled: true,
+    });
+    expect(first.body.items[0]).not.toHaveProperty("windows");
+    expect(first.body.next_cursor).toBe(`start_at|${early}|2032-01-01T18:00:00.000000Z`);
+    const legacy = await request({ limit: 1 });
+    expect(legacy.body.next_cursor).toBe(late);
+    expect(ids((await request({ cursor: legacy.body.next_cursor })).body)).toEqual([
+      early,
+      earlyPeer,
+      unpriced,
+    ]);
+    const priced = await request({ min_price_vnd: 100, max_price_vnd: 200 });
+    expect(ids(priced.body)).toEqual([late, earlyPeer]);
+    const sorted = await request({ sort: "price_asc", limit: 1 });
+    expect(ids(sorted.body)).toEqual([late]);
+    const tail = await request({ sort: "price_asc", cursor: sorted.body.next_cursor });
+    expect(ids(tail.body)).toEqual([earlyPeer, early, unpriced]);
+    expect(tail.body.items[2].min_ticket_price_vnd).toBeNull();
+    expect(ids((await request({ sale_status: "ON_SALE" })).body)).toEqual([earlyPeer]);
+    expect(ids((await request({ sale_status: "UPCOMING" })).body)).toEqual([early]);
+    expect(ids((await request({ sale_status: "CLOSED" })).body)).toEqual([late, unpriced]);
+    expect(ids((await request({ start_from: "2032-01-02T07:00:00+07:00" })).body)).toEqual([late]);
+
+    await app.db.pool.query("UPDATE events SET status='CANCELLED' WHERE id=$1", [early]);
+    const next = await request({
+      start_from: day,
+      start_before: nextDay,
+      sort: "start_at",
+      cursor: first.body.next_cursor,
+    });
+    expect(ids(next.body)).toEqual([earlyPeer, unpriced]);
+  });
+
+  it("rejects malformed or reversed catalog filters", async () => {
+    for (const query of [
+      { start_from: "2032-01-01" },
+      { start_from: "2032-01-02T00:00:00Z", start_before: "2032-01-01T00:00:00Z" },
+      { min_price_vnd: 200, max_price_vnd: 100 },
+      { min_price_vnd: "9007199254740992" },
+      { sort: "popular" },
+      { sale_status: "LOW_STOCK" },
+      { sort: "start_at", cursor: randomUUID() },
+      { sort: "price_asc", cursor: `start_at|${randomUUID()}|2032-01-01T18:00:00.000000Z` },
+      { sort: "price_asc", cursor: `price_asc|${randomUUID()}|9007199254740992` },
+    ]) {
+      await app.http.get("/v1/events").query(query).expect(400);
+    }
+  });
+
   it("filters unpublished events, caches reads, handles ETags and hides cancelled events despite old cache", async () => {
     await app.http.get(`/v1/events/${eventId}`).expect(404);
     await app.db.pool.query("UPDATE events SET status='APPROVED' WHERE id=$1", [eventId]);

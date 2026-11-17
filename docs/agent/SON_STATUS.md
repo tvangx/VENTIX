@@ -1,5 +1,9 @@
 # Trạng thái task — Sơn
 
+## Cập nhật S-204/V-201 — 2026-11-17
+
+- Phần bổ sung catalog cho màn Khám phá của V-201 đang In review. Xem [run report S-204](runs/S-204.md).
+
 ## Cập nhật S-602 — 2026-11-17
 
 - S-602 In review. Sửa lỗi ghép S-401/S-502 làm hỏng test cấu hình và Prisma schema của Ticket trên main. Xem [run report](runs/S-602.md).
