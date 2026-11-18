@@ -1,5 +1,18 @@
 # Ticket service
 
+## Xoay khóa mã hóa Ticket (S-504)
+
+Phân phối khóa mới qua `TICKET_ENCRYPTION_KEYS` cho tất cả instance trước khi đặt `TICKET_ACTIVE_KEY_ID` mới. Giữ khóa cũ để đọc dữ liệu đã ghi. Mỗi ID phải luôn trỏ tới cùng một khóa.
+
+```bash
+pnpm --filter @ticketing/ticket build
+pnpm --filter @ticketing/ticket keys:rotate
+pnpm --filter @ticketing/ticket keys:rotate --apply
+pnpm --filter @ticketing/ticket keys:rotate
+```
+
+Lệnh mặc định chỉ kiểm tra giải mã dữ liệu dùng khóa khác active key. `--apply` cập nhật `secret_enc` và `key_id` cùng lúc cho secret vé và khóa thiết bị offline. Giá trị secret, phiên bản QR và trạng thái nghiệp vụ được giữ nguyên. Có thể chạy lại sau lỗi hoặc xung đột với cùng active key. Sau khi đóng mọi writer cũ, lượt cuối phải có `checked: 0`. Giữ khóa cũ cho bản sao lưu cần khôi phục.
+
 ## Freeze nội bộ cho resale S-404
 
 `POST /v1/internal/tickets/:ticketId/freeze` và `/unfreeze` nhận `{listing_id,seller_id}`, header UUID `Idempotency-Key` bằng listing_id và `X-Internal-Key`. Env INTERNAL_API_KEY có tối thiểu 16 ký tự, thiếu key chặn endpoint. Giao diện service-to-service trả snapshot giá gốc/event/organizer, trạng thái binding và vé. Xác thực key constant-time theo ADR-0010.
@@ -7,6 +20,15 @@
 Freeze chỉ áp dụng vé ACTIVE của seller, chặn event đã hủy. Cùng binding FROZEN có thể replay, binding RELEASED trả 409 khi freeze lại. Release theo listing ID giữ tombstone để chặn request freeze đến muộn. Binding khác không mở khóa vé đang giữ. Vé terminal hoặc event đã hủy giữ trạng thái khi release. State/binding và AuditRecorded Outbox cùng transaction, unique partial giữ một binding FROZEN mỗi ticket. Xem ADR-0016 và resale-listing sequence.
 
 S-301 phát hành vé từ `OrderConfirmed` theo ADR-0009, dùng `ticket_db` riêng.
+
+## Tra cứu công khai — S-503
+
+- Mở `http://localhost:3005/v1/verify`, nhập UUID vé; trang HTML không cần đăng nhập hoặc JavaScript.
+- API `GET /v1/public/tickets/:ticketId` trả ticket_id/status/active và nft status/provider/token_id/tx_hash. Không trả owner/order/secret/giá/PII. ACTIVE không chứng minh quyền sở hữu và không thay TOTP/check-in.
+- Query đọc trạng thái hiện tại, `Cache-Control: no-store`. UUID sai trả 400, không tìm thấy trả 404, quá giới hạn trả 429 + Retry-After; API lỗi theo problem+json. Cả trang và API dùng noindex/no-referrer.
+- MOCK luôn có tx_hash NULL và giao diện ghi rõ mô phỏng. NFT FAILED không làm vé ACTIVE vô hiệu. Phụ thuộc schema nft_mints từ S-502; không có on-chain tx thật trong bản mock.
+- Rate limit mặc định 60 request/socket peer và 1000 request/process trong 60 giây, map tối đa 10.000 peer. Các biến VERIFY_RATE_* nằm trong env schema/example. Không tin X-Forwarded-For từ client. Khi qua proxy, peer là proxy nên dùng chung giới hạn; nhiều replica có bộ đếm riêng. Cần nhóm hạ tầng cấu hình hạn mức gateway khi public qua Kong, đây không phải distributed per-user limiter.
+- HTTP test dùng DB thật cho từng status và không rò dữ liệu; concurrency 50 request kiểm tra 429 và header giả. UI nằm trong Ticket, không sửa apps/web/staff-pwa hoặc route Kong.
 
 ## Chạy local
 
