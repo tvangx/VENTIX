@@ -1,5 +1,18 @@
 # Ticket service
 
+## Xoay khóa mã hóa Ticket (S-504)
+
+Phân phối khóa mới qua `TICKET_ENCRYPTION_KEYS` cho tất cả instance trước khi đặt `TICKET_ACTIVE_KEY_ID` mới. Giữ khóa cũ để đọc dữ liệu đã ghi. Mỗi ID phải luôn trỏ tới cùng một khóa.
+
+```bash
+pnpm --filter @ticketing/ticket build
+pnpm --filter @ticketing/ticket keys:rotate
+pnpm --filter @ticketing/ticket keys:rotate --apply
+pnpm --filter @ticketing/ticket keys:rotate
+```
+
+Lệnh mặc định chỉ kiểm tra giải mã dữ liệu dùng khóa khác active key. `--apply` cập nhật `secret_enc` và `key_id` cùng lúc cho secret vé và khóa thiết bị offline. Giá trị secret, phiên bản QR và trạng thái nghiệp vụ được giữ nguyên. Có thể chạy lại sau lỗi hoặc xung đột với cùng active key. Sau khi đóng mọi writer cũ, lượt cuối phải có `checked: 0`. Giữ khóa cũ cho bản sao lưu cần khôi phục.
+
 ## Freeze nội bộ cho resale S-404
 
 `POST /v1/internal/tickets/:ticketId/freeze` và `/unfreeze` nhận `{listing_id,seller_id}`, header UUID `Idempotency-Key` bằng listing_id và `X-Internal-Key`. Env INTERNAL_API_KEY có tối thiểu 16 ký tự, thiếu key chặn endpoint. Giao diện service-to-service trả snapshot giá gốc/event/organizer, trạng thái binding và vé. Xác thực key constant-time theo ADR-0010.

@@ -5,7 +5,7 @@ import { TicketSecrets } from "../tickets/ticket-secrets";
 
 @Injectable()
 export class OfflineKeys extends TicketSecrets {
-  constructor(@Inject(ENV) env: Env) {
+  constructor(@Inject(ENV) env: Pick<Env, "TICKET_ENCRYPTION_KEYS" | "TICKET_ACTIVE_KEY_ID">) {
     super(
       env.TICKET_ENCRYPTION_KEYS ?? {},
       env.TICKET_ACTIVE_KEY_ID ?? "",

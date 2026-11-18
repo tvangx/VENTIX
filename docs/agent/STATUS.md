@@ -44,7 +44,9 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 
 ## Task của Sơn/Vũ ảnh hưởng đến việc của Tuấn (theo dõi, không do agent làm)
 
-S-503 In review, đưa cổng tra cứu vé từ PR #87 vào nhánh tích hợp hiện hành. Xem [run report](runs/S-503.md).
+S-503 In review tại [#92](https://github.com/tvangx/VENTIX/pull/92), đồng bộ main sau khi #91/#93 được tích hợp và xử lý xung đột tài liệu. Xem [run report](runs/S-503.md).
+
+S-504 In review cho xoay khóa Identity/Ticket. Địa chỉ giao hàng chờ module lưu trữ Merch. Xem [run report](runs/S-504.md).
 
 S-602 In review, khôi phục build Ticket sau lần tích hợp S-401/S-502. Xem [run report](runs/S-602.md).
 

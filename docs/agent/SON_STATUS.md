@@ -1,8 +1,12 @@
 # Trạng thái task — Sơn
 
-## Cập nhật S-503 — 2026-11-17
+## Cập nhật S-503 — 2026-11-18
 
-- S-503 In review trên nhánh tích hợp mới. PR #87 đã merge vào nhánh S-502 sau khi #86 vào main. Xem [run report](runs/S-503.md).
+- S-503 In review tại [#92](https://github.com/tvangx/VENTIX/pull/92), đã đồng bộ với main sau khi #91/#93 được tích hợp. Giữ cả cập nhật S-503 và S-504 khi xử lý xung đột tài liệu. Xem [run report](runs/S-503.md).
+
+## Cập nhật S-504 — 2026-11-17
+
+- S-504 In review cho dữ liệu đã có trong Identity và Ticket. Địa chỉ giao hàng chờ phần lưu trữ Merch. Xem [run report](runs/S-504.md).
 
 ## Cập nhật S-602 — 2026-11-17
 
