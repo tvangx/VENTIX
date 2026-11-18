@@ -150,10 +150,27 @@ metric `outbox_relay_*` xuất qua `/metrics`.
 
 ## S-204 — Catalog sự kiện công khai
 
-`GET /v1/events` hỗ trợ `q` (tìm không phân biệt hoa/thường trong tiêu đề),
-`limit` (1–100, mặc định 20) và `cursor` UUID. `GET /v1/events/{id}` trả chi tiết,
-địa điểm, hạng vé, đợt mở bán và seat map đã publish mới nhất. Hai API không cần
-JWT, chỉ trả sự kiện `PUBLISHED`; qua Kong dùng tiền tố `/api/event`.
+`GET /v1/events` và `GET /v1/events/{id}` là API public cho sự kiện
+`PUBLISHED`. Qua Kong dùng tiền tố `/api/event`. API chi tiết trả địa điểm,
+hạng vé, đợt mở bán và seat map đã publish mới nhất.
+
+| Query list                       | Hành vi                                                                                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `q`                              | Tìm chuỗi trong tiêu đề, tên hoặc địa chỉ địa điểm. Không phân biệt hoa/thường.                                                                  |
+| `start_from`, `start_before`     | Lọc `start_at` trong khoảng nửa mở. Truyền ISO 8601 có múi giờ, ví dụ `2026-12-19T00:00:00+07:00`.                                               |
+| `min_price_vnd`, `max_price_vnd` | Lọc khoảng giá **từ** của sự kiện, bao gồm hai mốc. Event chưa có hạng vé không khớp khoảng giá.                                                 |
+| `sale_status`                    | `ON_SALE` khi có đợt đang mở, `UPCOMING` khi chưa mở hiện tại nhưng có đợt tương lai, `CLOSED` trong các trường hợp còn lại.                     |
+| `sort`                           | `id` mặc định, `start_at` theo ngày tăng dần, hoặc `price_asc` theo giá từ tăng dần. Cùng giá/ngày dùng ID để phân thứ tự. Chưa có giá xếp cuối. |
+| `limit`, `cursor`                | Mặc định 20, tối đa 100. Gửi nguyên `next_cursor` và giữ filter/sort tới trang kế. Bỏ cursor khi đổi filter/sort.                                |
+
+Card trả thêm `venue_name`, `venue_address`, `min_ticket_price_vnd`,
+`next_sale_starts_at`, `sale_status` và `sale_queue_enabled`. Giá là giá
+niêm yết thấp nhất của các hạng vé. Giá và mốc kế tiếp có thể là `null`.
+Hàng chờ lấy theo đợt hiện tại, hoặc đợt kế tiếp nếu chưa mở. Trạng thái dựa
+trên lịch mở bán và chưa bao gồm tồn vé thực tế hoặc trạng thái sàn resale.
+Thứ tự mặc định dùng cursor UUID hiện có. Hai kiểu sắp xếp mới cấp cursor
+chứa mốc đã trả để phân trang tiếp khi sự kiện mốc bị hủy. Client chuyển
+nguyên chuỗi qua query đã được mã hóa URL.
 
 Cả hai API trả `ETag` và hỗ trợ `If-None-Match`/304. Client cần kiểm tra lại với
 server (`Cache-Control: public, no-cache`). Dữ liệu được cache Redis 30–45 giây
@@ -162,6 +179,8 @@ service xác minh `PUBLISHED` trong event_db để cache cũ không lộ sự ki
 Redis lỗi thì đọc PostgreSQL. `REDIS_URL` mặc định `redis://localhost:6379`;
 local compose dùng `redis://localhost:16379`. Metric
 `event_catalog_cache_requests_total{result="hit|miss"}` cho biết hiệu quả cache.
+List tính trạng thái mở bán từ lịch đã cache ở thời điểm trả kết quả. Request
+có `sale_status` đi thẳng PostgreSQL để lọc trước khi phân trang.
 
 ## Dữ liệu mẫu (S-205)
 

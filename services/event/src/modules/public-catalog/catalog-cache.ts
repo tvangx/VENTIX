@@ -4,14 +4,27 @@ import { setTimeout } from "node:timers/promises";
 import Redis from "ioredis";
 import { ENV } from "../../app.tokens";
 import type { Env } from "../../config/env.schema";
+import type { CatalogQuery } from "./public-catalog.dto";
 
 export type CacheResult<T> = { value: T; hit: boolean };
 
-export function catalogListKey(query: { q?: string; cursor?: string; limit: number }): string {
+export function catalogListKey(query: CatalogQuery): string {
   const digest = createHash("sha256")
-    .update(JSON.stringify([query.q?.toLocaleLowerCase() ?? "", query.cursor ?? "", query.limit]))
+    .update(
+      JSON.stringify([
+        query.q?.toLocaleLowerCase() ?? "",
+        query.cursor ?? "",
+        query.limit,
+        query.sort ?? "id",
+        query.start_from,
+        query.start_before,
+        query.min_price_vnd,
+        query.max_price_vnd,
+        query.sale_status,
+      ]),
+    )
     .digest("hex");
-  return `catalog:{evt:catalog}:list:${digest}`;
+  return `catalog:{evt:catalog}:list:v2:${digest}`;
 }
 
 export function catalogDetailKey(id: string): string {
