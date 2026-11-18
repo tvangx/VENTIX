@@ -21,6 +21,15 @@ Freeze chỉ áp dụng vé ACTIVE của seller, chặn event đã hủy. Cùng 
 
 S-301 phát hành vé từ `OrderConfirmed` theo ADR-0009, dùng `ticket_db` riêng.
 
+## Tra cứu công khai — S-503
+
+- Mở `http://localhost:3005/v1/verify`, nhập UUID vé; trang HTML không cần đăng nhập hoặc JavaScript.
+- API `GET /v1/public/tickets/:ticketId` trả ticket_id/status/active và nft status/provider/token_id/tx_hash. Không trả owner/order/secret/giá/PII. ACTIVE không chứng minh quyền sở hữu và không thay TOTP/check-in.
+- Query đọc trạng thái hiện tại, `Cache-Control: no-store`. UUID sai trả 400, không tìm thấy trả 404, quá giới hạn trả 429 + Retry-After; API lỗi theo problem+json. Cả trang và API dùng noindex/no-referrer.
+- MOCK luôn có tx_hash NULL và giao diện ghi rõ mô phỏng. NFT FAILED không làm vé ACTIVE vô hiệu. Phụ thuộc schema nft_mints từ S-502; không có on-chain tx thật trong bản mock.
+- Rate limit mặc định 60 request/socket peer và 1000 request/process trong 60 giây, map tối đa 10.000 peer. Các biến VERIFY_RATE_* nằm trong env schema/example. Không tin X-Forwarded-For từ client. Khi qua proxy, peer là proxy nên dùng chung giới hạn; nhiều replica có bộ đếm riêng. Cần nhóm hạ tầng cấu hình hạn mức gateway khi public qua Kong, đây không phải distributed per-user limiter.
+- HTTP test dùng DB thật cho từng status và không rò dữ liệu; concurrency 50 request kiểm tra 429 và header giả. UI nằm trong Ticket, không sửa apps/web/staff-pwa hoặc route Kong.
+
 ## Chạy local
 
 ```bash

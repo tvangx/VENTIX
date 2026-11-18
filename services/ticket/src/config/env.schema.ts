@@ -46,6 +46,9 @@ export const envSchema = z
     NFT_LEASE_MS: z.coerce.number().int().min(100).max(300000).default(30000),
     NFT_RETRY_BASE_MS: z.coerce.number().int().min(10).max(60000).default(1000),
     NFT_RETRY_MAX_MS: z.coerce.number().int().min(10).max(3600000).default(60000),
+    VERIFY_RATE_PER_PEER: z.coerce.number().int().min(1).max(10000).default(60),
+    VERIFY_RATE_TOTAL: z.coerce.number().int().min(1).max(100000).default(1000),
+    VERIFY_RATE_WINDOW_MS: z.coerce.number().int().min(1000).max(3600000).default(60000),
     KAFKA_BROKERS: z
       .string()
       .regex(/^[^,\s]+(?::\d+)?(\s*,\s*[^,\s]+(?::\d+)?)*$/)

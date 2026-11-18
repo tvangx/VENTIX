@@ -33,6 +33,15 @@ describe("envSchema", () => {
     ])
       expect(() => envSchema.parse({ ...base, ...invalid })).toThrow();
   });
+  it("bounds public verification rate configuration", () => {
+    expect(envSchema.parse(base).VERIFY_RATE_PER_PEER).toBe(60);
+    for (const invalid of [
+      { VERIFY_RATE_PER_PEER: 0 },
+      { VERIFY_RATE_TOTAL: 100001 },
+      { VERIFY_RATE_WINDOW_MS: 0 },
+    ])
+      expect(() => envSchema.parse({ ...base, ...invalid })).toThrow();
+  });
   it("requires an active 256-bit key before enabling ticket issuance", () => {
     expect(() => envSchema.parse({ ...base, TICKET_WORKERS_ENABLED: "true" })).toThrow();
     const keys = JSON.stringify({ local: randomBytes(32).toString("base64") });
