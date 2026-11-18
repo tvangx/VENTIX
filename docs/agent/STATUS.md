@@ -44,6 +44,10 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 
 ## Task của Sơn/Vũ ảnh hưởng đến việc của Tuấn (theo dõi, không do agent làm)
 
+S-504 In review cho xoay khóa Identity/Ticket. Địa chỉ giao hàng chờ module lưu trữ Merch. Xem [run report](runs/S-504.md).
+
+S-602 In review, khôi phục build Ticket sau lần tích hợp S-401/S-502. Xem [run report](runs/S-602.md).
+
 S-603 In review tài liệu domain, xem [run report](runs/S-603.md). Lô Sơn #85/#86/#87/#88 có CI xanh tại lần đối chiếu 2026-11-13, chờ review. S-405/S-501 chờ #82, S-601 chờ xác nhận G3.
 
 | ID    | Người | Tên                                                       | Tuấn cần khi                             |

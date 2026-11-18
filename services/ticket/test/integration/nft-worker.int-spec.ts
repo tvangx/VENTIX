@@ -23,6 +23,8 @@ describe("S-502 Kafka issuance to mock mint", () => {
       await admin.createTopics({
         topics: [
           Topics.BOOKING_ORDERS,
+          Topics.PAYMENT_EVENTS,
+          Topics.EVENT_LIFECYCLE,
           Topics.TICKET_EVENTS,
           `${Topics.TICKET_EVENTS}.dlq`,
           `${Topics.BOOKING_ORDERS}.dlq`,
