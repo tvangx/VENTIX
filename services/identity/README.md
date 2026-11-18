@@ -2,6 +2,19 @@
 
 Tạo từ `services/_template` (xem `docs/dev/new-service.md`).
 
+## Xoay khóa mã hóa KYC (S-504)
+
+Thêm khóa mới vào `KYC_ENCRYPTION_KEYS` của mọi instance, sau đó đặt `KYC_ACTIVE_KEY_ID` thành ID mới. Giữ `KYC_HMAC_PEPPER` và khóa cũ. Mỗi ID phải luôn trỏ tới cùng một khóa.
+
+```bash
+pnpm --filter @ticketing/identity build
+pnpm --filter @ticketing/identity keys:rotate
+pnpm --filter @ticketing/identity keys:rotate --apply
+pnpm --filter @ticketing/identity keys:rotate
+```
+
+Lệnh mặc định đọc và thử giải mã hồ sơ dùng khóa khác active key. `--apply` chỉ cập nhật ciphertext của hai trường cùng với `key_id` và version trong một lần ghi. Chạy lại được nếu bị gián đoạn. Khi có xung đột, kiểm tra lại và chạy tiếp với cùng active key. Sau khi đóng mọi writer cũ, lượt cuối phải có `checked: 0`. Giữ khóa cũ cho OTP mang ciphertext còn hiệu lực và bản sao lưu còn trong thời hạn lưu giữ.
+
 ## Chạy local
 
 ```bash
