@@ -195,6 +195,8 @@ describe("RolesGuard / tenant", () => {
 describe("JwtVerifier (JWKS)", () => {
   let server: Server;
   let url: string;
+  let originalKey: Awaited<ReturnType<typeof makeKey>>;
+  let rotatedKey: Awaited<ReturnType<typeof makeKey>>;
   let hits = 0;
   let keys: unknown[] = [];
 
@@ -206,6 +208,7 @@ describe("JwtVerifier (JWKS)", () => {
     });
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
     url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/jwks`;
+    [originalKey, rotatedKey] = await Promise.all([makeKey("a"), makeKey("b")]);
   });
   afterAll(() => new Promise<void>((r) => server.close(() => r())));
 
@@ -214,33 +217,35 @@ describe("JwtVerifier (JWKS)", () => {
   }
 
   it("refreshes on unknown kid when cooldown has passed", async () => {
-    const a = await makeKey("a");
-    const b = await makeKey("b");
-    keys = [await jwk(a)];
+    keys = [await jwk(originalKey)];
     hits = 0;
     const v = new JwtVerifier({ issuer: ISS, audience: AUD, jwksUri: url, jwksCooldownMs: 0 });
-    await expect(v.verify(await sign(a.privateKey, {}, { kid: "a" }))).resolves.toMatchObject({
+    await expect(
+      v.verify(await sign(originalKey.privateKey, {}, { kid: "a" })),
+    ).resolves.toMatchObject({
       userId: "user-1",
     });
-    await v.verify(await sign(a.privateKey, {}, { kid: "a" }));
+    await v.verify(await sign(originalKey.privateKey, {}, { kid: "a" }));
     expect(hits).toBe(1); // cache hit
 
-    keys = [await jwk(a), await jwk(b)]; // xoay khóa
-    await expect(v.verify(await sign(b.privateKey, {}, { kid: "b" }))).resolves.toMatchObject({
+    keys = [await jwk(originalKey), await jwk(rotatedKey)]; // xoay khóa
+    await expect(
+      v.verify(await sign(rotatedKey.privateKey, {}, { kid: "b" })),
+    ).resolves.toMatchObject({
       userId: "user-1",
     });
     expect(hits).toBe(2);
   });
 
   it("does NOT refetch within cooldown for unknown kid (401)", async () => {
-    const a = await makeKey("a");
-    const b = await makeKey("b");
-    keys = [await jwk(a)];
+    keys = [await jwk(originalKey)];
     hits = 0;
     const v = new JwtVerifier({ issuer: ISS, audience: AUD, jwksUri: url, jwksCooldownMs: 60_000 });
-    await v.verify(await sign(a.privateKey, {}, { kid: "a" }));
-    keys = [await jwk(a), await jwk(b)];
-    await expect(v.verify(await sign(b.privateKey, {}, { kid: "b" }))).rejects.toMatchObject({
+    await v.verify(await sign(originalKey.privateKey, {}, { kid: "a" }));
+    keys = [await jwk(originalKey), await jwk(rotatedKey)];
+    await expect(
+      v.verify(await sign(rotatedKey.privateKey, {}, { kid: "b" })),
+    ).rejects.toMatchObject({
       status: 401,
     });
     expect(hits).toBe(1);
