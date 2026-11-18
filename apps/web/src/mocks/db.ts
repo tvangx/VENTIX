@@ -95,6 +95,8 @@ export const mockConfig = {
   queueSteps: 3,
   /** Nơi lưu phiên + tài khoản qua lần tải lại trang; null trong test. */
   storage: null as Storage | null,
+  /** Đồng hồ của mock (tình trạng mở bán phụ thuộc thời điểm). Test thay bằng mốc cố định. */
+  now: (): number => Date.now(),
 };
 
 const STORAGE_KEY = "ventix.mock.v1";

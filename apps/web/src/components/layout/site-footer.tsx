@@ -3,8 +3,8 @@ import { Wordmark } from "@/components/brand/logo";
 import { StageBeams } from "@/components/brand/stage-beams";
 import { MAIN_NAV } from "./nav";
 
-// Footer đổi theo theme (V-105 "Theme sáng/tối"): logo cỡ lớn là mực trên giấy hoặc giấy trên đêm,
-// chùm đèn vàng chiếu vào logo.
+// Footer đổi theo theme (V-105 "Theme sáng/tối"): logo cỡ lớn màu than trên nền sáng hoặc sáng trên than,
+// chùm đèn xanh lá nhạt chiếu vào logo.
 export function SiteFooter() {
   const year = new Date().getUTCFullYear();
   return (

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-/** Chữ "ventix." của V-105; dấu chấm đỏ cam. */
+/** Chữ "ventix." của V-105; dấu chấm xanh lá. */
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("font-extrabold tracking-[-0.05em]", className)}>

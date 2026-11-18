@@ -5,8 +5,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
 
-// Chỉ service đã có OpenAPI thật; event/merch/ticket/resale thêm khi chủ service bàn giao OpenAPI.
-const SERVICES = ["identity", "booking", "payment", "finance"];
+// Chỉ service đã có OpenAPI thật; merch/ticket/resale thêm khi chủ service bàn giao OpenAPI.
+const SERVICES = ["identity", "event", "booking", "payment", "finance"];
 
 const repoRoot = new URL("../../../", import.meta.url);
 const outDir = new URL("../src/lib/api/generated/", import.meta.url);

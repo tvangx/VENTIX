@@ -50,7 +50,7 @@ export function GoogleButton({ label, next }: { label: string; next: string }) {
         size="lg"
         onClick={onClick}
         disabled={pending}
-        className="border-2 border-[#0c0d1a] bg-white text-[#0c0d1a] hover:bg-white/85 dark:border-[#f2ede3]/40"
+        className="border-2 border-[#1c1c20] bg-white text-[#1c1c20] hover:bg-white/85 dark:border-[#f4f4f5]/40"
       >
         <GoogleMark />
         {pending ? "Đang chuyển tới Google…" : label}

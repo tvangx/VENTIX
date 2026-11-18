@@ -1,77 +1,91 @@
 @import "tailwindcss";
 
 /*
- * Token theo quy chuẩn wireframe V-105 (trang "Theme sáng/tối"): "giấy" #F2EDE3 là nền sáng,
- * "đêm" #0C0D1A là nền tối.
- * "stage" là nền của header, trang đăng nhập và khối mở màn: giấy ở theme sáng, đêm ở theme tối.
+ * Token theo quy chuẩn wireframe V-105 bản 79 ("Chỉ xanh lá + xám"): chỉ hai họ màu, xám
+ * (than #1C1C20 → trắng) và xanh lá (#2DC275 chính, #11804A đậm, #A7E8C5 nhạt). Không thêm sắc mới;
+ * ngoại lệ duy nhất là logo Google ở nút đăng nhập.
+ * "stage" là nền của header, trang đăng nhập và khối mở màn: xám sáng ở theme sáng, than ở theme tối.
+ * Lỗi không có màu riêng: chữ đậm màu chữ chính, ô nhập gạch chân nét đứt (V-105 bản 79).
  * Tên token giữ theo shadcn/ui để component có sẵn dùng tiếp được.
  */
 @custom-variant dark (&:is(.dark *));
 
 :root {
   --radius: 0.875rem;
-  --background: #f2ede3;
-  --foreground: #0c0d1a;
+  --background: #f4f4f5;
+  --foreground: #1c1c20;
   --card: #ffffff;
-  --card-foreground: #0c0d1a;
-  --field: #f2ede3;
-  --primary: #ff3b1f;
-  --primary-foreground: #0c0d1a;
-  --secondary: #0c0d1a;
-  --secondary-foreground: #f2ede3;
-  --muted: #d9d3c6;
-  --muted-foreground: #4b4c5c;
-  --accent: #e4ddcf;
-  --accent-foreground: #0c0d1a;
-  --destructive: #c42a12;
-  --border: #0c0d1a;
-  --input: #0c0d1a;
-  --ring: #2f45ff;
-  --link: #2f45ff;
-  --emphasis: #2f45ff;
-  --stage: #f2ede3;
-  --stage-foreground: #0c0d1a;
-  --stage-emphasis: #2f45ff;
-  --stage-muted: #d9d3c6;
-  /* Viền dưới header / quanh thẻ: mực đậm 2px trên nền giấy. */
-  --stage-rule: #0c0d1a;
-  --beam-yellow: 0.45;
-  --beam-blue: 0.12;
+  --card-foreground: #1c1c20;
+  --field: #f4f4f5;
+  --primary: #2dc275;
+  --primary-foreground: #1c1c20;
+  --secondary: #1c1c20;
+  --secondary-foreground: #f4f4f5;
+  --muted: #d4d4d8;
+  --muted-foreground: #52525b;
+  --accent: #e9f9f0;
+  --accent-foreground: #1c1c20;
+  --destructive: #1c1c20;
+  --border: #1c1c20;
+  --input: #1c1c20;
+  --ring: #11804a;
+  --link: #11804a;
+  --emphasis: #11804a;
+  --stage: #f4f4f5;
+  --stage-foreground: #1c1c20;
+  --stage-emphasis: #11804a;
+  --stage-muted: #d4d4d8;
+  /* Viền dưới header / quanh thẻ: than đậm 2px trên nền sáng. */
+  --stage-rule: #1c1c20;
+  /* Độ trong của chùm đèn (xanh lá nhạt, xanh lá đậm). */
+  --beam-pale: 0.5;
+  --beam-deep: 0.12;
+  /*
+   * Màu hạng vé theo thứ tự giá giảm dần (SVIP, VIP, Standard, Economy), giữ nguyên ở cả hai theme.
+   * Mỗi màu đi kèm màu chữ đạt tương phản 4.5:1.
+   */
+  --tier-1: #a7e8c5;
+  --tier-1-foreground: #1c1c20;
+  --tier-2: #11804a;
+  --tier-2-foreground: #ffffff;
+  --tier-3: #2dc275;
+  --tier-3-foreground: #1c1c20;
+  --tier-4: #a1a1aa;
+  --tier-4-foreground: #1c1c20;
   color-scheme: light;
 }
 
 .dark {
-  --background: #0c0d1a;
-  --foreground: #f2ede3;
-  --card: #1b1d30;
-  --card-foreground: #f2ede3;
-  --field: #0c0d1a;
-  --primary: #ff3b1f;
-  --primary-foreground: #0c0d1a;
-  --secondary: #f2ede3;
-  --secondary-foreground: #0c0d1a;
-  --muted: #2a2c44;
-  --muted-foreground: #c4bfb4;
-  --accent: #2a2c44;
-  --accent-foreground: #f2ede3;
-  /* Đỏ #C42A12 không đủ tương phản trên nền đêm; dùng sắc sáng hơn cùng họ. */
-  --destructive: #ff7a62;
-  --border: #f2ede3;
-  --input: #f2ede3;
-  --ring: #b9c0ff;
-  --link: #b9c0ff;
-  --emphasis: #ffd23f;
+  --background: #1c1c20;
+  --foreground: #f4f4f5;
+  --card: #27272a;
+  --card-foreground: #f4f4f5;
+  --field: #1c1c20;
+  --primary: #2dc275;
+  --primary-foreground: #1c1c20;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #1c1c20;
+  --muted: #3f3f46;
+  --muted-foreground: #a1a1aa;
+  --accent: #3f3f46;
+  --accent-foreground: #f4f4f5;
+  --destructive: #f4f4f5;
+  --border: #f4f4f5;
+  --input: #f4f4f5;
+  --ring: #2dc275;
+  --link: #2dc275;
+  --emphasis: #2dc275;
   color-scheme: dark;
 }
 
 .dark {
-  --stage: #0c0d1a;
-  --stage-foreground: #f2ede3;
-  --stage-emphasis: #ffd23f;
-  --stage-muted: #2a2c44;
-  --stage-rule: rgb(242 237 227 / 0.15);
-  --beam-yellow: 0.1;
-  --beam-blue: 0.16;
+  --stage: #1c1c20;
+  --stage-foreground: #f4f4f5;
+  --stage-emphasis: #2dc275;
+  --stage-muted: #3f3f46;
+  --stage-rule: rgb(244 244 245 / 0.15);
+  --beam-pale: 0.1;
+  --beam-deep: 0.22;
 }
 
 @theme inline {
@@ -104,6 +118,14 @@
   --color-stage-emphasis: var(--stage-emphasis);
   --color-stage-muted: var(--stage-muted);
   --color-stage-rule: var(--stage-rule);
+  --color-tier-1: var(--tier-1);
+  --color-tier-1-foreground: var(--tier-1-foreground);
+  --color-tier-2: var(--tier-2);
+  --color-tier-2-foreground: var(--tier-2-foreground);
+  --color-tier-3: var(--tier-3);
+  --color-tier-3-foreground: var(--tier-3-foreground);
+  --color-tier-4: var(--tier-4);
+  --color-tier-4-foreground: var(--tier-4-foreground);
 }
 
 @layer base {

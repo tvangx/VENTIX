@@ -9,7 +9,7 @@ pnpm --filter @ticketing/web dev:mock   # bật mock (đọc .env.mock: VITE_API
 pnpm --filter @ticketing/web dev        # backend thật qua Kong (localhost:8000)
 ```
 
-Mock chỉ bật khi `import.meta.env.DEV` **và** `VITE_API_MOCKING=true`, nên bản build production không chứa MSW. Request tới service chưa mock (event, merch, ticket, resale...) đi thẳng tới Kong như bình thường (`onUnhandledRequest: "bypass"`).
+Mock chỉ bật khi `import.meta.env.DEV` **và** `VITE_API_MOCKING=true`, nên bản build production không chứa MSW. Request tới service chưa mock (merch, ticket, resale...) đi thẳng tới Kong như bình thường (`onUnhandledRequest: "bypass"`).
 
 ## Tài khoản demo
 
@@ -27,14 +27,15 @@ Phiên đăng nhập và tài khoản đăng ký mới được lưu trong `loca
 
 ## Phạm vi
 
-| Service  | Nguồn hợp đồng                   | Ghi chú mock                                                                                 |
-| -------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
-| identity | `services/identity/openapi.json` | Email/refresh/logout, Google giả, tenant token, hồ sơ organizer + upload + Admin duyệt       |
-| booking  | `services/booking/openapi.json`  | Giữ ghế all-or-nothing, giới hạn/người, checkout idempotent, hàng chờ + SSE, seat-stream SSE |
-| payment  | `services/payment/openapi.json`  | `MOCK` thành công ngay; `VNPAY` redirect về `/payment/vnpay-return`, gọi return → đơn PAID   |
-| finance  | `services/finance/openapi.json`  | Thống kê organizer (VAT 10% theo ADR-0012), audit, DLQ replay/discard                        |
+| Service  | Nguồn hợp đồng                   | Ghi chú mock                                                                                                                                                                                                         |
+| -------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| event    | `services/event/openapi.json`    | Catalog công khai (V-201): `GET /v1/events` (tìm, lọc ngày/giá/tình trạng, sắp xếp, cursor như backend), `GET /v1/events/{id}`; chỉ sự kiện `PUBLISHED` của seed; `mockConfig.now` là đồng hồ tính tình trạng mở bán |
+| identity | `services/identity/openapi.json` | Email/refresh/logout, Google giả, tenant token, hồ sơ organizer + upload + Admin duyệt                                                                                                                               |
+| booking  | `services/booking/openapi.json`  | Giữ ghế all-or-nothing, giới hạn/người, checkout idempotent, hàng chờ + SSE, seat-stream SSE                                                                                                                         |
+| payment  | `services/payment/openapi.json`  | `MOCK` thành công ngay; `VNPAY` redirect về `/payment/vnpay-return`, gọi return → đơn PAID                                                                                                                           |
+| finance  | `services/finance/openapi.json`  | Thống kê organizer (VAT 10% theo ADR-0012), audit, DLQ replay/discard                                                                                                                                                |
 
-Chưa mock: event, merch, ticket, resale, notification (chưa có OpenAPI). Khi chủ service bàn giao OpenAPI: thêm tên vào `SERVICES` trong `scripts/gen-api.mjs`, chạy `gen:api`, thêm client vào `src/lib/api/index.ts` và handler vào `handlers/`.
+Chưa mock: merch, ticket, resale, notification (chưa có OpenAPI). Khi chủ service bàn giao OpenAPI: thêm tên vào `SERVICES` trong `scripts/gen-api.mjs`, chạy `gen:api`, thêm client vào `src/lib/api/index.ts` và handler vào `handlers/`.
 
 Ghế: event-service chưa có seat map, nên `db.ts` sinh ghế tất định theo `capacity` các hạng vé SEATED (`seatsOf(eventId)`), khoảng 1/9 số ghế đã bán sẵn. Sự kiện có hàng chờ (`song-am-live-2026`) đòi `X-Admission-Token` lấy từ SSE `/v1/queue/status`.
 
