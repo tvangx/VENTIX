@@ -71,19 +71,22 @@ export function tierTones(classes: TicketClass[]): Map<string, TierTone> {
   return new Map(byPrice.map((tc, i) => [tc.id, Math.min(i + 1, 4) as TierTone]));
 }
 
-/** Nút hành động chính ở trang chi tiết. */
+/** Nút hành động chính ở trang chi tiết; `to` là trang đích khi nút bấm được. */
 export function primaryAction(
   detail: CatalogDetail,
   sale: SaleState,
   now: number,
-): { label: string; enabled: boolean } {
-  if (Date.parse(detail.end_at) <= now) return { label: "Đã diễn ra", enabled: false };
-  if (sale.status === "CLOSED") return { label: "Đã đóng bán", enabled: false };
+): { label: string; enabled: boolean; to: "seats" | "buy" | null } {
+  if (Date.parse(detail.end_at) <= now) return { label: "Đã diễn ra", enabled: false, to: null };
+  if (sale.status === "CLOSED") return { label: "Đã đóng bán", enabled: false, to: null };
   if (sale.status === "UPCOMING") {
     const start = sale.phase ? ` ${formatDayMonth(sale.phase.starts_at)}` : "";
-    return { label: `Mở bán${start}`, enabled: false };
+    return { label: `Mở bán${start}`, enabled: false, to: null };
   }
-  if (sale.phase?.queue_enabled) return { label: "Vào phòng chờ", enabled: true };
+  // Phòng chờ (T-304) và mua vé đứng chưa có trang; chọn ghế là V-202.
+  if (sale.phase?.queue_enabled) return { label: "Vào phòng chờ", enabled: true, to: "buy" };
   const seated = detail.ticket_classes.some((tc) => tc.kind === "SEATED");
-  return { label: seated ? "Chọn ghế" : "Mua vé", enabled: true };
+  return seated && detail.seat_map
+    ? { label: "Chọn ghế", enabled: true, to: "seats" }
+    : { label: "Mua vé", enabled: true, to: "buy" };
 }

@@ -179,7 +179,7 @@ function EventDetailView({ event }: { event: CatalogDetail }) {
         </span>
         {action.enabled ? (
           <Button asChild size="lg">
-            <Link to={`/events/${event.id}/buy`}>{action.label}</Link>
+            <Link to={`/events/${event.id}/${action.to ?? "buy"}`}>{action.label}</Link>
           </Button>
         ) : (
           <Button type="button" size="lg" disabled>
@@ -287,7 +287,7 @@ function TicketClassesSection({ event }: { event: CatalogDetail }) {
   const classes = [...event.ticket_classes].sort(
     (a, b) => b.price_vnd - a.price_vnd || a.id.localeCompare(b.id),
   );
-  const seated = classes.some((tc) => tc.kind === "SEATED");
+  const seated = classes.some((tc) => tc.kind === "SEATED") && event.seat_map !== null;
   return (
     <section className="bg-card text-card-foreground">
       <div className="mx-auto flex max-w-[1312px] flex-col gap-8 px-4 py-14 md:px-8 md:py-20 xl:px-16">
@@ -320,6 +320,14 @@ function TicketClassesSection({ event }: { event: CatalogDetail }) {
             </li>
           ))}
         </ul>
+        {event.seat_map ? (
+          <Link
+            to={`/events/${event.id}/seats`}
+            className="self-start rounded-full border-2 border-current px-5 py-2.5 font-bold no-underline outline-none focus-visible:ring-4 focus-visible:ring-ring"
+          >
+            Xem sơ đồ ghế
+          </Link>
+        ) : null}
       </div>
     </section>
   );
