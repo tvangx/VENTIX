@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { SERVICE_PREFIX, toProblem, type EventPaths } from "@/lib/api";
 import { createServiceClient } from "@/lib/api/typed-client";
 import type { CatalogQuery } from "@/lib/catalog/filters";
+import { SeatMapLayoutSchema, type SeatMapLayout } from "@/lib/seatmap/layout";
 import { mockConfig, resetMockState } from "./db";
 import { mockServer } from "./node";
 
@@ -141,7 +142,15 @@ describe("GET /v1/events/{id} (mock)", () => {
       "Economy",
     ]);
     expect(detail.sale_phases.map((p) => p.per_user_limit)).toEqual([2, 4]);
-    expect(detail.seat_map).toBeNull();
+    // Seed chưa có seat map; mock sinh từ capacity các hạng SEATED (10.000 ghế).
+    const zones = (detail.seat_map?.layout as SeatMapLayout).zones;
+    expect(zones.map((zone) => zone.name)).toEqual(["Block A", "Block B", "Block C", "Block D"]);
+    const seats = zones.flatMap((z) => z.blocks.flatMap((b) => b.rows.map((r) => r.seats)));
+    expect(seats.reduce((sum, n) => sum + n, 0)).toBe(10_000);
+    expect(SeatMapLayoutSchema.safeParse(detail.seat_map?.layout).success).toBe(true);
+    // Vé đứng thì không có seat map.
+    const ga = await api.get("/v1/events/{id}", { path: { id: GIO_MUA } });
+    expect(ga.seat_map).toBeNull();
   });
 
   it("sự kiện chưa công khai → 404; id sai dạng → 400", async () => {

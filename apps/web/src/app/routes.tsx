@@ -19,7 +19,14 @@ export const routes: RouteObject[] = [
       { index: true, element: <HomePage /> },
       { path: "explore", element: <ExplorePage /> },
       { path: "events/:id", element: <EventDetailPage /> },
-      // Chọn ghế, phòng chờ, thanh toán làm ở V-202/V-301/T-304; tạm là trang "Sắp có".
+      // Trang ghế tải lười để Konva không vào bundle chính.
+      {
+        path: "events/:id/seats",
+        lazy: async () => ({
+          Component: (await import("@/pages/seats/seat-selection-page")).SeatSelectionPage,
+        }),
+      },
+      // Phòng chờ, mua vé đứng, thanh toán làm ở V-301/T-304; tạm là trang "Sắp có".
       { path: "events/:id/buy", element: <ComingSoonPage title="Mua vé" /> },
       { path: "resale", element: <ComingSoonPage title="Sàn bán lại" /> },
       {
