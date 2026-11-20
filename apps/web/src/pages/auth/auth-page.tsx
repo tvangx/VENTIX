@@ -105,11 +105,11 @@ export function AuthPage({ mode }: { mode: Mode }) {
           >
             <svg viewBox="0 0 100 100" className="absolute inset-0 size-full">
               <polygon
-                fill="#ff3b1f"
+                fill="#a7e8c5"
                 points="50,0 59,21 80,8 75,32 99,33 81,49 99,66 75,67 80,92 59,79 50,100 41,79 20,92 25,67 1,66 19,49 1,33 25,32 20,8 41,21"
               />
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-center text-[15px] leading-[1.05] font-extrabold text-[#0c0d1a]">
+            <span className="absolute inset-0 flex items-center justify-center text-center text-[15px] leading-[1.05] font-extrabold text-[#1c1c20]">
               Vé vào
               <br />
               cửa

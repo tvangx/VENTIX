@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Chùm đèn sân khấu: đa giác màu phẳng, không gradient (V-105).
- * Độ trong lấy từ token theo theme: trên nền giấy chùm vàng đậm hơn để còn nhìn thấy.
+ * Độ trong lấy từ token theo theme: trên nền sáng chùm xanh nhạt đậm hơn để còn nhìn thấy.
  */
 export function StageBeams({ className }: { className?: string }) {
   return (
@@ -14,13 +14,13 @@ export function StageBeams({ className }: { className?: string }) {
     >
       <polygon
         points="980,0 1020,0 1300,960 700,960"
-        fill="#ffd23f"
-        style={{ opacity: "var(--beam-yellow)" }}
+        fill="#a7e8c5"
+        style={{ opacity: "var(--beam-pale)" }}
       />
       <polygon
         points="240,0 266,0 520,960 20,960"
-        fill="#2f45ff"
-        style={{ opacity: "var(--beam-blue)" }}
+        fill="#11804a"
+        style={{ opacity: "var(--beam-deep)" }}
       />
     </svg>
   );
