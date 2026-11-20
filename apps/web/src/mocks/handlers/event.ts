@@ -1,6 +1,7 @@
 import { HttpResponse } from "msw";
 import { SERVICE_PREFIX, type EventPaths, type EventSchemas } from "@/lib/api";
 import { mockConfig } from "../db";
+import { mockSeatMapLayout } from "../seat-map";
 import { seedEvents, seedVenues, type SeedEvent } from "../seed";
 import { mockService, problem, UUID_RE } from "./typed";
 
@@ -98,8 +99,22 @@ function detailOf(event: SeedEvent): CatalogDetail {
         per_user_limit: phase.per_user_limit,
         require_kyc: phase.require_kyc,
       })),
-    // Seed V-104 chưa có sơ đồ ghế (do S-205 sinh).
-    seat_map: null,
+    seat_map: seatMapOf(event),
+  };
+}
+
+/** Seat map đã publish (mock sinh từ capacity, xem ../seat-map.ts); null với sự kiện chỉ có vé đứng. */
+function seatMapOf(event: SeedEvent): CatalogDetail["seat_map"] {
+  const layout = mockSeatMapLayout(event);
+  if (!layout) return null;
+  return {
+    id: `33000000-0000-4000-8000-${event.id.slice(-12)}`,
+    version: 1,
+    created_at: SEED_TIME,
+    updated_at: SEED_TIME,
+    event_id: event.id,
+    layout,
+    published_at: SEED_TIME,
   };
 }
 

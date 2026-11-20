@@ -239,24 +239,44 @@ describe("tình trạng bán ở trang chi tiết", () => {
     expect(saleStateOf([], NOW).status).toBe("CLOSED");
   });
 
-  it("nút chính theo tình trạng và loại vé", () => {
+  it("nút chính theo tình trạng, loại vé và seat map", () => {
     const queue = detail({ sale_phases: [p2] });
     expect(primaryAction(queue, saleStateOf([p2], NOW), NOW)).toEqual({
       label: "Vào phòng chờ",
       enabled: true,
+      to: "buy",
     });
     const open = phase("p4", "2026-11-01T00:00:00Z", "2026-12-01T00:00:00Z");
-    const seated = detail({ sale_phases: [open] });
-    expect(primaryAction(seated, saleStateOf([open], NOW), NOW).label).toBe("Chọn ghế");
+    const seatMap = {
+      ...META,
+      id: "33000000-0000-4000-8000-000000000001",
+      layout: { zones: [] },
+      published_at: META.created_at,
+    };
+    const seated = detail({ sale_phases: [open], seat_map: seatMap });
+    expect(primaryAction(seated, saleStateOf([open], NOW), NOW)).toEqual({
+      label: "Chọn ghế",
+      enabled: true,
+      to: "seats",
+    });
+    // Có ghế ngồi nhưng chưa publish seat map: chưa có trang chọn ghế.
+    const noMap = detail({ sale_phases: [open] });
+    expect(primaryAction(noMap, saleStateOf([open], NOW), NOW)).toEqual({
+      label: "Mua vé",
+      enabled: true,
+      to: "buy",
+    });
     const ga = detail({ sale_phases: [open], ticket_classes: [ticketClass("g", 1, "GA")] });
-    expect(primaryAction(ga, saleStateOf([open], NOW), NOW).label).toBe("Mua vé");
+    expect(primaryAction(ga, saleStateOf([open], NOW), NOW).to).toBe("buy");
     expect(primaryAction(detail({}), saleStateOf([p3], NOW), NOW)).toEqual({
       label: "Mở bán 20.12",
       enabled: false,
+      to: null,
     });
     expect(primaryAction(detail({}), saleStateOf([p1], NOW), NOW)).toEqual({
       label: "Đã đóng bán",
       enabled: false,
+      to: null,
     });
     const past = detail({ end_at: "2026-11-01T00:00:00Z" });
     expect(primaryAction(past, saleStateOf([p2], NOW), NOW).label).toBe("Đã diễn ra");
