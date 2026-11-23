@@ -198,8 +198,22 @@ class SeatMapZoneDto {
   @ApiProperty({ type: [SeatMapBlockDto] }) blocks!: SeatMapBlockDto[];
 }
 
+class SeatMapGaAreaDto {
+  @ApiProperty({ maxLength: 128 }) name!: string;
+  @ApiProperty({ format: "uuid", description: "Hạng vé GA, mỗi hạng chỉ gắn một khu đứng" })
+  ticket_class_id!: string;
+}
+
 class SeatMapLayoutDto {
-  @ApiProperty({ type: [SeatMapZoneDto] }) zones!: SeatMapZoneDto[];
+  @ApiProperty({
+    type: [SeatMapZoneDto],
+    maxItems: 100,
+    description: "Được phép rỗng nếu có ga_areas (sự kiện toàn vé đứng)",
+  })
+  zones!: SeatMapZoneDto[];
+
+  @ApiPropertyOptional({ type: [SeatMapGaAreaDto], maxItems: 100 })
+  ga_areas?: SeatMapGaAreaDto[];
 }
 
 export class CreateSeatMapDto {

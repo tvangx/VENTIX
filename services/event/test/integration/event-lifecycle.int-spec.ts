@@ -257,6 +257,32 @@ describe("S-203 event lifecycle on PostgreSQL and Kafka", () => {
     await post(url + "/cancel", { version: 4, reason: "Lặp lại" }).expect(409);
   });
 
+  it("publishes a standing-only seat map for display while keeping snapshot map version zero", async () => {
+    const { id, url } = await fixture();
+    const classes = await app.db.pool.query("SELECT id FROM ticket_classes WHERE event_id=$1", [
+      id,
+    ]);
+    const gaId = String(classes.rows[0].id);
+    const area = { name: "Khu đứng A – sát sân khấu", ticket_class_id: gaId };
+    await post(url + "/seat-maps", { layout: { zones: [], ga_areas: [area] } }).expect(201);
+    await post(url + "/submit", { version: 0 }).expect(200);
+    await decide(id, { version: 1, decision: "APPROVED" }).expect(200);
+    await app.http.get("/v1/events/" + id).expect(404);
+    await post(url + "/publish", { version: 2 }).expect(200);
+    const map = await app.db.pool.query("SELECT published_at FROM seat_maps WHERE event_id=$1", [
+      id,
+    ]);
+    expect(map.rows[0].published_at).toBeInstanceOf(Date);
+    const approved = EventApprovedV2.parse(await waitForMessage(id, "EventApproved"));
+    expect(approved.data.seat_map_version).toBe(0);
+    await app.http
+      .get("/v1/events/" + id)
+      .expect(200)
+      .expect(({ body }) =>
+        expect(body.seat_map).toMatchObject({ layout: { zones: [], ga_areas: [area] } }),
+      );
+  });
+
   it("rejects a seated publish without a matching map and keeps unpublished cancellation private", async () => {
     const { id, url } = await fixture(true, false);
     await post(url + "/submit", { version: 0 }).expect(200);

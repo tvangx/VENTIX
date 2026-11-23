@@ -121,6 +121,33 @@ cùng event. Tổng ghế tối đa 100.000; mỗi row tối đa 1.000 ghế. Vi
 transaction. S-203 đánh dấu `published_at` khi Organizer publish; trigger S-107
 chặn mọi sửa/xóa map hoặc hierarchy đã publish.
 
+### Khu đứng (GA) trong layout — issue #98
+
+Layout có thêm `ga_areas` (tùy chọn) để khai báo khu đứng; khu đứng không sinh ghế:
+
+```json
+{
+  "layout": {
+    "zones": [],
+    "ga_areas": [
+      { "name": "Khu đứng A", "ticket_class_id": "00000000-0000-4000-8000-0000000000aa" }
+    ]
+  }
+}
+```
+
+- `zones` được phép rỗng nhưng layout phải có ít nhất một zone hoặc một `ga_areas`
+  (sự kiện toàn vé đứng); `zones` vẫn bắt buộc có trong body, `ga_areas` tối đa 100 phần tử.
+- `ticket_class_id` phải thuộc event và có `kind = GA`, ngược lại `400 INVALID_GA_CLASS`.
+  Hạng vé GA không được dùng trong row ghế (vẫn `400 INVALID_SEAT_CLASS`).
+- Tên khu đứng không được trùng tên zone hoặc khu đứng khác (`400 DUPLICATE_SEAT_MAP_LABEL`);
+  một hạng vé GA chỉ gắn một khu (`400 DUPLICATE_GA_CLASS`).
+- Layout lưu nguyên dạng JSON trong `seat_maps.layout` nên không có migration; layout cũ không
+  có `ga_areas` vẫn hợp lệ.
+- Publish: event có vé SEATED giữ luồng cũ. Event chỉ có GA mà map mới nhất có `ga_areas` thì
+  map được đánh dấu `published_at` để catalog công khai trả `seat_map`, nhưng `EventApproved`
+  vẫn mang `seat_map_version=0` (booking không có ghế để prefetch giá).
+
 ## S-203 — Duyệt và công khai sự kiện
 
 | Vai trò   | Endpoint                                            | Chuyển trạng thái                           |
@@ -137,7 +164,7 @@ xong, Organizer mới có thể chủ động publish. Lịch mở bán vẫn do
 quyết định.
 
 Publish cần hạng vé và sale phase. Event có vé SEATED phải có bản đồ phiên
-bản mới nhất khớp các hạng vé ghế. Event chỉ có GA dùng `seat_map_version=0`.
+bản mới nhất khớp các hạng vé ghế. Event chỉ có GA dùng `seat_map_version=0` (sơ đồ khu đứng nếu có vẫn được publish để hiển thị).
 Việc đánh dấu seat map, chuyển PUBLISHED và ghi `EventApproved` v2 xảy ra
 cùng transaction. Event đã công khai khi hủy sẽ ghi `EventCancelled` v2.
 Hủy trước công khai chỉ đổi trạng thái Event. Booking xử lý dừng bán và T-401
