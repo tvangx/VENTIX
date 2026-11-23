@@ -3769,13 +3769,37 @@
         },
         "required": ["name", "blocks"]
       },
+      "SeatMapGaAreaDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "ticket_class_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Hạng vé GA, mỗi hạng chỉ gắn một khu đứng"
+          }
+        },
+        "required": ["name", "ticket_class_id"]
+      },
       "SeatMapLayoutDto": {
         "type": "object",
         "properties": {
           "zones": {
+            "maxItems": 100,
+            "description": "Được phép rỗng nếu có ga_areas (sự kiện toàn vé đứng)",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SeatMapZoneDto"
+            }
+          },
+          "ga_areas": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeatMapGaAreaDto"
             }
           }
         },

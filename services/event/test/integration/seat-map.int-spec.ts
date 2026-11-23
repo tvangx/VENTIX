@@ -8,6 +8,7 @@ describe("S-202 seat map", () => {
   let outsider: string;
   let eventId: string;
   let classId: string;
+  let venueId: string;
 
   beforeEach(async () => {
     app = await organizerApp();
@@ -25,6 +26,7 @@ describe("S-202 seat map", () => {
       .set("Idempotency-Key", randomUUID())
       .send(eventInput(venue.body.id))
       .expect(201);
+    venueId = venue.body.id;
     eventId = event.body.id;
     const ticketClass = await app.http
       .post(`${EVENTS}/${eventId}/ticket-classes`)
@@ -131,6 +133,111 @@ describe("S-202 seat map", () => {
       .auth(token, { type: "bearer" })
       .expect(200)
       .expect(({ body }) => expect(body.items).toHaveLength(1));
+  });
+
+  describe("ga_areas", () => {
+    async function createClass(kind: "SEATED" | "GA", name: string, event = eventId) {
+      const response = await app.http
+        .post(`${EVENTS}/${event}/ticket-classes`)
+        .auth(token, { type: "bearer" })
+        .set("Idempotency-Key", randomUUID())
+        .send({ name, price_vnd: 50000, capacity: 500, kind })
+        .expect(201);
+      return String(response.body.id);
+    }
+
+    async function seatMapCount() {
+      const result = await app.db.pool.query(
+        "SELECT count(*)::int AS count FROM seat_maps WHERE event_id=$1",
+        [eventId],
+      );
+      return result.rows[0].count as number;
+    }
+
+    it("stores a standing-only layout without creating seats", async () => {
+      const gaId = await createClass("GA", "Đứng A");
+      const created = await post({
+        zones: [],
+        ga_areas: [{ name: "Khu đứng A", ticket_class_id: gaId }],
+      }).expect(201);
+      expect(created.body.layout).toEqual({
+        zones: [],
+        ga_areas: [{ name: "Khu đứng A", ticket_class_id: gaId }],
+      });
+      const counts = await app.db.pool.query(
+        "SELECT (SELECT count(*)::int FROM zones WHERE seat_map_id=$1) AS zones, (SELECT count(*)::int FROM seats WHERE event_id=$2) AS seats",
+        [created.body.id, eventId],
+      );
+      expect(counts.rows[0]).toEqual({ zones: 0, seats: 0 });
+      await app.http
+        .get(`${EVENTS}/${eventId}/seat-maps/1`)
+        .auth(token, { type: "bearer" })
+        .expect(200)
+        .expect(({ body }) => expect(body.layout.ga_areas).toHaveLength(1));
+    });
+
+    it("stores standing areas next to seated zones", async () => {
+      const gaId = await createClass("GA", "Fanzone");
+      const created = await post({
+        ...layout(1000),
+        ga_areas: [{ name: "Fanzone", ticket_class_id: gaId }],
+      }).expect(201);
+      const seats = await app.db.pool.query(
+        "SELECT count(*)::int AS count FROM seats WHERE event_id=$1",
+        [eventId],
+      );
+      expect(seats.rows[0].count).toBe(1000);
+      expect(created.body.layout.ga_areas).toHaveLength(1);
+    });
+
+    it("rejects areas bound to SEATED, foreign or unknown classes without writing", async () => {
+      const otherEvent = await app.http
+        .post(EVENTS)
+        .auth(token, { type: "bearer" })
+        .set("Idempotency-Key", randomUUID())
+        .send(eventInput(venueId))
+        .expect(201);
+      const foreignGa = await createClass("GA", "Đứng ngoài", String(otherEvent.body.id));
+      for (const id of [classId, foreignGa, randomUUID()]) {
+        await post({ zones: [], ga_areas: [{ name: "Khu đứng", ticket_class_id: id }] })
+          .expect(400)
+          .expect(({ body }) => expect(body.code).toBe("INVALID_GA_CLASS"));
+      }
+      expect(await seatMapCount()).toBe(0);
+    });
+
+    it("rejects a GA class used as seated rows and invalid area shapes", async () => {
+      const gaId = await createClass("GA", "Đứng B");
+      await post({
+        zones: [
+          {
+            name: "A",
+            blocks: [{ name: "B", rows: [{ label: "R", seats: 1, ticket_class_id: gaId }] }],
+          },
+        ],
+      })
+        .expect(400)
+        .expect(({ body }) => expect(body.code).toBe("INVALID_SEAT_CLASS"));
+      await post({ zones: [] }).expect(400);
+      await post({
+        zones: [],
+        ga_areas: [
+          { name: "Khu", ticket_class_id: gaId },
+          { name: "Khu 2", ticket_class_id: gaId },
+        ],
+      })
+        .expect(400)
+        .expect(({ body }) => expect(body.code).toBe("DUPLICATE_GA_CLASS"));
+      expect(await seatMapCount()).toBe(0);
+    });
+
+    it("rejects standing areas from another organizer", async () => {
+      const gaId = await createClass("GA", "Đứng C");
+      await post(
+        { zones: [], ga_areas: [{ name: "Khu đứng", ticket_class_id: gaId }] },
+        outsider,
+      ).expect(404);
+    });
   });
 
   it("rolls back a failed bulk insert and rejects changes after publish", async () => {

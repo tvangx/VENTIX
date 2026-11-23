@@ -14,7 +14,7 @@ import type {
   UpdateVenueDto,
 } from "./organizer.dto";
 import { checkEditable, checkRange, checkVersion, notFound } from "./organizer-writes";
-import type { SeatMapLayout } from "./seat-map.layout";
+import { gaClassIdsOf, type SeatMapLayout } from "./seat-map.layout";
 
 function pageQuery(query: PageQuery) {
   return { take: query.limit + 1, orderBy: { id: "asc" as const } };
@@ -90,6 +90,20 @@ export class OrganizerRepository {
         400,
         "Hạng vé ghế không thuộc sự kiện hoặc không phải SEATED",
       );
+    }
+    const gaClassIds = [...new Set(gaClassIdsOf(layout))];
+    if (gaClassIds.length) {
+      const gaClasses = await tx.ticketClass.findMany({
+        where: { eventId, id: { in: gaClassIds }, kind: "GA" },
+        select: { id: true },
+      });
+      if (gaClasses.length !== gaClassIds.length) {
+        throw new ProblemException(
+          "INVALID_GA_CLASS",
+          400,
+          "Hạng vé của khu đứng không thuộc sự kiện hoặc không phải GA",
+        );
+      }
     }
     const latest = await tx.seatMap.findFirst({ where: { eventId }, orderBy: { version: "desc" } });
     const map = await tx.seatMap.create({

@@ -7,6 +7,7 @@ import { PrismaService } from "../../db/prisma.service";
 import type { DecideEventDto } from "./event-lifecycle.dto";
 import type { PageQuery } from "./organizer.dto";
 import { checkVersion, notFound } from "./organizer-writes";
+import { gaClassIdsOf, parseSeatMapLayout } from "./seat-map.layout";
 
 type EventState = "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "PUBLISHED" | "CANCELLED";
 
@@ -102,7 +103,17 @@ export class EventLifecycleRepository {
     const seated = new Set(
       classes.filter(({ kind }) => kind === "SEATED").map(({ id: classId }) => classId),
     );
-    const seatMapVersion = seated.size ? await this.publishSeatMap(tx, event.id, seated) : 0;
+    // Sự kiện toàn vé đứng: snapshot giữ seat_map_version = 0 (booking không có ghế để prefetch giá),
+    // nhưng sơ đồ khu đứng vẫn được publish để trang công khai hiển thị.
+    let seatMapVersion = 0;
+    if (seated.size) {
+      seatMapVersion = await this.publishSeatMap(tx, event.id, seated);
+    } else {
+      const gaClassIds = new Set(
+        classes.filter(({ kind }) => kind === "GA").map(({ id: classId }) => classId),
+      );
+      await this.publishGaAreaMap(tx, event.id, gaClassIds);
+    }
     const snapshot = {
       event_id: event.id,
       organizer_id: event.organizerId,
@@ -227,6 +238,26 @@ export class EventLifecycleRepository {
       await tx.seatMap.update({ where: { id: map.id }, data: { publishedAt: new Date() } });
     }
     return map.version;
+  }
+
+  private async publishGaAreaMap(
+    tx: Prisma.TransactionClient,
+    eventId: string,
+    gaClassIds: ReadonlySet<string>,
+  ) {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${"seatmap:" + eventId}, 0))::text`;
+    const map = await tx.seatMap.findFirst({ where: { eventId }, orderBy: { version: "desc" } });
+    if (!map || map.publishedAt) return;
+    const { layout } = parseSeatMapLayout(map.layout);
+    if (!layout.ga_areas?.length) return;
+    if (gaClassIdsOf(layout).some((classId) => !gaClassIds.has(classId))) {
+      throw new ProblemException(
+        "SEAT_MAP_CLASS_MISMATCH",
+        409,
+        "Khu đứng phải gắn với hạng vé GA của sự kiện",
+      );
+    }
+    await tx.seatMap.update({ where: { id: map.id }, data: { publishedAt: new Date() } });
   }
 
   private envelope(event: Event) {
