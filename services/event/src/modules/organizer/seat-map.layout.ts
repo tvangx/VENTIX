@@ -11,7 +11,14 @@ const row = z
   .strict();
 const block = z.object({ name, rows: z.array(row).min(1).max(200) }).strict();
 const zone = z.object({ name, blocks: z.array(block).min(1).max(100) }).strict();
-const layoutSchema = z.object({ zones: z.array(zone).min(1).max(100) }).strict();
+const gaArea = z.object({ name, ticket_class_id: z.string().uuid() }).strict();
+const layoutSchema = z
+  .object({
+    zones: z.array(zone).max(100),
+    ga_areas: z.array(gaArea).max(100).optional(),
+  })
+  .strict()
+  .refine((value) => value.zones.length > 0 || (value.ga_areas?.length ?? 0) > 0);
 
 export type SeatMapLayout = z.infer<typeof layoutSchema>;
 
@@ -23,6 +30,20 @@ export function parseSeatMapLayout(value: unknown): { layout: SeatMapLayout; sea
   const layout = parsed.data;
   const zoneNames = new Set<string>();
   let seatCount = 0;
+  const gaClassIds = new Set<string>();
+  for (const area of layout.ga_areas ?? []) {
+    // Zone và khu đứng dùng chung một không gian tên để khán giả không nhầm lẫn khi chọn khu.
+    if (zoneNames.has(area.name)) throw duplicateLayout();
+    zoneNames.add(area.name);
+    if (gaClassIds.has(area.ticket_class_id)) {
+      throw new ProblemException(
+        "DUPLICATE_GA_CLASS",
+        400,
+        "Mỗi hạng vé GA chỉ gắn với một khu đứng",
+      );
+    }
+    gaClassIds.add(area.ticket_class_id);
+  }
   for (const zone of layout.zones) {
     if (zoneNames.has(zone.name)) throw duplicateLayout();
     zoneNames.add(zone.name);
@@ -44,6 +65,14 @@ export function parseSeatMapLayout(value: unknown): { layout: SeatMapLayout; sea
   return { layout, seatCount };
 }
 
+export function gaClassIdsOf(layout: SeatMapLayout): string[] {
+  return (layout.ga_areas ?? []).map((area) => area.ticket_class_id);
+}
+
 function duplicateLayout() {
-  return new ProblemException("DUPLICATE_SEAT_MAP_LABEL", 400, "Tên zone, block hoặc row bị trùng");
+  return new ProblemException(
+    "DUPLICATE_SEAT_MAP_LABEL",
+    400,
+    "Tên zone, khu đứng, block hoặc row bị trùng",
+  );
 }
