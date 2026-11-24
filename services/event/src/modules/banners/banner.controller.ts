@@ -1,9 +1,13 @@
 import { Body, Controller, Headers, HttpCode, Param, ParseUUIDPipe, Post } from "@nestjs/common";
-import { ApiOkResponse, ApiOperation, ApiTags, ApiBearerAuth } from "@nestjs/swagger";
+import { ApiOperation, ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { Roles } from "@ticketing/auth-guard";
-import { EventResponse } from "../organizer/organizer.responses";
 import { ApiOrganizerErrors, ApiOrganizerWrite, OrganizerId } from "../organizer/organizer-http";
-import { ConfirmBannerDto, PresignBannerDto, PresignBannerResponse } from "./banner.dto";
+import {
+  ConfirmBannerDto,
+  ConfirmBannerResponse,
+  PresignBannerDto,
+  PresignBannerResponse,
+} from "./banner.dto";
 import { BannerService } from "./banner.service";
 
 const uuid = new ParseUUIDPipe();
@@ -17,21 +21,22 @@ export class BannerController {
   constructor(private readonly banners: BannerService) {}
 
   @Post("presign")
-  @HttpCode(200)
+  @HttpCode(201)
   @ApiOperation({ summary: "Xin URL PUT có chữ ký để tải banner thẳng lên kho ảnh" })
-  @ApiOkResponse({ type: PresignBannerResponse })
+  @ApiOrganizerWrite(201, PresignBannerResponse)
   presign(
     @OrganizerId() tenant: string,
     @Param("eventId", uuid) eventId: string,
     @Body() dto: PresignBannerDto,
+    @Headers("idempotency-key") key?: string,
   ) {
-    return this.banners.presign(tenant, eventId, dto);
+    return this.banners.presign(tenant, eventId, dto, key);
   }
 
   @Post("confirm")
   @HttpCode(200)
   @ApiOperation({ summary: "Xác nhận ảnh đã tải lên và gắn làm banner sự kiện" })
-  @ApiOrganizerWrite(200, EventResponse)
+  @ApiOrganizerWrite(200, ConfirmBannerResponse)
   confirm(
     @OrganizerId() tenant: string,
     @Param("eventId", uuid) eventId: string,

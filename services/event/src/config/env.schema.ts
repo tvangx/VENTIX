@@ -48,14 +48,14 @@ export const envSchema = z
     MINIO_ACCESS_KEY: z.string().min(1).optional(),
     MINIO_SECRET_KEY: z.string().min(1).optional(),
     /** Gốc URL công khai của bucket banner, ví dụ http://localhost:9000/event-banners. */
-    BANNER_PUBLIC_BASE_URL: z.string().url().optional(),
-    BANNER_MAX_BYTES: z.coerce
+    PUBLIC_ASSET_BASE_URL: z.string().url().optional(),
+    UPLOAD_MAX_BYTES: z.coerce
       .number()
       .int()
       .min(1024)
       .max(10 * 1024 * 1024)
       .default(5 * 1024 * 1024),
-    BANNER_PRESIGN_TTL_SECONDS: z.coerce.number().int().min(30).max(900).default(300),
+    UPLOAD_PRESIGN_TTL_SECONDS: z.coerce.number().int().min(30).max(900).default(300),
     ...authEnvShape,
   })
   .superRefine((env, ctx) => {

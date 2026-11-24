@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 interface StoredObject {
   body: Buffer;
   contentType: string;
+  cacheControl?: string;
 }
 
 /**
@@ -24,6 +25,7 @@ export async function startFakeS3() {
         objects.set(path, {
           body: Buffer.concat(chunks),
           contentType: String(req.headers["content-type"] ?? "application/octet-stream"),
+          cacheControl: req.headers["cache-control"] as string | undefined,
         });
         res.writeHead(200, { ETag: '"fake"' }).end();
       } else if (req.method === "DELETE") {
@@ -67,6 +69,9 @@ export async function startFakeS3() {
     /** Đặt object trực tiếp, bỏ qua URL presign. */
     put(bucket: string, key: string, body: Buffer, contentType: string) {
       objects.set(`/${bucket}/${key}`, { body, contentType });
+    },
+    stored(bucket: string, key: string) {
+      return objects.get(`/${bucket}/${key}`);
     },
     has(bucket: string, key: string) {
       return objects.has(`/${bucket}/${key}`);

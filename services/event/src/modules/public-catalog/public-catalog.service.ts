@@ -4,7 +4,7 @@ import { ProblemException } from "@ticketing/common";
 import { ENV } from "../../app.tokens";
 import type { Env } from "../../config/env.schema";
 import { MetricsService } from "../../metrics/metrics";
-import { bannerPublicUrl } from "../banners/banner-file";
+import { publicAssetUrl, thumbnailKeyFor } from "../banners/banner-file";
 import {
   eventResponse,
   page,
@@ -107,8 +107,12 @@ export class PublicCatalogService {
         .filter((item) => published.has(item.id))
         .map(({ windows, ...item }) => ({
           ...item,
-          // Tính sau cache để đổi BANNER_PUBLIC_BASE_URL có hiệu lực ngay, không chờ hết TTL.
-          banner_url: bannerPublicUrl(this.env.BANNER_PUBLIC_BASE_URL, item.banner_key),
+          // Tính sau cache để đổi PUBLIC_ASSET_BASE_URL có hiệu lực ngay, không chờ hết TTL.
+          banner_url: publicAssetUrl(this.env.PUBLIC_ASSET_BASE_URL, item.banner_key),
+          thumbnail_url: publicAssetUrl(
+            this.env.PUBLIC_ASSET_BASE_URL,
+            thumbnailKeyFor(item.banner_key),
+          ),
           ...catalogSaleSummary(windows, now),
         })),
       next_cursor: result.value.next_cursor,
@@ -134,7 +138,11 @@ export class PublicCatalogService {
     }
     return {
       ...result.value,
-      banner_url: bannerPublicUrl(this.env.BANNER_PUBLIC_BASE_URL, result.value.banner_key),
+      banner_url: publicAssetUrl(this.env.PUBLIC_ASSET_BASE_URL, result.value.banner_key),
+      thumbnail_url: publicAssetUrl(
+        this.env.PUBLIC_ASSET_BASE_URL,
+        thumbnailKeyFor(result.value.banner_key),
+      ),
     };
   }
 }

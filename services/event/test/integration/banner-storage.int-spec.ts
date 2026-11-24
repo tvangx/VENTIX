@@ -63,6 +63,18 @@ describe("S-201b BannerStorage against a fake S3", () => {
     await expect(storage.remove(KEY)).resolves.toBeUndefined();
   });
 
+  it("writes a public object with long-lived cache headers and reads it back", async () => {
+    const key = "public/events/0b9b7a3e-4c1d-4e2f-9a6b-1d2c3e4f5a6b/x.webp";
+    await storage.putPublic(key, PNG_BYTES, "image/webp");
+    expect(s3.stored("event-banners", key)).toMatchObject({
+      contentType: "image/webp",
+      cacheControl: "public, max-age=31536000, immutable",
+    });
+    await expect(storage.read(key)).resolves.toEqual(PNG_BYTES);
+    await expect(storage.read("missing")).rejects.toMatchObject({ code: "STORAGE_UNAVAILABLE" });
+    await storage.remove(key);
+  });
+
   it("maps an unreachable store to 503 STORAGE_UNAVAILABLE and swallows cleanup errors", async () => {
     const dead = await startFakeS3();
     const endpoint = dead.endpoint;

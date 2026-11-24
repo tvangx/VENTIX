@@ -106,6 +106,13 @@ export class CatalogCard extends EventResponse {
     description: "URL ảnh banner công khai; null khi chưa có ảnh hoặc chưa cấu hình kho ảnh",
   })
   banner_url!: string | null;
+  @ApiProperty({
+    type: String,
+    format: "uri",
+    nullable: true,
+    description: "URL thumbnail WebP; null khi banner chưa qua xử lý ảnh (khóa seed/cũ)",
+  })
+  thumbnail_url!: string | null;
   @ApiProperty() venue_name!: string;
   @ApiProperty() venue_address!: string;
   @ApiProperty({ type: Number, nullable: true, minimum: 0 }) min_ticket_price_vnd!: number | null;
@@ -128,6 +135,13 @@ export class CatalogDetail extends EventResponse {
     description: "URL ảnh banner công khai; null khi chưa có ảnh hoặc chưa cấu hình kho ảnh",
   })
   banner_url!: string | null;
+  @ApiProperty({
+    type: String,
+    format: "uri",
+    nullable: true,
+    description: "URL thumbnail WebP; null khi banner chưa qua xử lý ảnh (khóa seed/cũ)",
+  })
+  thumbnail_url!: string | null;
   @ApiProperty({ type: VenueResponse }) venue!: VenueResponse;
   @ApiProperty({ type: [TicketClassResponse] }) ticket_classes!: TicketClassResponse[];
   @ApiProperty({ type: [SalePhaseResponse] }) sale_phases!: SalePhaseResponse[];

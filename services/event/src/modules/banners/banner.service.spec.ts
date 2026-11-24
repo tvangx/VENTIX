@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { ProblemException } from "@ticketing/common";
 import type { Env } from "../../config/env.schema";
 import type { OrganizerRepository } from "../organizer/organizer.repository";
@@ -7,62 +8,59 @@ import type { BannerStorage, StoredBanner } from "./banner.storage";
 
 const TENANT = "5a1f0c3e-7b2d-4c8e-9f10-a1b2c3d4e5f6";
 const EVENT = "0b9b7a3e-4c1d-4e2f-9a6b-1d2c3e4f5a6b";
-const FILE = "7f1d6c2a-3b4e-4a5f-8c9d-0e1f2a3b4c5d";
-const KEY = `events/${EVENT}/${FILE}.png`;
+const UPLOAD = "7f1d6c2a-3b4e-4a5f-8c9d-0e1f2a3b4c5d";
+const STAGING = `staging/events/${EVENT}/${UPLOAD}`;
 const IDEMPOTENCY = "c3f1a2b4-5d6e-4f70-8a9b-0c1d2e3f4a5b";
-const MAX = 1000;
-const PNG = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13]);
+const MAX = 100_000;
+const BASE = "https://cdn.test/event-banners";
+
+let png: Buffer;
+beforeAll(async () => {
+  png = await sharp({ create: { width: 40, height: 20, channels: 3, background: "#123456" } })
+    .png()
+    .toBuffer();
+});
 
 function rejects(promise: Promise<unknown>, status: number, code: string) {
-  return expect(promise).rejects.toMatchObject({
-    constructor: ProblemException,
-    status,
-    code,
-  });
+  return expect(promise).rejects.toMatchObject({ constructor: ProblemException, status, code });
 }
 
-function setup(over: { status?: string; stored?: StoredBanner | null; owner?: boolean } = {}) {
+function setup(over: { status?: string; stored?: StoredBanner | null; body?: Buffer } = {}) {
   const event = { id: EVENT, organizerId: TENANT, status: over.status ?? "DRAFT", version: 3 };
-  const updated = {
-    ...event,
-    venueId: "a1b2c3d4-0000-4000-8000-000000000001",
-    title: "t",
-    description: "d",
-    bannerKey: KEY,
-    version: 4,
-    createdAt: new Date("2030-01-01T00:00:00Z"),
-    updatedAt: new Date("2030-01-01T00:00:00Z"),
-    startAt: new Date("2030-02-01T00:00:00Z"),
-    endAt: new Date("2030-02-01T02:00:00Z"),
-  };
   const repo = {
-    event: jest.fn(async (tenant: string) =>
-      over.owner === false || tenant !== TENANT ? null : event,
-    ),
-    updateEvent: jest.fn(async () => updated),
+    event: jest.fn(async (tenant: string) => (tenant === TENANT ? event : null)),
+    updateEvent: jest.fn(async () => ({ ...event, version: 4 })),
   };
   const writes = {
     run: jest.fn(
       async (
-        _tenant: string,
-        _key: string | undefined,
-        _operation: string,
+        _t: string,
+        _k: string | undefined,
+        _op: string,
         _payload: object,
         write: (tx: object) => Promise<object>,
       ) => write({}),
     ),
   };
   const stored =
-    over.stored === undefined ? { size: 100, contentType: "image/png", head: PNG } : over.stored;
+    over.stored === undefined
+      ? { size: png.length, contentType: "image/png", head: png.subarray(0, 12) }
+      : over.stored;
   const storage = {
     presignUpload: jest.fn(async (_key: string, _type: string, _size: number) => ({
       url: "http://minio.test/event-banners/signed",
       headers: { "Content-Type": "image/png" },
     })),
     inspect: jest.fn(async () => stored),
-    remove: jest.fn(async () => undefined),
+    read: jest.fn(async () => over.body ?? png),
+    putPublic: jest.fn(async (_key: string, _body: Buffer, _type: string) => undefined),
+    remove: jest.fn(async (_key: string) => undefined),
   };
-  const env = { BANNER_MAX_BYTES: MAX, BANNER_PRESIGN_TTL_SECONDS: 300 } as Env;
+  const env = {
+    UPLOAD_MAX_BYTES: MAX,
+    UPLOAD_PRESIGN_TTL_SECONDS: 300,
+    PUBLIC_ASSET_BASE_URL: BASE,
+  } as Env;
   const service = new BannerService(
     env,
     repo as unknown as OrganizerRepository,
@@ -72,29 +70,38 @@ function setup(over: { status?: string; stored?: StoredBanner | null; owner?: bo
   return { service, repo, writes, storage };
 }
 
-describe("S-201b BannerService.presign", () => {
-  it("issues a server-generated key under the event with a bounded expiry", async () => {
-    const { service, storage } = setup();
+const presignDto = { content_type: "image/png", size_bytes: 500 };
+
+describe("S-605 BannerService.presign", () => {
+  it("issues a staging upload_id with a bounded expiry under the Idempotency-Key", async () => {
+    const { service, storage, writes } = setup();
     const before = Date.now();
-    const result = await service.presign(TENANT, EVENT, {
-      content_type: "image/png",
-      size_bytes: 500,
-    });
-    expect(result.object_key).toMatch(new RegExp(`^events/${EVENT}/[0-9a-f-]{36}\\.png$`));
-    expect(result.method).toBe("PUT");
-    expect(result.max_bytes).toBe(MAX);
-    expect(Date.parse(result.expires_at) - before).toBeGreaterThan(299_000);
-    expect(Date.parse(result.expires_at) - before).toBeLessThan(302_000);
-    expect(storage.presignUpload).toHaveBeenCalledWith(result.object_key, "image/png", 500);
+    const result = (await service.presign(TENANT, EVENT, presignDto, IDEMPOTENCY)) as Record<
+      string,
+      string | number
+    >;
+    expect(result.upload_id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(result).toMatchObject({ method: "PUT", max_bytes: MAX });
+    expect(Date.parse(String(result.expires_at)) - before).toBeGreaterThan(299_000);
+    expect(Date.parse(String(result.expires_at)) - before).toBeLessThan(302_000);
+    expect(storage.presignUpload).toHaveBeenCalledWith(
+      `staging/events/${EVENT}/${result.upload_id}`,
+      "image/png",
+      500,
+    );
+    expect(writes.run).toHaveBeenCalledWith(
+      TENANT,
+      IDEMPOTENCY,
+      `POST events/${EVENT}/banner/presign`,
+      presignDto,
+      expect.any(Function),
+    );
   });
 
   it("hides events of another tenant as 404 and never signs", async () => {
     const { service, storage } = setup();
     await rejects(
-      service.presign("9d9d9d9d-0000-4000-8000-000000000009", EVENT, {
-        content_type: "image/png",
-        size_bytes: 10,
-      }),
+      service.presign("9d9d9d9d-0000-4000-8000-000000000009", EVENT, presignDto, IDEMPOTENCY),
       404,
       "NOT_FOUND",
     );
@@ -106,7 +113,7 @@ describe("S-201b BannerService.presign", () => {
     async (status) => {
       const { service, storage } = setup({ status });
       await rejects(
-        service.presign(TENANT, EVENT, { content_type: "image/png", size_bytes: 10 }),
+        service.presign(TENANT, EVENT, presignDto, IDEMPOTENCY),
         409,
         "EVENT_NOT_EDITABLE",
       );
@@ -117,66 +124,71 @@ describe("S-201b BannerService.presign", () => {
   it("allows REJECTED events, which are editable again", async () => {
     const { service } = setup({ status: "REJECTED" });
     await expect(
-      service.presign(TENANT, EVENT, { content_type: "image/webp", size_bytes: 10 }),
+      service.presign(TENANT, EVENT, { ...presignDto, content_type: "image/webp" }, IDEMPOTENCY),
     ).resolves.toMatchObject({ method: "PUT" });
   });
 
   it("rejects unsupported types and oversize files before touching storage", async () => {
     const { service, storage } = setup();
     await rejects(
-      service.presign(TENANT, EVENT, { content_type: "image/gif", size_bytes: 10 }),
+      service.presign(TENANT, EVENT, { content_type: "image/gif", size_bytes: 10 }, IDEMPOTENCY),
       400,
-      "INVALID_BANNER_TYPE",
+      "INVALID_IMAGE_TYPE",
     );
     await rejects(
-      service.presign(TENANT, EVENT, { content_type: "image/png", size_bytes: MAX + 1 }),
+      service.presign(
+        TENANT,
+        EVENT,
+        { content_type: "image/png", size_bytes: MAX + 1 },
+        IDEMPOTENCY,
+      ),
       400,
-      "BANNER_TOO_LARGE",
+      "IMAGE_TOO_LARGE",
     );
     expect(storage.presignUpload).not.toHaveBeenCalled();
     await expect(
-      service.presign(TENANT, EVENT, { content_type: "image/png", size_bytes: MAX }),
+      service.presign(TENANT, EVENT, { content_type: "image/png", size_bytes: MAX }, IDEMPOTENCY),
     ).resolves.toBeDefined();
   });
 });
 
-describe("S-201b BannerService.confirm", () => {
-  const dto = { object_key: KEY, version: 3 };
+describe("S-605 BannerService.confirm", () => {
+  const dto = { upload_id: UPLOAD, version: 3 };
 
-  it("verifies the stored object then sets banner_key with the caller's version", async () => {
+  it("publishes banner + thumbnail, sets banner_key and drops staging", async () => {
     const { service, repo, writes, storage } = setup();
-    const response = await service.confirm(TENANT, EVENT, dto, IDEMPOTENCY);
-    expect(response).toMatchObject({ banner_key: KEY, version: 4 });
-    expect(storage.inspect).toHaveBeenCalledWith(KEY);
+    const response = (await service.confirm(TENANT, EVENT, dto, IDEMPOTENCY)) as {
+      banner_key: string;
+      banner_url: string;
+      thumbnail_url: string;
+      version: number;
+    };
+    expect(response.banner_key).toMatch(
+      new RegExp(`^public/events/${EVENT}/[0-9a-f-]{36}\\.webp$`),
+    );
+    expect(response.banner_url).toBe(`${BASE}/${response.banner_key}`);
+    expect(response.thumbnail_url).toBe(
+      `${BASE}/${response.banner_key.replace(/\.webp$/, "_thumb.webp")}`,
+    );
+    expect(response.version).toBe(4);
+    expect(storage.inspect).toHaveBeenCalledWith(STAGING);
+    expect(storage.putPublic).toHaveBeenCalledTimes(2);
+    for (const [, body, type] of storage.putPublic.mock.calls) {
+      expect(type).toBe("image/webp");
+      expect((await sharp(body).metadata()).format).toBe("webp");
+    }
     expect(repo.updateEvent).toHaveBeenCalledWith({}, TENANT, EVENT, {
-      banner_key: KEY,
+      banner_key: response.banner_key,
       version: 3,
     });
-    // Cùng khóa + cùng payload → OrganizerWrites phát lại; khác payload → 409 (kiểm ở test int).
+    expect(storage.remove).toHaveBeenCalledWith(STAGING);
     expect(writes.run).toHaveBeenCalledWith(
       TENANT,
       IDEMPOTENCY,
       `POST events/${EVENT}/banner/confirm`,
-      { object_key: KEY, version: 3 },
+      { upload_id: UPLOAD, version: 3 },
       expect.any(Function),
     );
-  });
-
-  it.each([
-    ["another event", `events/1c0c8b4f-5d2e-4f30-8b7c-2e3d4f5a6b7c/${FILE}.png`],
-    ["a seed key", "seed/banners/a.jpg"],
-    ["path traversal", `events/${EVENT}/../x/${FILE}.png`],
-    ["an unknown extension", `events/${EVENT}/${FILE}.gif`],
-  ])("rejects a key of %s without touching storage", async (_name, object_key) => {
-    const { service, storage, repo } = setup();
-    await rejects(
-      service.confirm(TENANT, EVENT, { object_key, version: 3 }, IDEMPOTENCY),
-      400,
-      "INVALID_BANNER_KEY",
-    );
-    expect(storage.inspect).not.toHaveBeenCalled();
-    expect(storage.remove).not.toHaveBeenCalled();
-    expect(repo.updateEvent).not.toHaveBeenCalled();
   });
 
   it("returns 404 for another tenant before probing storage", async () => {
@@ -189,54 +201,89 @@ describe("S-201b BannerService.confirm", () => {
     expect(storage.inspect).not.toHaveBeenCalled();
   });
 
-  it("returns 409 when nothing was uploaded and does not write", async () => {
+  it("returns 404 UPLOAD_NOT_FOUND when nothing is staged or it was already confirmed", async () => {
     const { service, repo, storage } = setup({ stored: null });
-    await rejects(service.confirm(TENANT, EVENT, dto, IDEMPOTENCY), 409, "BANNER_NOT_UPLOADED");
+    await rejects(service.confirm(TENANT, EVENT, dto, IDEMPOTENCY), 404, "UPLOAD_NOT_FOUND");
     expect(repo.updateEvent).not.toHaveBeenCalled();
+    expect(storage.putPublic).not.toHaveBeenCalled();
     expect(storage.remove).not.toHaveBeenCalled();
   });
 
+  const bytes12 = Buffer.alloc(12);
   it.each([
-    ["too large", { size: MAX + 1, contentType: "image/png", head: PNG }, "BANNER_TOO_LARGE"],
+    ["too large", { size: MAX + 1, contentType: "image/png", head: bytes12 }, "IMAGE_TOO_LARGE"],
     [
       "empty",
       { size: 0, contentType: "image/png", head: Buffer.alloc(0) },
-      "INVALID_BANNER_CONTENT",
+      "INVALID_IMAGE_CONTENT",
     ],
     [
-      "content-type mismatch",
-      { size: 100, contentType: "image/jpeg", head: PNG },
-      "BANNER_TYPE_MISMATCH",
+      "an unsupported type",
+      { size: 100, contentType: "image/gif", head: bytes12 },
+      "INVALID_IMAGE_TYPE",
     ],
-    [
-      "missing content-type",
-      { size: 100, contentType: undefined, head: PNG },
-      "BANNER_TYPE_MISMATCH",
-    ],
+    ["without a type", { size: 100, contentType: undefined, head: bytes12 }, "INVALID_IMAGE_TYPE"],
     [
       "fake magic bytes",
       { size: 100, contentType: "image/png", head: Buffer.from("<html><script>") },
-      "INVALID_BANNER_CONTENT",
+      "INVALID_IMAGE_CONTENT",
     ],
-  ])("rejects an object that is %s, deletes it and never writes", async (_name, stored, code) => {
+    [
+      "png declared but jpeg bytes",
+      {
+        size: 100,
+        contentType: "image/png",
+        head: Buffer.from([255, 216, 255, 224, 0, 0, 0, 0, 0, 0, 0, 0]),
+      },
+      "INVALID_IMAGE_CONTENT",
+    ],
+  ])("rejects an object that is %s, deletes it and never publishes", async (_n, stored, code) => {
     const { service, repo, storage } = setup({ stored });
     await rejects(service.confirm(TENANT, EVENT, dto, IDEMPOTENCY), 400, code);
-    expect(storage.remove).toHaveBeenCalledWith(KEY);
+    expect(storage.remove).toHaveBeenCalledWith(STAGING);
+    expect(storage.read).not.toHaveBeenCalled();
+    expect(storage.putPublic).not.toHaveBeenCalled();
     expect(repo.updateEvent).not.toHaveBeenCalled();
   });
 
   it("accepts a content-type carrying parameters and mixed case", async () => {
     const { service } = setup({
-      stored: { size: 100, contentType: "Image/PNG; charset=binary", head: PNG },
+      stored: {
+        size: png.length,
+        contentType: "Image/PNG; charset=binary",
+        head: png.subarray(0, 12),
+      },
     });
     await expect(service.confirm(TENANT, EVENT, dto, IDEMPOTENCY)).resolves.toBeDefined();
   });
 
-  it("propagates version conflicts from the repository", async () => {
-    const { service, repo } = setup();
+  it("rejects bytes that pass the sniff but do not decode, and never publishes", async () => {
+    const { service, storage } = setup({
+      body: Buffer.concat([png.subarray(0, 12), Buffer.alloc(50)]),
+    });
+    await rejects(service.confirm(TENANT, EVENT, dto, IDEMPOTENCY), 400, "INVALID_IMAGE_CONTENT");
+    expect(storage.putPublic).not.toHaveBeenCalled();
+  });
+
+  it("removes published copies and keeps staging when the version check fails", async () => {
+    const { service, repo, storage } = setup();
     repo.updateEvent.mockRejectedValueOnce(
       new ProblemException("VERSION_CONFLICT", 409, "Phiên bản tài nguyên đã thay đổi"),
     );
     await rejects(service.confirm(TENANT, EVENT, dto, IDEMPOTENCY), 409, "VERSION_CONFLICT");
+    const published = storage.putPublic.mock.calls.map(([key]) => key);
+    expect(published).toHaveLength(2);
+    for (const key of published) expect(storage.remove).toHaveBeenCalledWith(key);
+    expect(storage.remove).not.toHaveBeenCalledWith(STAGING);
+  });
+
+  it("removes published copies when the second upload to storage fails", async () => {
+    const { service, repo, storage } = setup();
+    storage.putPublic
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new ProblemException("STORAGE_UNAVAILABLE", 503, "down"));
+    await rejects(service.confirm(TENANT, EVENT, dto, IDEMPOTENCY), 503, "STORAGE_UNAVAILABLE");
+    expect(repo.updateEvent).not.toHaveBeenCalled();
+    expect(storage.remove).toHaveBeenCalledTimes(2);
   });
 });

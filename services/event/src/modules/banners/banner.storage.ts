@@ -77,7 +77,7 @@ export class BannerStorage implements OnModuleDestroy {
           ContentLength: sizeBytes,
         }),
         {
-          expiresIn: this.env.BANNER_PRESIGN_TTL_SECONDS,
+          expiresIn: this.env.UPLOAD_PRESIGN_TTL_SECONDS,
           signableHeaders: new Set(["content-type", "content-length"]),
         },
       );
@@ -111,6 +111,39 @@ export class BannerStorage implements OnModuleDestroy {
     } catch (error) {
       if (isMissing(error)) return null;
       throw new ProblemException("STORAGE_UNAVAILABLE", 503, "Không kiểm tra được ảnh đã tải lên");
+    }
+  }
+
+  /** Đọc toàn bộ object (đã được `inspect` xác nhận nhỏ hơn giới hạn). */
+  async read(key: string): Promise<Buffer> {
+    const client = this.configured();
+    try {
+      const object = await client.send(
+        new GetObjectCommand({ Bucket: this.env.MINIO_BUCKET, Key: key }),
+        { abortSignal: AbortSignal.timeout(STORAGE_TIMEOUT_MS * 4) },
+      );
+      return Buffer.from(await (object.Body?.transformToByteArray() ?? new Uint8Array()));
+    } catch {
+      throw new ProblemException("STORAGE_UNAVAILABLE", 503, "Không đọc được ảnh đã tải lên");
+    }
+  }
+
+  /** Ghi object công khai bất biến (tên chứa UUID nên cache dài hạn là an toàn). */
+  async putPublic(key: string, body: Buffer, contentType: string): Promise<void> {
+    const client = this.configured();
+    try {
+      await client.send(
+        new PutObjectCommand({
+          Bucket: this.env.MINIO_BUCKET,
+          Key: key,
+          Body: body,
+          ContentType: contentType,
+          CacheControl: "public, max-age=31536000, immutable",
+        }),
+        { abortSignal: AbortSignal.timeout(STORAGE_TIMEOUT_MS * 4) },
+      );
+    } catch {
+      throw new ProblemException("STORAGE_UNAVAILABLE", 503, "Không ghi được ảnh đã xử lý");
     }
   }
 

@@ -44,7 +44,7 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 
 ## Task của Sơn/Vũ ảnh hưởng đến việc của Tuấn (theo dõi, không do agent làm)
 
-S-201b (ID tạm) In review: upload banner presign/confirm + `banner_url` catalog, chờ chốt CONTRACT CHANGE openapi. Xem [run report](runs/S-201b.md).
+S-201b/S-605 (ID tạm) In review tại [#103](https://github.com/tvangx/VENTIX/pull/103): upload banner presign/confirm, sharp WebP + thumbnail, `banner_url`/`thumbnail_url` catalog, CONTRACT CHANGE additive đã chốt A + A. Xem [run report](runs/S-201b.md).
 
 S-204/V-201 In review tại [#94](https://github.com/tvangx/VENTIX/pull/94), đồng bộ main và xử lý xung đột tài liệu cho phần bổ sung catalog công khai. Xem [run report](runs/S-204.md).
 

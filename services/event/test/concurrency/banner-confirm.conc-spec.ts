@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { EVENTS, VENUES, eventInput, organizerApp, venueInput } from "../helpers/organizer-app";
-import { PNG_BYTES, startFakeS3, type FakeS3 } from "../helpers/fake-s3";
+import { startFakeS3, type FakeS3 } from "../helpers/fake-s3";
+import { realImage } from "../helpers/images";
 
 const CONCURRENCY = 50;
+const BUCKET = "event-banners";
 
-describe("S-201b banner confirm under concurrency", () => {
+describe("S-605 banner confirm under concurrency", () => {
   let app: Awaited<ReturnType<typeof organizerApp>>;
   let s3: FakeS3;
   let token: string;
@@ -14,6 +16,7 @@ describe("S-201b banner confirm under concurrency", () => {
     app = await organizerApp({
       env: {
         MINIO_ENDPOINT: s3.endpoint,
+        MINIO_BUCKET: BUCKET,
         MINIO_ACCESS_KEY: "test-access",
         MINIO_SECRET_KEY: "test-secret",
       },
@@ -35,33 +38,33 @@ describe("S-201b banner confirm under concurrency", () => {
       id: string;
       version: number;
     };
-    const keys: string[] = [];
+    const png = await realImage("png", 200, 100);
+    const ids: string[] = [];
     for (let i = 0; i < count; i += 1) {
       const signed = (
         await post(`${EVENTS}/${event.id}/banner/presign`, {
           content_type: "image/png",
-          size_bytes: PNG_BYTES.length,
-        }).expect(200)
+          size_bytes: png.length,
+        }).expect(201)
       ).body;
-      const put = await fetch(signed.upload_url, {
-        method: "PUT",
-        headers: signed.headers,
-        body: PNG_BYTES,
-      });
+      const put = await fetch(signed.url, { method: "PUT", headers: signed.headers, body: png });
       expect(put.status).toBe(200);
-      keys.push(signed.object_key);
+      ids.push(signed.upload_id);
     }
-    return { event, keys };
+    return { event, ids };
   }
 
+  const publicKeys = (eventId: string) =>
+    [...s3.objects.keys()].filter((key) => key.includes(`/public/events/${eventId}/`));
+
   it("applies one confirm exactly once when 50 requests share an Idempotency-Key", async () => {
-    const { event, keys } = await eventWithUploads(1);
+    const { event, ids } = await eventWithUploads(1);
     const idem = randomUUID();
     const results = await Promise.all(
       Array.from({ length: CONCURRENCY }, () =>
         post(
           `${EVENTS}/${event.id}/banner/confirm`,
-          { object_key: keys[0], version: event.version },
+          { upload_id: ids[0], version: event.version },
           idem,
         ),
       ),
@@ -72,14 +75,15 @@ describe("S-201b banner confirm under concurrency", () => {
     const { rows } = await app.db.pool.query("SELECT version, banner_key FROM events WHERE id=$1", [
       event.id,
     ]);
-    expect(rows[0]).toEqual({ version: event.version + 1, banner_key: keys[0] });
+    expect(rows[0]).toEqual({ version: event.version + 1, banner_key: results[0].body.banner_key });
+    expect(publicKeys(event.id)).toHaveLength(2);
   });
 
-  it("lets exactly one of 50 competing confirms win the same version", async () => {
-    const { event, keys } = await eventWithUploads(CONCURRENCY);
+  it("lets exactly one of 50 competing confirms win the same version and leaves no orphans", async () => {
+    const { event, ids } = await eventWithUploads(CONCURRENCY);
     const results = await Promise.all(
-      keys.map((key) =>
-        post(`${EVENTS}/${event.id}/banner/confirm`, { object_key: key, version: event.version }),
+      ids.map((id) =>
+        post(`${EVENTS}/${event.id}/banner/confirm`, { upload_id: id, version: event.version }),
       ),
     );
     const won = results.filter((res) => res.status === 200);
@@ -91,5 +95,11 @@ describe("S-201b banner confirm under concurrency", () => {
       event.id,
     ]);
     expect(rows[0]).toEqual({ version: event.version + 1, banner_key: won[0].body.banner_key });
+    expect(publicKeys(event.id).sort()).toEqual(
+      [
+        `/${BUCKET}/${won[0].body.banner_key}`,
+        `/${BUCKET}/${String(won[0].body.banner_key).replace(/\.webp$/, "_thumb.webp")}`,
+      ].sort(),
+    );
   });
 });
