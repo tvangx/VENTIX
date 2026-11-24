@@ -257,12 +257,13 @@ describe("S-605 BannerService.confirm", () => {
     await expect(service.confirm(TENANT, EVENT, dto, IDEMPOTENCY)).resolves.toBeDefined();
   });
 
-  it("rejects bytes that pass the sniff but do not decode, and never publishes", async () => {
+  it("rejects bytes that pass the sniff but do not decode, , deletes staging and never publishes", async () => {
     const { service, storage } = setup({
       body: Buffer.concat([png.subarray(0, 12), Buffer.alloc(50)]),
     });
     await rejects(service.confirm(TENANT, EVENT, dto, IDEMPOTENCY), 400, "INVALID_IMAGE_CONTENT");
     expect(storage.putPublic).not.toHaveBeenCalled();
+    expect(storage.remove).toHaveBeenCalledWith(STAGING);
   });
 
   it("removes published copies and keeps staging when the version check fails", async () => {

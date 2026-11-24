@@ -94,7 +94,11 @@ export class BannerService {
       { upload_id: dto.upload_id.toLowerCase(), version: dto.version },
       async (tx) => {
         const source = await this.verifyStaged(staging);
-        const processed = await processBanner(source);
+        const processed = await processBanner(source).catch(async (error: unknown) => {
+          // Qua được bước nhận dạng nhưng không giải mã được: file hỏng, xóa như các ca từ chối khác.
+          await this.storage.remove(staging);
+          throw error;
+        });
         const keys = newPublicBannerKeys(eventId);
         try {
           await this.storage.putPublic(keys.banner, processed.banner, "image/webp");
