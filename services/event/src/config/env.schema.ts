@@ -39,9 +39,35 @@ export const envSchema = z
       .optional(),
     /** Đặt biến này mới bật OpenTelemetry. */
     OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+    // Kho ảnh banner (S-201b): MinIO qua giao thức S3, cùng tên biến với identity.
+    MINIO_ENDPOINT: z.string().url().default("http://localhost:9000"),
+    MINIO_BUCKET: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/)
+      .default("event-banners"),
+    MINIO_ACCESS_KEY: z.string().min(1).optional(),
+    MINIO_SECRET_KEY: z.string().min(1).optional(),
+    /** Gốc URL công khai của bucket banner, ví dụ http://localhost:9000/event-banners. */
+    BANNER_PUBLIC_BASE_URL: z.string().url().optional(),
+    BANNER_MAX_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1024)
+      .max(10 * 1024 * 1024)
+      .default(5 * 1024 * 1024),
+    BANNER_PRESIGN_TTL_SECONDS: z.coerce.number().int().min(30).max(900).default(300),
     ...authEnvShape,
   })
-  .superRefine((env, ctx) => refineAuthEnv(env, ctx))
+  .superRefine((env, ctx) => {
+    refineAuthEnv(env, ctx);
+    if (Boolean(env.MINIO_ACCESS_KEY) !== Boolean(env.MINIO_SECRET_KEY)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["MINIO_ACCESS_KEY"],
+        message: "Configure both MinIO access key and secret key",
+      });
+    }
+  })
   .transform((env) => ({
     ...env,
     EVENT_OUTBOX_ENABLED: env.EVENT_OUTBOX_ENABLED ?? env.NODE_ENV !== "test",

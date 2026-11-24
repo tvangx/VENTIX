@@ -1,7 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { ProblemException } from "@ticketing/common";
+import { ENV } from "../../app.tokens";
+import type { Env } from "../../config/env.schema";
 import { MetricsService } from "../../metrics/metrics";
+import { bannerPublicUrl } from "../banners/banner-file";
 import {
   eventResponse,
   page,
@@ -46,6 +49,7 @@ export function catalogSaleSummary(
 @Injectable()
 export class PublicCatalogService {
   constructor(
+    @Inject(ENV) private readonly env: Env,
     private readonly repo: PublicCatalogRepository,
     private readonly cache: CatalogCache,
     private readonly metrics: MetricsService,
@@ -101,7 +105,12 @@ export class PublicCatalogService {
     return {
       items: result.value.items
         .filter((item) => published.has(item.id))
-        .map(({ windows, ...item }) => ({ ...item, ...catalogSaleSummary(windows, now) })),
+        .map(({ windows, ...item }) => ({
+          ...item,
+          // Tính sau cache để đổi BANNER_PUBLIC_BASE_URL có hiệu lực ngay, không chờ hết TTL.
+          banner_url: bannerPublicUrl(this.env.BANNER_PUBLIC_BASE_URL, item.banner_key),
+          ...catalogSaleSummary(windows, now),
+        })),
       next_cursor: result.value.next_cursor,
     };
   }
@@ -123,6 +132,9 @@ export class PublicCatalogService {
     if (!result.value || !published.has(id)) {
       throw new ProblemException("EVENT_NOT_FOUND", 404, "Không tìm thấy sự kiện công khai");
     }
-    return result.value;
+    return {
+      ...result.value,
+      banner_url: bannerPublicUrl(this.env.BANNER_PUBLIC_BASE_URL, result.value.banner_key),
+    };
   }
 }
