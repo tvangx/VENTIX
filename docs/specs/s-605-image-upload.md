@@ -1,6 +1,6 @@
 # Đặc tả S-605 — Upload ảnh dùng chung (presign, confirm, WebP/thumbnail)
 
-> Trạng thái: **đề xuất, chờ Tuấn chốt hai câu hỏi mở ở mục 9** trước khi cài đặt. Người làm: Sơn. Run report: [S-605](../agent/runs/S-605.md).
+> Trạng thái: **đã chốt 2026-11-24 theo phương án A cho cả hai câu hỏi ở mục 9**, sẵn sàng cài đặt. Người làm: Sơn. Run report: [S-605](../agent/runs/S-605.md).
 
 ## 1. Mục tiêu và phạm vi
 
@@ -75,7 +75,9 @@ Thư viện mới: `@aws-sdk/client-s3` và `@aws-sdk/s3-request-presigner` đã
 Test bắt buộc: unit (magic bytes, MIME sai, vượt kích thước, idempotency key), integration với PostgreSQL + MinIO thật (presign→PUT→confirm, replay confirm, upload hết hạn, event của tenant khác bị 403/404, file giả mạo đuôi, ảnh quá lớn), concurrency (50 confirm cùng `upload_id` chỉ xử lý một lần), catalog trả URL và đổi ETag khi đổi banner. Kiểm chứng gồm `lint`, `typecheck`, `test`, `test:int`, `test:conc` của `event`, `openapi:export`, `pnpm format:check && pnpm build`.
 DoD: Organizer tải banner qua hai bước và thấy ảnh trong catalog; ảnh giả mạo bị từ chối; object staging được dọn; OpenAPI, README event, ERD/sequence cập nhật; run report có số test thật; không có secret; MinIO thật được kiểm chứng (S-105 từng chưa chạy được do Docker).
 
-## 9. Câu hỏi mở (chặn cài đặt)
+## 9. Quyết định đã chốt (2026-11-24: A + A)
+
+Hai câu hỏi dưới đây đã được chốt theo đề xuất A. Giữ nguyên phân tích để tra cứu.
 
 1. **CONTRACT CHANGE — OpenAPI của `event`.** Hai endpoint mới và hai trường `banner_url`/`thumbnail_url` là thay đổi additive trên hợp đồng đã bàn giao cho Vũ. _Lựa chọn:_ (A) thêm vào OpenAPI hiện tại, additive, không đổi trường cũ; (B) làm service/route riêng để không đụng hợp đồng event. _Đề xuất:_ A, vì chỉ thêm, Vũ sinh lại client; cần Tuấn xác nhận và báo Vũ. _Nếu chọn sai:_ FE hỏng build hoặc phải làm lại client.
 2. **Banner đọc công khai trực tiếp từ MinIO hay qua Kong.** _(A)_ bucket `event-banners` public-read prefix `public/`, URL trực tiếp: đơn giản, nhanh, nhưng lộ endpoint MinIO và khó thêm cache/CDN sau. _(B)_ qua Kong `/assets/*` proxy tới MinIO: một origin, cache header và rate limit ở Kong, nhưng thêm route Kong (vùng Tuấn) và tải qua gateway. _Đề xuất:_ A cho dev và giai đoạn đầu, giữ `PUBLIC_ASSET_BASE_URL` để chuyển sang B không đổi code. _Nếu chọn sai:_ đổi URL ảnh đã lưu, nhưng vì DB chỉ lưu `banner_key` nên chi phí thấp.

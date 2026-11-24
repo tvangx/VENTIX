@@ -3,7 +3,7 @@
 ## Task mới S-605 — 2026-11-24
 
 - S-605 Upload ảnh banner (presign/confirm, WebP/thumbnail, URL công khai, module storage dùng chung): **Todo**, chỉ có tài liệu. Xem [spec](../specs/s-605-image-upload.md) và [run report](runs/S-605.md).
-- Chờ Tuấn chốt trước khi cài đặt: (1) CONTRACT CHANGE additive cho OpenAPI `event`; (2) banner đọc công khai trực tiếp từ MinIO hay qua Kong. Phụ thuộc S-105, S-201, S-204 đã xong; V-201 đang chờ URL ảnh công khai.
+- Đã chốt 2026-11-24 (A + A): (1) CONTRACT CHANGE additive cho OpenAPI `event`; (2) banner public-read trực tiếp từ MinIO qua `PUBLIC_ASSET_BASE_URL`. Còn việc `infra/`: policy anonymous read prefix `public/`. Phụ thuộc S-105, S-201, S-204 đã xong; V-201 đang chờ URL ảnh công khai.
 
 ## Cập nhật S-204/V-201 — 2026-11-18
 
