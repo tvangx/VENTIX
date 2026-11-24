@@ -125,10 +125,12 @@ gantt
 | | T1 | T2 | T3 | T4 | T5 | T6 | Tổng |
 |---|---|---|---|---|---|---|---|
 | **Tuấn** | 4,5 | 4,5 | 5,0 | 5,0 | 4,75 | 4,0 | 27,75 |
-| **Sơn** | 4,5 | 4,75 | 4,5 | 4,75 | 4,5 | 4,5 | 27,5 |
+| **Sơn** | 4,5 | 5,25 | 4,5 | 4,75 | 4,75 | 4,5 | 28,25 |
 | **Vũ** | 4,5 | 4,5 | 5,25 | 5,0 | 4,5 | 4,5 | 28,25 |
 
 > **Cập nhật sau khi chốt hợp đồng saga (12/10):** T-101 và T-104 đã xong ở Phase 0 nên tuần 1 của Tuấn còn dư; T-201 và T-207 được chuyển về tuần 1. Thêm T-301a, T-203b, S-206, V-306, V-406 và nới T-301/T-206. **Vũ vượt 5 ngày ở tuần 3 (5,25) và tuần 4 (5,0):** nếu T-304 trượt thì V-302 trượt theo; nếu vẫn thiếu thì cắt UI combo (V-406) hoặc để Sơn đảm nhận V-304. Tuần 3 của Tuấn đầy (5,0), T-304 là phần được phép trượt.
+>
+> **Cập nhật upload ảnh banner (đề xuất, chờ Tuấn xác nhận):** S-201 +0,25, S-204 +0,25 (tuần 2), S-504 +0,25 (tuần 5). Sơn vượt 5 ngày ở tuần 2 (5,25): nếu thiếu thì tách phần confirm/ảnh công khai của S-204 sang đầu tuần 3 (Sơn còn dư 0,5) hoặc làm banner sau S-206. Ước lượng chưa phải cam kết cho đến khi spec task upload ảnh được chốt.
 
 ---
 
@@ -178,7 +180,7 @@ Làm xong **trước thứ Hai tuần 1**; mỗi mục có người phụ trách
 | S-102 | Đăng ký/đăng nhập email, **argon2id**, **JWT RS256 + endpoint JWKS**, refresh token rotation + phát hiện tái sử dụng (`family_id`) | 1,25 | S-101 | Test: dùng lại refresh token cũ → thu hồi cả family |
 | S-103 | Google OAuth (PKCE) | 0,5 | S-102 | Đăng nhập Google tạo/liên kết tài khoản |
 | S-104 | RBAC guard/decorator + ngữ cảnh tenant (`organizer_id`); seed tài khoản Admin | 0,5 | S-102 | Test truy cập sai role/tenant → 403 |
-| S-105 | Đăng ký Organizer + API Admin duyệt/từ chối + upload giấy phép lên MinIO | 0,75 | S-104 | Luồng UC-02 chạy được qua API |
+| S-105 | Đăng ký Organizer + API Admin duyệt/từ chối + upload giấy phép lên MinIO (bucket **private**; lớp storage S3 qua AWS SDK v3 viết sao cho tách được thành **module MinIO dùng chung** cho upload ảnh) | 0,75 | S-104 | Luồng UC-02 chạy được qua API; adapter storage không phụ thuộc nghiệp vụ Organizer, đổi endpoint/bucket chỉ qua env |
 | S-106 | OpenAPI cho identity + bộ request mẫu (Bruno/Postman) | 0,5 | S-102 | Vũ sinh được client từ OpenAPI |
 | S-107 | Schema + migration `event_db` (venues, events, ticket_classes, sale_phases, seat_maps, zones, blocks, seats, event_approvals) | 0,5 | T-102 | Migration chạy được; ERD khớp mục 5.2 Tài liệu KT |
 
@@ -216,10 +218,10 @@ Làm xong **trước thứ Hai tuần 1**; mỗi mục có người phụ trách
 #### Sơn
 | ID | Công việc | Ngày | Phụ thuộc | DoD |
 |---|---|---|---|---|
-| S-201 | CRUD venue, event, ticket_classes, sale_phases, kiểm tra tenant | 1,0 | S-107, S-104 | Organizer A không sửa được event của B |
+| S-201 | CRUD venue, event, ticket_classes, sale_phases, kiểm tra tenant; **upload banner sự kiện qua presign/confirm** (`banner_key`: kiểm tra tenant, MIME, magic bytes, kích thước, `HeadObject` trước khi lưu) | 1,25 | S-107, S-104, S-105 | Organizer A không sửa được event của B và không đặt được banner cho event của B; `banner_key` chỉ nhận object đã confirm; confirm lặp lại an toàn |
 | S-202 | Seat map: validate layout JSON, **sinh zones/blocks/seats hàng loạt** (≥ 10.000 ghế), version bất biến sau khi publish | 1,25 | S-201 | Sinh 10k ghế < vài giây; sửa seat map đã publish bị từ chối |
 | S-203 | Luồng duyệt: `DRAFT → PENDING → APPROVED/REJECTED → PUBLISHED`; outbox `EventApproved/Updated/Cancelled` | 1,0 | S-201, T-103 | Máy trạng thái có test; sự kiện xuất hiện trên Kafka |
-| S-204 | API công khai (danh sách/tìm kiếm/chi tiết) với **Redis cache-aside + chống stampede + ETag** | 0,75 | S-201 | Test tải đọc: phần lớn request trúng cache |
+| S-204 | API công khai (danh sách/tìm kiếm/chi tiết) với **Redis cache-aside + chống stampede + ETag**; trả **URL ảnh banner công khai** cùng `banner_key` (ETag/cache đổi khi banner đổi) | 1,0 | S-201 | Test tải đọc: phần lớn request trúng cache; đổi banner làm vô hiệu cache và đổi ETag; FE nhận URL ảnh dùng được |
 | S-205 | Script seed: 3 sự kiện, 1 sự kiện ≥ 10k ghế, ticket class, sale phase | 0,25 | S-202 | `pnpm seed` chạy lặp lại được |
 | S-206 | API nội bộ `GET /v1/internal/events/{id}/seat-classes` (xem `docs/api/internal/seat-classes.yaml`), xác thực `X-Internal-Key`, phân trang cursor | 0,5 | S-202 | Trả đúng ánh xạ ghế→hạng vé; thiếu khóa → 401; bị Kong chặn từ ngoài |
 
@@ -333,7 +335,7 @@ Làm xong **trước thứ Hai tuần 1**; mỗi mục có người phụ trách
 | S-501 | Job **giải ngân escrow** theo chính sách đã chốt + tranh chấp cơ bản (Admin giữ/hoàn) | 0,75 | S-405 | Giải ngân đúng điều kiện; tranh chấp chặn giải ngân |
 | S-502 | **NFT worker (timebox 2 ngày)**: hợp đồng ERC-721 (Hardhat + OpenZeppelin) trên Polygon Amoy, consumer `TicketIssued`, retry, `nft_mints`, metadata lên Pinata. Nếu quá timebox → giữ `MockMinter` | 2,0 | S-301 | Vé mint được trên testnet **hoặc** mock hoạt động; lỗi mint không ảnh hưởng vé off-chain |
 | S-503 | **Cổng tra cứu vé công khai** (không cần đăng nhập, có rate limit): trạng thái vé + tx hash | 0,5 | S-301 | Tra cứu được tính hợp lệ của vé |
-| S-504 | Rà soát mã hóa PII: kyc, secret vé, địa chỉ; script xoay khóa theo `key_id` | 0,5 | S-305 | Xoay khóa không làm mất khả năng giải mã dữ liệu cũ |
+| S-504 | Rà soát mã hóa PII: kyc, secret vé, địa chỉ; script xoay khóa theo `key_id`; rà quy tắc lưu trữ ảnh: bucket **public** chỉ cho banner, giấy tờ ở bucket **private** (presigned GET ngắn hạn), danh sách MIME + magic bytes cho phép | 0,75 | S-305 | Xoay khóa không làm mất khả năng giải mã dữ liệu cũ; không có đường nào để giấy tờ vào bucket public; file sai MIME/magic bytes bị từ chối |
 | S-505 | `IInvoiceAdapter` + MockAdapter (+ sandbox MISA nếu có) trong `finance-service` | 0,75 | T-402 | Có hóa đơn cho order đã thanh toán; lỗi nhà cung cấp → retry |
 
 #### Vũ
@@ -368,8 +370,8 @@ Làm xong **trước thứ Hai tuần 1**; mỗi mục có người phụ trách
 | ID | Công việc | Ngày | Phụ thuộc | DoD |
 |---|---|---|---|---|
 | S-601 | **E2E (Playwright/API)** cho luồng tới hạn: mua vé, hết hạn order, IPN trùng, check-in, resale (phối hợp Vũ) | 1,5 | G3 | Chạy được trong CI hoặc một lệnh; đạt 100% |
-| S-602 | Sửa lỗi tồn đọng | 1,0 | — | Không còn lỗi chặn luồng chính |
-| S-603 | Cập nhật SRS/UC/ERD/sequence cho identity, event, ticket, resale; ADR offline TOTP | 1,5 | — | Tài liệu khớp hệ thống thực tế |
+| S-602 | Sửa lỗi tồn đọng (gồm **dọn object mồ côi** trên MinIO khi confirm/commit DB lỗi hoặc presign không được confirm) | 1,0 | — | Không còn lỗi chặn luồng chính; có cách dọn object mồ côi đã kiểm chứng |
+| S-603 | Cập nhật SRS/UC/ERD/sequence cho identity, event, ticket, resale; ADR offline TOTP; **ERD (`banner_key`), sequence presign/confirm và ADR upload ảnh** (hai bucket public/private, presigned URL) | 1,5 | — | Tài liệu khớp hệ thống thực tế, gồm luồng upload ảnh |
 | S-604 | Hỗ trợ tập dượt | 0,5 | — | — |
 
 #### Vũ
