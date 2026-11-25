@@ -165,6 +165,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an order owned by the authenticated user */
+        get: operations["OrderReadController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -260,6 +277,18 @@ export interface components {
             admission_token?: string;
             /** Format: date-time */
             expires_at?: string;
+        };
+        OrderView: {
+            /** Format: uuid */
+            order_id: string;
+            event_id: string;
+            status: string;
+            total_amount_vnd: number;
+            ticket_amount_vnd: number;
+            merch_amount_vnd: number;
+            /** Format: date-time */
+            expires_at: string;
+            items: Record<string, never>[];
         };
     };
     responses: never;
@@ -766,6 +795,41 @@ export interface operations {
             };
             /** @description QUEUE_UNAVAILABLE (application/problem+json); Retry-After: 1 */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OrderReadController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderView"];
+                };
+            };
+            /** @description JWT required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ORDER_NOT_FOUND; absent or not owned */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

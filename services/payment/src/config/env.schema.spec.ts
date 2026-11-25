@@ -41,6 +41,22 @@ describe("envSchema", () => {
 });
 
 describe("payment configuration", () => {
+  it.each([
+    "http://sandbox.vnpaytest.vn/paymentv2/vpcpay.html",
+    "https://evil.test/paymentv2/vpcpay.html",
+    "https://pay.vnpay.vn/vpcpay.html",
+    "https://sandbox.vnpaytest.vn/paymentv2/vpcpay.html?x=1",
+  ])("rejects a non-allowlisted payment URL %s", (url) => {
+    expect(envSchema.safeParse({ ...base, VNPAY_PAYMENT_URL: url }).success).toBe(false);
+  });
+  it("accepts the specifically supplied sandbox URL", () => {
+    expect(
+      envSchema.parse({
+        ...base,
+        VNPAY_PAYMENT_URL: "https://sandbox.vnpaytest.vn/paymentv2/vpcpay.html",
+      }).VNPAY_PAYMENT_URL,
+    ).toContain("sandbox.vnpaytest.vn");
+  });
   it("allows mock-only with empty VNPay secrets and rejects missing credentials when enabled", () => {
     expect(loadEnv(envSchema, base).VNPAY_ENABLED).toBe(false);
     expect(() => loadEnv(envSchema, { ...base, VNPAY_ENABLED: "true" })).toThrow(

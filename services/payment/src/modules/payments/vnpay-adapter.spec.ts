@@ -4,6 +4,25 @@ import { VnpayAdapter, canonicalQuery, gmt7 } from "./vnpay-adapter";
 const signed =
   "vnp_Amount=1000000&vnp_OrderInfo=Thanh+toan+don+hang&vnp_ReturnUrl=https%3A%2F%2Fexample.test%2Freturn%3Fa%3D1%26b%3D2";
 describe("VNPay protocol", () => {
+  it("uses the configured sandbox endpoint without changing signature parameters", () => {
+    const a = new VnpayAdapter({
+      tmnCode: "TESTCODE",
+      secret: "test-secret",
+      returnUrl: "https://example.test/return",
+      paymentUrl: "https://sandbox.vnpaytest.vn/paymentv2/vpcpay.html",
+    });
+    const result = new URL(
+      a.createPayment({
+        paymentId: "11111111-1111-4111-8111-111111111111",
+        amountVnd: 10000,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 900000),
+        ipAddress: "127.0.0.1",
+      }).redirect_url,
+    );
+    expect(result.origin).toBe("https://sandbox.vnpaytest.vn");
+    expect(result.searchParams.get("vnp_SecureHash")).toHaveLength(128);
+  });
   const adapter = new VnpayAdapter({
     tmnCode: "TESTCODE",
     secret: "test-secret",

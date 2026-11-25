@@ -13,6 +13,10 @@ import { PublicCatalogModule } from "./modules/public-catalog/public-catalog.mod
 import { InternalKeyGuard } from "./modules/seat-classes/internal-key.guard";
 import { SeatClassesController } from "./modules/seat-classes/seat-classes.controller";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
+import {
+  PublicSeatsController,
+  PublicSeatsRepository,
+} from "./modules/public-catalog/public-seats";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -30,11 +34,18 @@ export class AppModule implements NestModule {
           publicKeyPem: env.AUTH_PUBLIC_KEY_PEM,
         }),
       ],
-      controllers: [HealthController, MetricsController, WhoamiController, SeatClassesController],
+      controllers: [
+        HealthController,
+        MetricsController,
+        WhoamiController,
+        SeatClassesController,
+        PublicSeatsController,
+      ],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
+        PublicSeatsRepository,
         EventOutboxWorker,
         InternalKeyGuard,
       ],

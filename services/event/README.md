@@ -1,5 +1,7 @@
 # Event service
 
+T-208 bổ sung `GET /v1/events/{id}/seats?seat_map_version=…&cursor=…&limit=…`: chỉ event PUBLISHED và map đã publish, trả UUID ghế cùng hạng vé/zone/block/hàng/số. Limit mặc định 1000, tối đa 5000; cursor là UUID cuối trang. Browser dùng ánh xạ này để gọi Booking holds, không truy cập endpoint internal. Tuấn duyệt hợp đồng tại ADR-0019; không đổi DB/Kafka.
+
 Tạo từ `services/_template` (xem `docs/dev/new-service.md`).
 
 ## Chạy local

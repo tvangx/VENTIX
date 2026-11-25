@@ -1,5 +1,7 @@
 # payment-service (T-302, T-303, T-405)
 
+T-208: `VNPAY_PAYMENT_URL` được validate bằng allowlist HTTPS hai endpoint sandbox. Mặc định giữ `sandbox.vnpayment.vn`; overlay demo chọn rõ `https://sandbox.vnpaytest.vn/paymentv2/vpcpay.html` theo thông tin Tuấn cấp. Không suy đoán hai hostname tương đương. Return frontend `/payments/return` chỉ hiển thị trạng thái đọc từ Booking; IPN vẫn kiểm chữ ký trước ghi kết quả. Không nhập secret sandbox vào repo.
+
 Tạo link thanh toán VNPay sandbox hoặc mock từ read-model `payables` cục bộ. Cổng dev 3004.
 Inbox dựng payable từ `OrderAwaitingPayment` (ORDER) và `ResaleOrderAwaitingPayment` (RESALE)
 trong cùng transaction; chỉ đọc DB payment. Consumer subscribe `booking.orders` và `resale.events`.

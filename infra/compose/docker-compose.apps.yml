@@ -1,0 +1,183 @@
+# T-208 demo only; layer AFTER prod, and tunnel when enabled. No host ports.
+x-app: &app
+  restart: unless-stopped
+  init: true
+  networks: [backend]
+  logging:
+    driver: local
+    options: { max-size: "10m", max-file: "3" }
+  healthcheck:
+    test:
+      [
+        "CMD",
+        "node",
+        "-e",
+        "fetch('http://127.0.0.1:'+process.env.PORT+'/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+      ]
+    interval: 10s
+    timeout: 5s
+    retries: 18
+    start_period: 30s
+
+x-env: &env
+  NODE_ENV: production
+  AUTH_ISSUER: ${DEMO_ORIGIN:?Set DEMO_ORIGIN}
+  AUTH_AUDIENCE: ticketing
+  AUTH_JWKS_URI: http://identity:3001/.well-known/jwks.json
+  KAFKA_BROKERS: kafka:29092
+  INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
+
+services:
+  identity:
+    <<: *app
+    image: ticketing-demo/identity:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    environment: &identity-env
+      <<: *env
+      DEMO_SERVICE: identity
+      PORT: 3001
+      DB_PASSWORD: ${DB_PASSWORD_IDENTITY:?Set DB_PASSWORD_IDENTITY}
+      JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM:?Set persistent JWT_PRIVATE_KEY_PEM}
+      WEB_ORIGIN: ${DEMO_ORIGIN:?Set DEMO_ORIGIN}
+      IDENTITY_OUTBOX_ENABLED: "true"
+    depends_on:
+      identity-migrate: { condition: service_completed_successfully }
+      kafka: { condition: service_healthy }
+  identity-migrate:
+    <<: *app
+    image: ticketing-demo/identity:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    restart: "no"
+    healthcheck: { disable: true }
+    environment: *identity-env
+    command: ["node_modules/.bin/prisma", "migrate", "deploy"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  event:
+    <<: *app
+    image: ticketing-demo/event:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    environment: &event-env
+      <<: *env
+      DEMO_SERVICE: event
+      PORT: 3002
+      DB_PASSWORD: ${DB_PASSWORD_EVENT:?Set DB_PASSWORD_EVENT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      EVENT_OUTBOX_ENABLED: "true"
+    depends_on:
+      event-migrate: { condition: service_completed_successfully }
+      identity: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+  event-migrate:
+    <<: *app
+    image: ticketing-demo/event:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    restart: "no"
+    healthcheck: { disable: true }
+    environment: *event-env
+    command: ["node_modules/.bin/prisma", "migrate", "deploy"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  booking:
+    <<: *app
+    image: ticketing-demo/booking:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    environment: &booking-env
+      <<: *env
+      DEMO_SERVICE: booking
+      PORT: 3003
+      DB_PASSWORD: ${DB_PASSWORD_BOOKING:?Set DB_PASSWORD_BOOKING}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      EVENT_INTERNAL_URL: http://event:3002
+      MERCH_INTERNAL_URL: http://merch:3007
+      ADMISSION_REQUIRED: "true"
+      ADMISSION_TOKEN_SECRET: ${ADMISSION_TOKEN_SECRET:?Set ADMISSION_TOKEN_SECRET}
+    depends_on:
+      booking-migrate: { condition: service_completed_successfully }
+      event: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+  booking-migrate:
+    <<: *app
+    image: ticketing-demo/booking:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    restart: "no"
+    healthcheck: { disable: true }
+    environment: *booking-env
+    command: ["node_modules/.bin/prisma", "migrate", "deploy"]
+    depends_on:
+      postgres-booking: { condition: service_healthy }
+
+  payment:
+    <<: *app
+    image: ticketing-demo/payment:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    networks: [backend, edge]
+    environment: &payment-env
+      <<: *env
+      DEMO_SERVICE: payment
+      PORT: 3004
+      DB_PASSWORD: ${DB_PASSWORD_PAYMENT:?Set DB_PASSWORD_PAYMENT}
+      PAYMENT_WORKERS_ENABLED: "true"
+      VNPAY_ENABLED: "true"
+      VNPAY_PAYMENT_URL: https://sandbox.vnpaytest.vn/paymentv2/vpcpay.html
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:?Set sandbox VNPAY_TMN_CODE}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:?Set sandbox VNPAY_HASH_SECRET}
+      VNPAY_RETURN_URL: ${DEMO_ORIGIN:?Set DEMO_ORIGIN}/payments/return
+      VNPAY_IPN_URL: ${DEMO_ORIGIN:?Set DEMO_ORIGIN}/api/payment/v1/payments/vnpay/ipn
+    depends_on:
+      payment-migrate: { condition: service_completed_successfully }
+      identity: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+  payment-migrate:
+    <<: *app
+    image: ticketing-demo/payment:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    restart: "no"
+    healthcheck: { disable: true }
+    environment: *payment-env
+    command: ["node_modules/.bin/prisma", "migrate", "deploy"]
+    depends_on:
+      postgres-payment: { condition: service_healthy }
+
+  ticket:
+    <<: *app
+    image: ticketing-demo/ticket:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    environment: &ticket-env
+      <<: *env
+      DEMO_SERVICE: ticket
+      PORT: 3005
+      DB_PASSWORD: ${DB_PASSWORD_TICKET:?Set DB_PASSWORD_TICKET}
+      TICKET_WORKERS_ENABLED: "true"
+      TICKET_ACTIVE_KEY_ID: ${TICKET_ACTIVE_KEY_ID:?Set TICKET_ACTIVE_KEY_ID}
+      TICKET_ENCRYPTION_KEYS: ${TICKET_ENCRYPTION_KEYS:?Set persistent TICKET_ENCRYPTION_KEYS}
+    depends_on:
+      ticket-migrate: { condition: service_completed_successfully }
+      identity: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+  ticket-migrate:
+    <<: *app
+    image: ticketing-demo/ticket:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    restart: "no"
+    healthcheck: { disable: true }
+    environment: *ticket-env
+    command: ["node_modules/.bin/prisma", "migrate", "deploy"]
+    depends_on:
+      postgres-ticket: { condition: service_healthy }
+
+  web:
+    <<: *app
+    image: ticketing-demo/web:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  kong:
+    environment:
+      KONG_NGINX_WORKER_PROCESSES: "2"
+      # T-206 routes use PCRE lookahead; Kong 3.8 default compatibility router cannot parse it.
+      KONG_ROUTER_FLAVOR: traditional
+    volumes:
+      - ../kong/kong.demo.yml:/kong/kong.prod.yml:ro

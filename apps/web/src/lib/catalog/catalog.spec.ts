@@ -191,6 +191,8 @@ function ticketClass(id: string, price: number, kind: "SEATED" | "GA" = "SEATED"
 
 function detail(patch: Partial<CatalogDetail>): CatalogDetail {
   return {
+    banner_url: null,
+    thumbnail_url: null,
     id: META.event_id,
     version: 1,
     created_at: META.created_at,
