@@ -55,6 +55,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/organizer/events/{eventId}/banner/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Xin URL PUT có chữ ký để tải banner thẳng lên kho ảnh */
+        post: operations["BannerController_presign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/organizer/events/{eventId}/banner/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Xác nhận ảnh đã tải lên và gắn làm banner sự kiện */
+        post: operations["BannerController_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/organizer/venues": {
         parameters: {
             query?: never;
@@ -372,6 +406,43 @@ export interface components {
             code: string;
             request_id: string | null;
         };
+        PresignBannerDto: {
+            /** @enum {string} */
+            content_type: "image/jpeg" | "image/png" | "image/webp";
+            /** @description Số byte của file; tối đa theo UPLOAD_MAX_BYTES */
+            size_bytes: number;
+        };
+        PresignBannerResponse: {
+            /** Format: uuid */
+            upload_id: string;
+            /** @enum {string} */
+            method: "PUT";
+            url: string;
+            /** @description Header bắt buộc gửi kèm khi PUT */
+            headers: {
+                [key: string]: string;
+            };
+            /** Format: date-time */
+            expires_at: string;
+            max_bytes: number;
+        };
+        ConfirmBannerDto: {
+            version: number;
+            /**
+             * Format: uuid
+             * @description upload_id nhận từ bước presign
+             */
+            upload_id: string;
+        };
+        ConfirmBannerResponse: {
+            banner_key: string;
+            /** Format: uri */
+            banner_url: string | null;
+            /** Format: uri */
+            thumbnail_url: string | null;
+            /** @description Phiên bản mới của sự kiện */
+            version: number;
+        };
         Object: Record<string, never>;
         VenueResponse: {
             /** Format: uuid */
@@ -573,8 +644,18 @@ export interface components {
             name: string;
             blocks: components["schemas"]["SeatMapBlockDto"][];
         };
+        SeatMapGaAreaDto: {
+            name: string;
+            /**
+             * Format: uuid
+             * @description Hạng vé GA, mỗi hạng chỉ gắn một khu đứng
+             */
+            ticket_class_id: string;
+        };
         SeatMapLayoutDto: {
+            /** @description Được phép rỗng nếu có ga_areas (sự kiện toàn vé đứng) */
             zones: components["schemas"]["SeatMapZoneDto"][];
+            ga_areas?: components["schemas"]["SeatMapGaAreaDto"][];
         };
         CreateSeatMapDto: {
             layout: components["schemas"]["SeatMapLayoutDto"];
@@ -639,6 +720,16 @@ export interface components {
             start_at: string;
             /** Format: date-time */
             end_at: string;
+            /**
+             * Format: uri
+             * @description URL ảnh banner công khai; null khi chưa có ảnh hoặc chưa cấu hình kho ảnh
+             */
+            banner_url: string | null;
+            /**
+             * Format: uri
+             * @description URL thumbnail WebP; null khi banner chưa qua xử lý ảnh (khóa seed/cũ)
+             */
+            thumbnail_url: string | null;
             venue_name: string;
             venue_address: string;
             min_ticket_price_vnd: number | null;
@@ -673,6 +764,16 @@ export interface components {
             start_at: string;
             /** Format: date-time */
             end_at: string;
+            /**
+             * Format: uri
+             * @description URL ảnh banner công khai; null khi chưa có ảnh hoặc chưa cấu hình kho ảnh
+             */
+            banner_url: string | null;
+            /**
+             * Format: uri
+             * @description URL thumbnail WebP; null khi banner chưa qua xử lý ảnh (khóa seed/cũ)
+             */
+            thumbnail_url: string | null;
             venue: components["schemas"]["VenueResponse"];
             ticket_classes: components["schemas"]["TicketClassResponse"][];
             sale_phases: components["schemas"]["SalePhaseResponse"][];
@@ -755,6 +856,152 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    BannerController_presign: {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignBannerDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresignBannerResponse"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OrganizerProblemResponse"];
+                };
+            };
+            /** @description Thiếu token hợp lệ */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OrganizerProblemResponse"];
+                };
+            };
+            /** @description Thiếu role hoặc tenant hợp lệ */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OrganizerProblemResponse"];
+                };
+            };
+            /** @description Không tìm thấy trong tenant */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OrganizerProblemResponse"];
+                };
+            };
+            /** @description Trạng thái, phiên bản, khóa ghi hoặc quan hệ bị xung đột */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OrganizerProblemResponse"];
+                };
+            };
+        };
+    };
+    BannerController_confirm: {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmBannerDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmBannerResponse"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OrganizerProblemResponse"];
+                };
+            };
+            /** @description Thiếu token hợp lệ */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OrganizerProblemResponse"];
+                };
+            };
+            /** @description Thiếu role hoặc tenant hợp lệ */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OrganizerProblemResponse"];
+                };
+            };
+            /** @description Không tìm thấy trong tenant */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OrganizerProblemResponse"];
+                };
+            };
+            /** @description Trạng thái, phiên bản, khóa ghi hoặc quan hệ bị xung đột */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["OrganizerProblemResponse"];
+                };
             };
         };
     };

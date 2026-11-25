@@ -1,4 +1,5 @@
 import type { BookingSchemas, FinanceSchemas, IdentitySchemas } from "@/lib/api";
+import { initialOrganizerState, type OrganizerMockState } from "./organizer-store";
 import { seedEvents, seedMerch, type SeedEvent, type SeedSalePhase } from "./seed";
 
 // Trạng thái giả lập của backend cho MSW: chỉ nằm trong bộ nhớ trình duyệt/tiến trình test.
@@ -86,6 +87,8 @@ interface MockState {
   admissions: Map<string, { userId: string; eventId: string; expiresAt: number }>;
   dlq: DeadLetterRow[];
   audit: AuditRow[];
+  /** API organizer của event-service (V-203). */
+  organizer: OrganizerMockState;
 }
 
 export const mockConfig = {
@@ -315,6 +318,7 @@ function initialState(): MockState {
     payments: new Map(),
     queues: new Map(),
     admissions: new Map(),
+    organizer: initialOrganizerState(DEMO_ORGANIZER_ID),
     dlq: [
       {
         id: "12000000-0000-4000-8000-000000000001",

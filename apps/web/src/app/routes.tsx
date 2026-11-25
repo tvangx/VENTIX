@@ -1,4 +1,4 @@
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 import { RootLayout } from "@/components/layout/root-layout";
 import { GuestOnly, RequireAuth } from "@/components/layout/route-guards";
 import { AccountPage } from "@/pages/account";
@@ -10,8 +10,8 @@ import { ExplorePage } from "@/pages/explore/explore-page";
 import { HomePage } from "@/pages/home";
 import { NotFoundPage } from "@/pages/not-found";
 
-// Layout riêng Organizer/Admin làm ở task sau (V-203…). Tách khỏi router.tsx để test dùng
-// createMemoryRouter với cùng cây route.
+// Tách khỏi router.tsx để test dùng createMemoryRouter với cùng cây route.
+// Khu ban tổ chức (V-203) có layout riêng ("hậu trường"), tải lười: chỉ organizer mới cần.
 export const routes: RouteObject[] = [
   {
     element: <RootLayout />,
@@ -47,4 +47,33 @@ export const routes: RouteObject[] = [
     ],
   },
   { path: "auth/callback", element: <AuthCallbackPage /> },
+  {
+    element: <RequireAuth />,
+    children: [
+      {
+        path: "organizer",
+        lazy: async () => ({
+          Component: (await import("@/pages/organizer/organizer-layout")).OrganizerLayout,
+        }),
+        children: [
+          { index: true, element: <Navigate to="events" replace /> },
+          {
+            path: "events",
+            lazy: async () => ({
+              Component: (await import("@/pages/organizer/events-page")).OrganizerEventsPage,
+            }),
+          },
+          // Wizard tải lười riêng vì có Konva (xem trước sơ đồ ghế).
+          { path: "events/new", lazy: wizard },
+          { path: "events/:id", lazy: wizard },
+        ],
+      },
+    ],
+  },
 ];
+
+async function wizard() {
+  return {
+    Component: (await import("@/pages/organizer/wizard/wizard-page")).OrganizerWizardPage,
+  };
+}

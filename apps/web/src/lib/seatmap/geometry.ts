@@ -9,6 +9,8 @@ import type { SeatMapLayout } from "./layout";
 // - Mỗi Block là một dải cung; Block đầu tiên gần sân khấu nhất.
 // - Các Khu của một Block xếp cạnh nhau trên cung, cách nhau một khoảng trống.
 // - Hàng đầu tiên của Khu gần sân khấu nhất; ghế số 1 ở bên trái nhìn từ khán đài.
+// - Khu đứng (`ga_areas`, không có ghế) là một dải cung liền sát sân khấu, trước mọi Block ghế;
+//   nhiều khu đứng thì chia đều dải theo thứ tự trong layout, từ trái sang phải.
 
 export const SEAT_SPACING = 12;
 export const ROW_SPACING = 14;
@@ -18,6 +20,9 @@ const ZONE_GAP = 40;
 const STAGE_RADIUS = 90;
 /** Góc tối đa một Block được trải ra (radian); Block rộng hơn thì bán kính tăng lên. */
 const MAX_SPAN = (Math.PI * 160) / 180;
+/** Bề sâu dải khu đứng và khoảng trống (theo cung) giữa hai khu đứng cạnh nhau. */
+export const GA_DEPTH = 70;
+const GA_GAP = 10;
 
 export interface SeatPoint {
   /** Khóa duy nhất theo vị trí: "block:khu:hàng:số" (tức zone:block của hợp đồng) (chỉ số, bắt đầu từ 0, trừ số ghế). */
@@ -62,8 +67,25 @@ export interface Bounds {
   maxY: number;
 }
 
+/** Khu đứng: hình quạt vành khăn tâm (0,0); góc theo quy ước `onArc` (0 là thẳng lên, âm là trái). */
+export interface GaAreaGeometry {
+  index: number;
+  name: string;
+  ticketClassId: string;
+  innerRadius: number;
+  outerRadius: number;
+  startAngle: number;
+  endAngle: number;
+  /** Tâm hình quạt, để đặt tên khu. */
+  center: { x: number; y: number };
+  /** Chiều dài cung ở giữa bề sâu: bề rộng tối đa của nhãn. */
+  arcLength: number;
+  bounds: Bounds;
+}
+
 export interface SeatMapGeometry {
   seats: SeatPoint[];
+  gaAreas: GaAreaGeometry[];
   blocks: BlockGeometry[];
   zones: ZoneGeometry[];
   rowLabels: RowLabel[];
@@ -100,6 +122,13 @@ export function buildGeometry(layout: SeatMapLayout): SeatMapGeometry {
   extend(all, -STAGE_RADIUS, 0);
   extend(all, STAGE_RADIUS, 0);
   let innerRadius = STAGE_RADIUS + ZONE_GAP;
+
+  const gaAreas = buildGaAreas(layout.ga_areas ?? [], innerRadius);
+  for (const area of gaAreas) {
+    extend(all, area.bounds.minX, area.bounds.minY);
+    extend(all, area.bounds.maxX, area.bounds.maxY);
+  }
+  if (gaAreas.length > 0) innerRadius += GA_DEPTH + ZONE_GAP;
 
   layout.zones.forEach((zone, zi) => {
     // Bề rộng (theo cung, tính ở bán kính trong) của từng block = hàng dài nhất.
@@ -166,5 +195,43 @@ export function buildGeometry(layout: SeatMapLayout): SeatMapGeometry {
     innerRadius = radius + depth + ZONE_GAP;
   });
 
-  return { seats, blocks, zones, rowLabels, bounds: all, stageRadius: STAGE_RADIUS };
+  return { seats, gaAreas, blocks, zones, rowLabels, bounds: all, stageRadius: STAGE_RADIUS };
+}
+
+function buildGaAreas(
+  areas: readonly { name: string; ticket_class_id: string }[],
+  inner: number,
+): GaAreaGeometry[] {
+  if (areas.length === 0) return [];
+  const outer = inner + GA_DEPTH;
+  const mid = inner + GA_DEPTH / 2;
+  // Khe giữa hai khu tính theo cung ở bán kính trong, để khe không hẹp lại phía sân khấu.
+  const gap = GA_GAP / inner;
+  const each = (MAX_SPAN - gap * (areas.length - 1)) / areas.length;
+  return areas.map((area, i) => {
+    const startAngle = -MAX_SPAN / 2 + i * (each + gap);
+    const endAngle = startAngle + each;
+    const bounds = emptyBounds();
+    // Lấy mẫu dọc hai cung: đủ chính xác cho khung nhìn, không cần công thức đúng tuyệt đối.
+    for (let k = 0; k <= 16; k += 1) {
+      const angle = startAngle + ((endAngle - startAngle) * k) / 16;
+      for (const radius of [inner, outer]) {
+        const [x, y] = onArc(radius, angle);
+        extend(bounds, x, y);
+      }
+    }
+    const [cx, cy] = onArc(mid, (startAngle + endAngle) / 2);
+    return {
+      index: i,
+      name: area.name,
+      ticketClassId: area.ticket_class_id,
+      innerRadius: inner,
+      outerRadius: outer,
+      startAngle,
+      endAngle,
+      center: { x: cx, y: cy },
+      arcLength: mid * each,
+      bounds,
+    };
+  });
 }

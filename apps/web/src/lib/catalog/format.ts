@@ -11,6 +11,15 @@ export function formatVnd(amount: number): string {
   return `${vndFormatter.format(amount)}đ`;
 }
 
+const compactFormatter = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 });
+
+/** Số tiền lớn ghi gọn: 4500000000 → "4,5 tỷ", 800000000 → "800 triệu", 500000 → "500.000đ". */
+export function formatCompactVnd(amount: number): string {
+  if (amount >= 1e9) return `${compactFormatter.format(amount / 1e9)} tỷ`;
+  if (amount >= 1e6) return `${compactFormatter.format(amount / 1e6)} triệu`;
+  return formatVnd(amount);
+}
+
 export interface VnDateParts {
   year: number;
   /** 1–12 */
