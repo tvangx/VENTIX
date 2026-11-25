@@ -14,6 +14,7 @@ describe("S-204 public catalog", () => {
     redis = await new GenericContainer("redis:7-alpine").withExposedPorts(6379).start();
     app = await organizerApp({
       redisUrl: `redis://${redis.getHost()}:${redis.getMappedPort(6379)}`,
+      env: { PUBLIC_ASSET_BASE_URL: "https://cdn.test/event-banners/" },
     });
     await app.db.pool.query(
       "INSERT INTO venues (id,organizer_id,name,address,capacity,updated_at) VALUES ($1,$2,'Main Hall','Hanoi',100,now())",
@@ -126,6 +127,56 @@ describe("S-204 public catalog", () => {
       cursor: first.body.next_cursor,
     });
     expect(ids(next.body)).toEqual([earlyPeer, unpriced]);
+  });
+
+  it("S-605 returns banner_url/thumbnail_url for public keys only, null otherwise", async () => {
+    const withBanner = randomUUID();
+    const seeded = randomUUID();
+    const without = randomUUID();
+    const bannerVenue = randomUUID();
+    const key = `public/events/${withBanner}/${randomUUID()}.webp`;
+    const thumb = key.replace(/\.webp$/, "_thumb.webp");
+    await app.db.pool.query(
+      "INSERT INTO venues (id,organizer_id,name,address,capacity,updated_at) VALUES ($1,$2,'Banner Hall','Banner Quarter',100,now())",
+      [bannerVenue, organizerId],
+    );
+    for (const [id, banner] of [
+      [withBanner, key],
+      [seeded, "seed/banners/a.jpg"],
+      [without, null],
+    ]) {
+      await app.db.pool.query(
+        `INSERT INTO events (id,organizer_id,venue_id,title,description,banner_key,status,start_at,end_at,updated_at)
+         VALUES ($1,$2,$3,'Banner Show','Banner fixture',$4,'PUBLISHED','2033-01-01T18:00:00Z','2033-01-01T20:00:00Z',now())`,
+        [id, organizerId, bannerVenue, banner],
+      );
+    }
+    const list = await app.http.get("/v1/events").query({ q: "banner quarter" }).expect(200);
+    const byId = new Map<string, Record<string, string | null>>(
+      list.body.items.map((item: { id: string }) => [item.id, item]),
+    );
+    expect(byId.get(withBanner)).toMatchObject({
+      banner_key: key,
+      banner_url: `https://cdn.test/event-banners/${key}`,
+      thumbnail_url: `https://cdn.test/event-banners/${thumb}`,
+    });
+    expect(byId.get(seeded)).toMatchObject({
+      banner_key: "seed/banners/a.jpg",
+      banner_url: null,
+      thumbnail_url: null,
+    });
+    expect(byId.get(without)).toMatchObject({
+      banner_key: null,
+      banner_url: null,
+      thumbnail_url: null,
+    });
+    const detail = await app.http.get(`/v1/events/${withBanner}`).expect(200);
+    expect(detail.body).toMatchObject({
+      banner_url: `https://cdn.test/event-banners/${key}`,
+      thumbnail_url: `https://cdn.test/event-banners/${thumb}`,
+    });
+    const none = await app.http.get(`/v1/events/${without}`).expect(200);
+    expect([none.body.banner_url, none.body.thumbnail_url]).toEqual([null, null]);
   });
 
   it("rejects malformed or reversed catalog filters", async () => {

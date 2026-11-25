@@ -25,7 +25,14 @@ export async function organizerApp({
   kafkaBrokers,
   redisUrl,
   internalApiKey,
-}: { kafkaBrokers?: string[]; redisUrl?: string; internalApiKey?: string } = {}) {
+  env: extraEnv,
+}: {
+  kafkaBrokers?: string[];
+  redisUrl?: string;
+  internalApiKey?: string;
+  /** Biến môi trường bổ sung, ví dụ MINIO_* trỏ vào S3 giả. */
+  env?: Record<string, string>;
+} = {}) {
   const db = await testDatabase();
   const { publicKey, privateKey } = await generateKeyPair("RS256");
   const env = loadEnv(envSchema, {
@@ -37,6 +44,7 @@ export async function organizerApp({
     AUTH_ISSUER: "https://identity.test",
     AUTH_AUDIENCE: "ticketing-api",
     AUTH_PUBLIC_KEY_PEM: await exportSPKI(publicKey),
+    ...extraEnv,
   });
   const app = await createApp(env, createLogger("test", { level: "silent" }));
   await app.listen(0, "127.0.0.1");
