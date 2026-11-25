@@ -36,6 +36,7 @@ case " $* " in
     [[ "$*" == *'--interactive=false'* ]] || exit 21
     if IFS= read -r line; then exit 22; fi
     [[ "$TEST_FAIL" != migration || "$*" != *payment-migrate* ]] || exit 13
+    [[ "$TEST_FAIL" != topics || "$*" != *kafka-init* ]] || exit 16
     [[ "$TEST_FAIL" != env || "$*" != *'identity validate'* ]] || exit 14
     exit 0 ;;
   *" up "*|*" stop "*) exit 0 ;;
@@ -76,6 +77,11 @@ test("migration failure stops before daemon mutation", () => {
   assert.notEqual(result.status, 0);
   assert.doesNotMatch(result.calls, /up -d|ticket-migrate/);
   assert.match(result.stderr, /Migration failed: payment-migrate/);
+});
+test("topic bootstrap failure stops before migrations or daemon mutation", () => {
+  const result = run("upgrade", "topics");
+  assert.notEqual(result.status, 0);
+  assert.doesNotMatch(result.calls, /-migrate|up -d/);
 });
 test("env failure stops before migration", () => {
   const result = run("upgrade", "env");

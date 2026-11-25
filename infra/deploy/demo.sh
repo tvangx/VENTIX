@@ -42,6 +42,8 @@ for svc in identity event booking payment ticket; do
 done
 [[ "$action" != check ]] || { echo 'Artifact/images/env validated; no migrations or daemon changes.'; exit; }
 if [[ "$action" = upgrade ]]; then
+  # Reuse T-207's idempotent job: a healthy broker alone does not prove topics exist.
+  "${app[@]}" run -T --interactive=false --rm --no-deps --pull never kafka-init < /dev/null
   # Sequential migration jobs make the failing service explicit; never reset or seed.
   for job in "${jobs[@]}"; do
     echo "Migrating $job"
