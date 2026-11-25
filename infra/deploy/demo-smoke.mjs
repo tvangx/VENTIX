@@ -91,10 +91,16 @@ const detail = await request(`/api/event/v1/events/${eventId}`);
 check(detail.res.status === 200 && detail.body.seat_map, "Real public event and seat map");
 check((await request("/api/event/v1/events")).body.items.length >= 3, "Seeded catalog");
 const seatsRes = await request(
-  `/api/event/v1/events/${eventId}/seats?seat_map_version=${detail.body.seat_map.version}&limit=1`,
+  `/api/event/v1/events/${eventId}/seats?seat_map_version=${detail.body.seat_map.version}&limit=1000`,
 );
 check(seatsRes.res.ok, "Public seat UUID mapping via Kong");
-const seat = seatsRes.body.items[0].seat_id;
+const availability = await request(`/api/booking/v1/events/${eventId}/seat-status`, {
+  headers: auth,
+});
+check(availability.res.ok, "Current availability before selecting a fixture seat");
+const occupied = new Set([...availability.body.sold, ...availability.body.held]);
+const seat = seatsRes.body.items.find((item) => !occupied.has(item.seat_id))?.seat_id;
+check(seat, "A free fixture seat is required; preserve previous test orders/tickets");
 const joinOptions = { method: "POST", headers: auth, body: JSON.stringify({ event_id: eventId }) };
 await poll(
   async () => (await request("/api/booking/v1/queue/join", joinOptions)).res.status === 201,

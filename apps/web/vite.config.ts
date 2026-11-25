@@ -19,6 +19,9 @@ export default defineConfig({
   },
   preview: { port: 5173, strictPort: true },
   test: {
+    // CI chạy đồng thời nhiều package Jest/Vitest; một worker tránh tranh CPU làm UI timeout.
+    // Giữ nguyên timeout và toàn bộ assertion/test case.
+    maxWorkers: 1,
     environment: "node",
     include: ["src/**/*.spec.{ts,tsx}"],
   },
