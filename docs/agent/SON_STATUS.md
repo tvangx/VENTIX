@@ -1,5 +1,10 @@
 # Trạng thái task — Sơn
 
+## Task mới S-605 — 2026-11-24
+
+- S-605 Upload ảnh banner (presign/confirm, WebP/thumbnail, URL công khai, module storage dùng chung): **Todo**, chỉ có tài liệu. Xem [spec](../specs/s-605-image-upload.md) và [run report](runs/S-605.md).
+- Đã chốt 2026-11-24 (A + A): (1) CONTRACT CHANGE additive cho OpenAPI `event`; (2) banner public-read trực tiếp từ MinIO qua `PUBLIC_ASSET_BASE_URL`. Còn việc `infra/`: policy anonymous read prefix `public/`. Phụ thuộc S-105, S-201, S-204 đã xong; V-201 đang chờ URL ảnh công khai.
+
 ## Cập nhật S-204/V-201 — 2026-11-18
 
 - Phần bổ sung catalog cho màn Khám phá của V-201 đang In review tại [#94](https://github.com/tvangx/VENTIX/pull/94), đồng bộ main sau khi #91/#92/#93 được tích hợp và xử lý xung đột tài liệu. Xem [run report S-204](runs/S-204.md).
