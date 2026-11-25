@@ -15,5 +15,6 @@ coverage/
 *.pem
 *.key
 secrets/
+cloudflared-token
 
 STATUS.md
