@@ -1,5 +1,5 @@
 # Chỉ hạ tầng T-207. Env bắt buộc: --env-file /etc/ticketing/.env.prod.
-# Cloudflare Tunnel chạy trên host, trỏ tới Kong loopback; không mở data plane ra host.
+# Tunnel container dùng overlay docker-compose.tunnel.yml; base giữ Kong loopback.
 name: ticketing-prod
 
 x-logging: &logging
