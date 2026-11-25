@@ -169,3 +169,14 @@ Task tiếp theo đề xuất: T-xxx (chờ lệnh)
 - **Mặc định:** từng task (Bước 0 → 8), dừng sau mỗi task.
 - **Chế độ lô** (chỉ khi người dùng nói rõ, ví dụ "làm T-201 đến T-203"): vẫn mỗi task một nhánh/PR/run report; dừng ngay khi có điều kiện dừng ở mục 9; không gộp thay đổi của nhiều task vào một PR.
 - **Sửa lỗi sau review:** thêm commit vào cùng nhánh, cập nhật run report (thêm mục "Lần chạy N"), không tạo task mới.
+
+<!-- BEGIN:turborepo-agent-rules -->
+
+# This is NOT the Turborepo you know
+
+Turborepo configuration, task behavior, and CLI commands can vary between installed versions and may differ from your training data. Resolve the `turbo` package from this file's directory or relevant workspace; in monorepos, it may not be visible from the repository root. For example, run `node -p "require.resolve('turbo/package.json')"` from a workspace that depends on `turbo`.
+
+Read `docs/README.md` inside that installed package first, then read the relevant pages from its `docs/` directory before changing Turborepo configuration or commands. Heed deprecation notices. These bundled docs match the installed package version and are available without network access.
+
+This block is written and re-added by `turbo` before repository-scoped commands when an AI agent is detected. In the Turborepo source repository, its template is defined in `crates/turborepo-cli/src/cli/agent_guidance.rs`. Removing the managed block while updates are enabled means a later qualifying invocation will add it again. Set `"agentGuidance": false` in the root `turbo.json` or `turbo.jsonc` to opt out; this does not remove an existing block. Keep the block committed with your work to avoid an uncommitted change on the next agent invocation.
+<!-- END:turborepo-agent-rules -->

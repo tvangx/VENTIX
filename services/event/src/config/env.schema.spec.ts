@@ -63,6 +63,46 @@ describe("envSchema", () => {
     );
   });
 
+  it("applies banner storage defaults and keeps the public URL optional", () => {
+    const env = loadEnv(envSchema, base);
+    expect(env.MINIO_ENDPOINT).toBe("http://localhost:9000");
+    expect(env.MINIO_BUCKET).toBe("event-banners");
+    expect(env.UPLOAD_MAX_BYTES).toBe(5 * 1024 * 1024);
+    expect(env.UPLOAD_PRESIGN_TTL_SECONDS).toBe(300);
+    expect(env.PUBLIC_ASSET_BASE_URL).toBeUndefined();
+  });
+
+  it("requires MinIO access key and secret key together", () => {
+    expect(() => loadEnv(envSchema, { ...base, MINIO_ACCESS_KEY: "key" })).toThrow(
+      /MINIO_ACCESS_KEY/,
+    );
+    expect(() => loadEnv(envSchema, { ...base, MINIO_SECRET_KEY: "secret" })).toThrow(
+      /MINIO_ACCESS_KEY/,
+    );
+    expect(
+      loadEnv(envSchema, { ...base, MINIO_ACCESS_KEY: "key", MINIO_SECRET_KEY: "secret" })
+        .MINIO_ACCESS_KEY,
+    ).toBe("key");
+  });
+
+  it("bounds banner size, presign lifetime and public URL", () => {
+    expect(() => loadEnv(envSchema, { ...base, UPLOAD_MAX_BYTES: "10" })).toThrow(
+      /UPLOAD_MAX_BYTES/,
+    );
+    expect(() => loadEnv(envSchema, { ...base, UPLOAD_MAX_BYTES: "999999999" })).toThrow(
+      /UPLOAD_MAX_BYTES/,
+    );
+    expect(() => loadEnv(envSchema, { ...base, UPLOAD_PRESIGN_TTL_SECONDS: "5" })).toThrow(
+      /UPLOAD_PRESIGN_TTL_SECONDS/,
+    );
+    expect(() => loadEnv(envSchema, { ...base, UPLOAD_PRESIGN_TTL_SECONDS: "86400" })).toThrow(
+      /UPLOAD_PRESIGN_TTL_SECONDS/,
+    );
+    expect(() => loadEnv(envSchema, { ...base, PUBLIC_ASSET_BASE_URL: "not a url" })).toThrow(
+      /PUBLIC_ASSET_BASE_URL/,
+    );
+  });
+
   it("rejects AUTH_PUBLIC_KEY_PEM in production", () => {
     expect(() =>
       loadEnv(envSchema, {

@@ -72,6 +72,228 @@
         "tags": ["whoami"]
       }
     },
+    "/v1/organizer/events/{eventId}/banner/presign": {
+      "post": {
+        "operationId": "BannerController_presign",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignBannerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresignBannerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu token hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Thiếu role hoặc tenant hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy trong tenant",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Trạng thái, phiên bản, khóa ghi hoặc quan hệ bị xung đột",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Xin URL PUT có chữ ký để tải banner thẳng lên kho ảnh",
+        "tags": ["organizer-event-banner"]
+      }
+    },
+    "/v1/organizer/events/{eventId}/banner/confirm": {
+      "post": {
+        "operationId": "BannerController_confirm",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBannerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmBannerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu token hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Thiếu role hoặc tenant hợp lệ",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy trong tenant",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Trạng thái, phiên bản, khóa ghi hoặc quan hệ bị xung đột",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizerProblemResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Xác nhận ảnh đã tải lên và gắn làm banner sự kiện",
+        "tags": ["organizer-event-banner"]
+      }
+    },
     "/v1/organizer/venues": {
       "get": {
         "operationId": "OrganizerVenuesController_list",
@@ -3122,6 +3344,94 @@
         },
         "required": ["type", "title", "status", "detail", "code", "request_id"]
       },
+      "PresignBannerDto": {
+        "type": "object",
+        "properties": {
+          "content_type": {
+            "type": "string",
+            "enum": ["image/jpeg", "image/png", "image/webp"]
+          },
+          "size_bytes": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Số byte của file; tối đa theo UPLOAD_MAX_BYTES"
+          }
+        },
+        "required": ["content_type", "size_bytes"]
+      },
+      "PresignBannerResponse": {
+        "type": "object",
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "method": {
+            "type": "string",
+            "enum": ["PUT"]
+          },
+          "url": {
+            "type": "string"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Header bắt buộc gửi kèm khi PUT"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "max_bytes": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": ["upload_id", "method", "url", "headers", "expires_at", "max_bytes"]
+      },
+      "ConfirmBannerDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "upload_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "upload_id nhận từ bước presign"
+          }
+        },
+        "required": ["version", "upload_id"]
+      },
+      "ConfirmBannerResponse": {
+        "type": "object",
+        "properties": {
+          "banner_key": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "banner_url": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "thumbnail_url": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Phiên bản mới của sự kiện"
+          }
+        },
+        "required": ["banner_key", "banner_url", "thumbnail_url", "version"]
+      },
       "Object": {
         "type": "object",
         "properties": {}
@@ -4006,6 +4316,18 @@
             "type": "string",
             "format": "date-time"
           },
+          "banner_url": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL ảnh banner công khai; null khi chưa có ảnh hoặc chưa cấu hình kho ảnh"
+          },
+          "thumbnail_url": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL thumbnail WebP; null khi banner chưa qua xử lý ảnh (khóa seed/cũ)"
+          },
           "venue_name": {
             "type": "string"
           },
@@ -4043,6 +4365,8 @@
           "banner_key",
           "start_at",
           "end_at",
+          "banner_url",
+          "thumbnail_url",
           "venue_name",
           "venue_address",
           "min_ticket_price_vnd",
@@ -4119,6 +4443,18 @@
             "type": "string",
             "format": "date-time"
           },
+          "banner_url": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL ảnh banner công khai; null khi chưa có ảnh hoặc chưa cấu hình kho ảnh"
+          },
+          "thumbnail_url": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL thumbnail WebP; null khi banner chưa qua xử lý ảnh (khóa seed/cũ)"
+          },
           "venue": {
             "$ref": "#/components/schemas/VenueResponse"
           },
@@ -4156,6 +4492,8 @@
           "banner_key",
           "start_at",
           "end_at",
+          "banner_url",
+          "thumbnail_url",
           "venue",
           "ticket_classes",
           "sale_phases",

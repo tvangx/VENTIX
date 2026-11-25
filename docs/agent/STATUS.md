@@ -44,6 +44,8 @@ Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human
 
 ## Task của Sơn/Vũ ảnh hưởng đến việc của Tuấn (theo dõi, không do agent làm)
 
+S-201b/S-605 (ID tạm) In review tại [#103](https://github.com/tvangx/VENTIX/pull/103): upload banner presign/confirm, sharp WebP + thumbnail, `banner_url`/`thumbnail_url` catalog, CONTRACT CHANGE additive đã chốt A + A. Xem [run report](runs/S-201b.md).
+
 S-204/V-201 In review tại [#94](https://github.com/tvangx/VENTIX/pull/94), đồng bộ main và xử lý xung đột tài liệu cho phần bổ sung catalog công khai. Xem [run report](runs/S-204.md).
 
 S-503 In review tại [#92](https://github.com/tvangx/VENTIX/pull/92), đồng bộ main sau khi #91/#93 được tích hợp và xử lý xung đột tài liệu. Xem [run report](runs/S-503.md).
@@ -66,6 +68,7 @@ S-603 In review tài liệu domain, xem [run report](runs/S-603.md). Lô Sơn #8
 | V-305 | Vũ    | Merch reserve/commit theo `OrderCreated`/`OrderConfirmed` | G2                                       |
 | V-306 | Vũ    | API nội bộ `quotes` (SKU lẻ)                              | T-301 (có thể dùng server giả)           |
 | S-405 | Sơn   | Resale mua (+ `ResaleOrderAwaitingPayment`)               | Blocked hợp đồng refund #82, xem runs/S-405.md |
+| S-605 | Sơn   | Upload ảnh banner (presign/confirm, WebP, URL công khai)  | Todo, đã chốt A + A 2026-11-24, chờ lệnh cài đặt ([spec](../specs/s-605-image-upload.md), [run](runs/S-605.md)); V-201 cần URL ảnh |
 | S-505 | Sơn   | Hóa đơn (dùng bảng `invoices` của T-402)                  | G3                                       |
 | V-501 | Vũ    | Admin portal (refund, audit, DLQ)                         | T-401, T-402 (DLQ: có thể dùng Kafka UI) |
 | V-502 | Vũ    | Dashboard Organizer                                       | T-402 (SSE là [C], có thể polling)       |

@@ -16,9 +16,13 @@ import {
 import { EventLifecycleRepository } from "./event-lifecycle.repository";
 import { EventLifecycleService } from "./event-lifecycle.service";
 import { SeatMapsController } from "./seat-maps.controller";
+import { BannerController } from "../banners/banner.controller";
+import { BannerService } from "../banners/banner.service";
+import { BannerStorage } from "../banners/banner.storage";
 
 @Module({
   controllers: [
+    BannerController,
     OrganizerVenuesController,
     OrganizerEventsController,
     OrganizerTicketClassesController,
@@ -34,6 +38,8 @@ import { SeatMapsController } from "./seat-maps.controller";
     OrganizerWrites,
     EventLifecycleRepository,
     EventLifecycleService,
+    BannerStorage,
+    BannerService,
   ],
   exports: [PrismaService],
 })
