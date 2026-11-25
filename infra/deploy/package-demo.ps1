@@ -12,14 +12,19 @@ $bundle = Join-Path $output $Release
 if (Test-Path -LiteralPath $bundle) { throw "Release directory already exists; choose a new release" }
 New-Item -ItemType Directory -Path $bundle -Force | Out-Null
 function Invoke-Docker([string[]]$Arguments) {
-  & docker @Arguments
-  if ($LASTEXITCODE -ne 0) { throw "Docker command failed" }
+  # Docker progress uses stderr on success too; exit code decides success on Windows PowerShell.
+  $previousPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try { & docker @Arguments; $dockerCode = $LASTEXITCODE }
+  finally { $ErrorActionPreference = $previousPreference }
+  if ($dockerCode -ne 0) { throw "Docker command failed" }
 }
 $images = @()
 foreach ($service in @("identity", "event", "booking", "payment", "ticket", "web")) {
   $image = "ticketing-demo/${service}:$Release"
-  & docker image inspect $image *> $null
-  if ($LASTEXITCODE -eq 0) { throw "Image release tag already exists: $image" }
+  $existingImage = & docker image ls -q $image
+  if ($LASTEXITCODE -ne 0) { throw "Cannot inspect image inventory" }
+  if ($existingImage) { throw "Image release tag already exists: $image" }
   $dockerfile = if ($service -eq "web") { "apps/web/Dockerfile" } else { "infra/deploy/Dockerfile" }
   Invoke-Docker @("build", "--platform", "linux/amd64", "-f", $dockerfile, "--build-arg", "SERVICE=$service", "-t", $image, ".")
   $images += $image
