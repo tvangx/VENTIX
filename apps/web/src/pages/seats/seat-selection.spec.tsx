@@ -32,6 +32,10 @@ const GIO_MUA = "30000000-0000-4000-8000-000000000002"; // vé đứng
 const GIAO_HUONG = "30000000-0000-4000-8000-000000000003"; // sắp mở bán
 const KICH = "30000000-0000-4000-8000-000000000004"; // đang mở, không hàng chờ
 
+// Mỗi lần chọn ghế bằng bàn phím tốn ~0,5s trong jsdom (getByRole + render lại cả trang);
+// chạy song song qua turbo thì vượt mặc định 5s của vitest. Chỉ nới cho hai test nặng.
+const KEYBOARD_TEST_TIMEOUT = 15_000;
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(NOW);
@@ -90,26 +94,30 @@ describe("trang chọn ghế", () => {
     expect(text(screen.getByRole("region", { name: "Ghế của bạn" }))).toContain("0 / 4 ghế");
   });
 
-  it("chọn bằng bàn phím: danh sách ghế, tạm tính, bỏ chọn", async () => {
-    await openSeats(SONG_AM);
-    const user = userEvent.setup();
-    await pickSeat(user, "Block A · Khu A1", "A", "1");
-    await pickSeat(user, "Block B · Khu B2", "C", "7");
+  it(
+    "chọn bằng bàn phím: danh sách ghế, tạm tính, bỏ chọn",
+    async () => {
+      await openSeats(SONG_AM);
+      const user = userEvent.setup();
+      await pickSeat(user, "Block A · Khu A1", "A", "1");
+      await pickSeat(user, "Block B · Khu B2", "C", "7");
 
-    const list = screen.getByRole("list", { name: "Ghế đã chọn" });
-    expect(within(list).getAllByRole("listitem").map(text)).toEqual([
-      "A1 SVIP · Block A · Khu A13.500.000đ",
-      "C7 VIP · Block B · Khu B22.500.000đ",
-    ]);
-    expect(text(screen.getByTestId("seat-total"))).toBe("6.000.000đ");
-    expect(text(screen.getByRole("region", { name: "Ghế của bạn" }))).toContain("2 / 4 ghế");
-    // Canvas nhận đúng tập ghế đang chọn để tô màu.
-    expect(text(screen.getByTestId("canvas-selected"))).toBe("0:0:0:1,1:1:2:7");
+      const list = screen.getByRole("list", { name: "Ghế đã chọn" });
+      expect(within(list).getAllByRole("listitem").map(text)).toEqual([
+        "A1 SVIP · Block A · Khu A13.500.000đ",
+        "C7 VIP · Block B · Khu B22.500.000đ",
+      ]);
+      expect(text(screen.getByTestId("seat-total"))).toBe("6.000.000đ");
+      expect(text(screen.getByRole("region", { name: "Ghế của bạn" }))).toContain("2 / 4 ghế");
+      // Canvas nhận đúng tập ghế đang chọn để tô màu.
+      expect(text(screen.getByTestId("canvas-selected"))).toBe("0:0:0:1,1:1:2:7");
 
-    await user.click(screen.getByRole("button", { name: "Bỏ ghế A1" }));
-    expect(text(screen.getByTestId("seat-total"))).toBe("2.500.000đ");
-    expect(text(screen.getByTestId("canvas-selected"))).toBe("1:1:2:7");
-  });
+      await user.click(screen.getByRole("button", { name: "Bỏ ghế A1" }));
+      expect(text(screen.getByTestId("seat-total"))).toBe("2.500.000đ");
+      expect(text(screen.getByTestId("canvas-selected"))).toBe("1:1:2:7");
+    },
+    KEYBOARD_TEST_TIMEOUT,
+  );
 
   it("bấm ghế trên sơ đồ: chọn rồi bấm lần nữa để bỏ", async () => {
     await openSeats(SONG_AM);
@@ -122,22 +130,26 @@ describe("trang chọn ghế", () => {
     expect(screen.queryByRole("list", { name: "Ghế đã chọn" })).toBeNull();
   });
 
-  it("không vượt giới hạn 4 ghế; chọn lại ghế đã chọn bằng bàn phím thì báo, không bỏ", async () => {
-    await openSeats(SONG_AM);
-    const user = userEvent.setup();
-    for (const seat of ["1", "2", "3", "4"]) await pickSeat(user, "Block A · Khu A1", "A", seat);
-    await pickSeat(user, "Block A · Khu A1", "A", "5");
-    expect(text(screen.getByRole("status"))).toBe("Bạn đã chọn đủ số ghế tối đa của đợt mở bán.");
-    expect(
-      within(screen.getByRole("list", { name: "Ghế đã chọn" })).getAllByRole("listitem"),
-    ).toHaveLength(4);
+  it(
+    "không vượt giới hạn 4 ghế; chọn lại ghế đã chọn bằng bàn phím thì báo, không bỏ",
+    async () => {
+      await openSeats(SONG_AM);
+      const user = userEvent.setup();
+      for (const seat of ["1", "2", "3", "4"]) await pickSeat(user, "Block A · Khu A1", "A", seat);
+      await pickSeat(user, "Block A · Khu A1", "A", "5");
+      expect(text(screen.getByRole("status"))).toBe("Bạn đã chọn đủ số ghế tối đa của đợt mở bán.");
+      expect(
+        within(screen.getByRole("list", { name: "Ghế đã chọn" })).getAllByRole("listitem"),
+      ).toHaveLength(4);
 
-    await pickSeat(user, "Block A · Khu A1", "A", "2");
-    expect(text(screen.getByRole("status"))).toBe("Bạn đã chọn ghế này rồi.");
-    expect(
-      within(screen.getByRole("list", { name: "Ghế đã chọn" })).getAllByRole("listitem"),
-    ).toHaveLength(4);
-  });
+      await pickSeat(user, "Block A · Khu A1", "A", "2");
+      expect(text(screen.getByRole("status"))).toBe("Bạn đã chọn ghế này rồi.");
+      expect(
+        within(screen.getByRole("list", { name: "Ghế đã chọn" })).getAllByRole("listitem"),
+      ).toHaveLength(4);
+    },
+    KEYBOARD_TEST_TIMEOUT,
+  );
 
   it("nút tiếp tục thanh toán còn tắt (giữ ghế là V-301)", async () => {
     await openSeats(KICH);
