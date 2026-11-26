@@ -30,7 +30,7 @@ Snapshot theo dõi Sơn ngày 2026-11-12 (chưa đối chiếu lại trong lư�
 | T-302  | 3    | payment-service + adapter                                           | T-103, T-301a              | Done       | #56 | Đã merge; E2E VNPay sandbox thật chưa được xác minh lại trong lượt này |
 | T-303  | 3    | IPN idempotent + sweeper + bù trừ                                   | T-301, T-302               | Done       | #57 | Đã merge; Node 20: 240 test pass; xem runs/T-303.md     |
 | T-304  | 3    | Waiting Room                                                        | T-202, T-206               | Done       | #58 | Đã merge; 232 test pass; Kong 95 checks                |
-| T-401  | 4    | Refund, hoàn lô, tự hoàn tiền (LATE_PAYMENT, EventCancelled)        | T-302, T-303               | Todo       |     | Hoàn tiền = tiền thật, 2 người đọc                     |
+| T-401  | 4    | Refund, hoàn lô, tự hoàn tiền (LATE_PAYMENT, EventCancelled)        | T-302, T-303               | In review  |     | Xem runs/T-401.md; cần 2 người đọc                     |
 | T-402  | 4    | finance-service (sổ cái, VAT, audit, thống kê, DLQ admin)           | T-103, T-303               | Done       | #59 | Đã merge; 32 test pass; xem runs/T-402.md              |
 | T-403  | 4    | Load test vòng 1 + tối ưu                                           | G2, T-304 (T-404 nên xong) | Todo       |     | Bạn chạy k6 từ máy thứ hai                             |
 | T-404  | 4    | Prometheus + Grafana                                                | T-102                      | Todo       |     |                                                        |
