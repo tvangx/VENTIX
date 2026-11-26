@@ -180,3 +180,9 @@ Bật `IDENTITY_OUTBOX_ENABLED=true` và cấu hình `KAFKA_BROKERS` để relay
 Local dùng Mailpit SMTP ở `127.0.0.1:11025` theo stack VENTIX hiện tại. Test dùng container riêng với image `KYC_TEST_MAILPIT_IMAGE=axllent/mailpit:v1.33.0` đã pull thành công. Có thể thay hostname/port bằng SMTP dev của bạn. Nodemailer tắt debug/file/URL content access và đặt timeout kết nối, theo [tài liệu SMTP](https://nodemailer.com/smtp).
 
 Run report ở `docs/agent/runs/S-305.md`. Test KYC dùng PostgreSQL 16, Redis 7.4, Mailpit và Kafka thật, với dữ liệu tổng hợp.
+
+## Gi?m s?t HTTP (T-404)
+
+`/metrics` xu?t histogram `http_server_request_duration_seconds{service,method,route,status_class}` thay t?n HTTP c? `http_request_duration_seconds`. Route l? m?u ??ng k?; URL kh?ng kh?p d?ng `unmatched`, kh?ng g?n ID/raw URL v?o nh?n. Middleware global ghi m?i response ho?n t?t m?t l?n, bao g?m l?i guard/filter v? 404; l??t scrape kh?ng ???c t?nh. Metric nghi?p v? v? endpoint hi?n c? gi? nguy?n.
+
+Prometheus/Grafana, rollout backend v? ch?n metrics qua Kong: [runbook observability](../../docs/ops/observability.md). Kh?ng public `/metrics`.

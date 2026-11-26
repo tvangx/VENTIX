@@ -380,3 +380,9 @@ Key cùng hash tag `{evt:<eventId>}`: `seat:{evt:E}:<seatId>` = `H:<userId>` có
 Lua nằm trong `src/seat-hold/lua`, nạp bằng ioredis defineCommand (EVALSHA, fallback EVAL), được copy vào dist khi build. Kiểm tra xung đột/giới hạn/kiểu metadata trước khi ghi. Gia hạn một phần có thể khiến hold set chứa seat đã hết hạn: Lua chỉ đếm ghế còn thực sự thuộc user; dọn thành viên cũ sau khi batch được chấp nhận. Request bị từ chối không cleanup hay gia hạn bất kỳ key nào. Không KEYS/SCAN; đọc danh sách bằng hold set. Index hexp và Stream là metadata event, không đặt TTL theo từng user; thông báo hết hạn qua sweeper thuộc T-204.
 
 Metrics có `seat_hold_requests_total{outcome="success|conflict|limit"}` và histogram HTTP hiện có; không dùng event/user/seat làm label. Integration dùng PostgreSQL + Redis `redis:7.4-alpine` Testcontainers (cùng tag hạ tầng dev), kiểm chứng qua HTTP/JWT và Pub/Sub/Stream thật. Concurrency dùng 100 kết nối Redis đã đồng bộ trước khi gửi; API test thêm 100 user HTTP khi Redis client vừa khởi tạo. Kết quả thật: [run report T-202](../../docs/agent/runs/T-202.md).
+
+## Gi?m s?t HTTP (T-404)
+
+`/metrics` xu?t histogram `http_server_request_duration_seconds{service,method,route,status_class}` thay t?n HTTP c? `http_request_duration_seconds`. Route l? m?u ??ng k?; URL kh?ng kh?p d?ng `unmatched`, kh?ng g?n ID/raw URL v?o nh?n. Middleware global ghi m?i response ho?n t?t m?t l?n, bao g?m l?i guard/filter v? 404; l??t scrape kh?ng ???c t?nh. Metric nghi?p v? v? endpoint hi?n c? gi? nguy?n.
+
+Prometheus/Grafana, rollout backend v? ch?n metrics qua Kong: [runbook observability](../../docs/ops/observability.md). Kh?ng public `/metrics`.

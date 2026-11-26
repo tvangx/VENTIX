@@ -6,7 +6,7 @@ import { HttpLoggingMiddleware } from "./common/http-logging.middleware";
 import type { Env } from "./config/env.schema";
 import { DbModule } from "./db/db-health.service";
 import { HealthController } from "./health/health.controller";
-import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
+import { MetricsController, MetricsService } from "./metrics/metrics";
 import { EventOutboxWorker } from "./messaging/event-outbox.worker";
 import { OrganizerModule } from "./modules/organizer/organizer.module";
 import { PublicCatalogModule } from "./modules/public-catalog/public-catalog.module";
@@ -56,6 +56,6 @@ export class AppModule implements NestModule {
   }
 
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestIdMiddleware, HttpLoggingMiddleware, MetricsMiddleware).forRoutes("*");
+    consumer.apply(RequestIdMiddleware, HttpLoggingMiddleware).forRoutes("*");
   }
 }
