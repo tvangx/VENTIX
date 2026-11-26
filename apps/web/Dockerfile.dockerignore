@@ -1,0 +1,16 @@
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.base.json
+!eslint.config.*
+!apps
+!apps/web
+!apps/web/**
+**/node_modules
+**/dist
+**/.env*
+**/*.pem
+**/*.key
+**/coverage
+**/.turbo

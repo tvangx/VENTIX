@@ -25,6 +25,12 @@ export const envSchema = z
       .default("false")
       .transform((v) => v === "true"),
     VNPAY_TMN_CODE: z.string().default(""),
+    VNPAY_PAYMENT_URL: z
+      .enum([
+        "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
+        "https://sandbox.vnpaytest.vn/paymentv2/vpcpay.html",
+      ])
+      .default("https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"),
     VNPAY_HASH_SECRET: z.string().default(""),
     VNPAY_RETURN_URL: z.union([z.literal(""), z.string().url().max(255)]).default(""),
     VNPAY_IPN_URL: z.union([z.literal(""), z.string().url().max(255)]).default(""),

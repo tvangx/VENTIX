@@ -540,6 +540,46 @@
         "summary": "Stream private queue position once per second, then admission token",
         "tags": ["queue"]
       }
+    },
+    "/v1/orders/{orderId}": {
+      "get": {
+        "operationId": "OrderReadController_get",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT required"
+          },
+          "404": {
+            "description": "ORDER_NOT_FOUND; absent or not owned"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read an order owned by the authenticated user",
+        "tags": ["orders"]
+      }
     }
   },
   "info": {
@@ -827,6 +867,50 @@
           }
         },
         "required": ["status", "position", "estimated_wait_sec"]
+      },
+      "OrderView": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "total_amount_vnd": {
+            "type": "number"
+          },
+          "ticket_amount_vnd": {
+            "type": "number"
+          },
+          "merch_amount_vnd": {
+            "type": "number"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "order_id",
+          "event_id",
+          "status",
+          "total_amount_vnd",
+          "ticket_amount_vnd",
+          "merch_amount_vnd",
+          "expires_at",
+          "items"
+        ]
       }
     }
   }

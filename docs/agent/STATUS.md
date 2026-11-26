@@ -19,6 +19,7 @@ Snapshot theo dõi Sơn ngày 2026-11-12 (chưa đối chiếu lại trong lư�
 | T-107  | 1    | Workshop xác nhận hợp đồng                                          | —                          | Human      |     | Quyết định đã chốt; chỉ cần Sơn/Vũ xác nhận            |
 | T-201  | 1    | Schema booking_db                                                   | T-102, T-103               | Done       | #45 | Mã lõi (unique index)                                  |
 | T-207  | 1    | VPS + deploy thử                                                    | —                          | In review  | #109 | #47 đã merge; bổ sung stdin/timeout + tunnel container, xem runs/T-207.md; Tuấn nghiệm thu HTTPS |
+| T-208 | Demo | Đóng gói và triển khai demo ứng dụng | Infra đã Tuấn nghiệm thu; backend Done | In review | #111 | Local artifact/checksum + 39 smoke checks; CONTRACT CHANGE đã duyệt; EC2/sandbox thật Tuấn nghiệm thu; không thay T-403/T-505/T-601; xem runs/T-208.md |
 | T-202  | 2    | Lua giữ ghế + /holds                                                | T-201                      | Done       | #48 | Mã lõi; cần 2 người đọc                                |
 | T-206  | 2    | Hoàn thiện Kong (+ chặn /internal)                                  | T-104, T-202               | Done       | #50 | Đã merge; Kong 3.8.0: 95 checks đạt; xem runs/T-206.md   |
 | T-203  | 2    | Consumer event + rehydrate                                          | T-103, T-201, S-203        | Done  | #51 | CONTRACT CHANGE lifecycle v2; cần 2 người đọc           |

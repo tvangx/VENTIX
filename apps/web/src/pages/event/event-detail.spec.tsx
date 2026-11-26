@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen, within } from "@testing-library/react";
+import { screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -96,11 +96,13 @@ describe("trang chi tiết sự kiện", () => {
     expect(screen.getAllByText(/vé đứng/)).toHaveLength(2);
   });
 
-  it("nút mua vé dẫn tới trang tạm “Sắp có”", async () => {
+  it("nút mua vé yêu cầu đăng nhập và giữ đường quay lại checkout", async () => {
     const { router } = await openEvent(SONG_AM);
     await userEvent.setup().click(screen.getByRole("link", { name: "Vào phòng chờ" }));
-    expect(router.state.location.pathname).toBe(`/events/${SONG_AM}/buy`);
-    expect(text(await screen.findByRole("heading", { level: 1 }))).toContain("Mua vé");
+    await waitFor(() => expect(router.state.location.pathname).toBe("/login"));
+    expect(new URLSearchParams(router.state.location.search).get("next")).toBe(
+      `/events/${SONG_AM}/buy`,
+    );
   });
 
   it("sự kiện chưa công khai → không tìm thấy, không có nút thử lại", async () => {

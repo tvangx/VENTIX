@@ -27,6 +27,7 @@ import { QueueController } from "./queue/queue.controller";
 import { QueueService } from "./queue/queue.service";
 import { AdmissionWorker } from "./queue/admission-worker.service";
 import { AdmissionGuard } from "./queue/admission.guard";
+import { OrderReadController, OrderReadService } from "./orders/order-read";
 
 @Module({})
 export class AppModule implements NestModule {
@@ -50,12 +51,14 @@ export class AppModule implements NestModule {
         SeatStatusController,
         CheckoutController,
         QueueController,
+        OrderReadController,
       ],
       providers: [
         { provide: ENV, useValue: env },
         { provide: LOGGER, useValue: logger },
         MetricsService,
         QueueService,
+        OrderReadService,
         AdmissionWorker,
         AdmissionGuard,
         CheckoutRepository,

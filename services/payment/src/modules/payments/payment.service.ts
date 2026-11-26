@@ -42,6 +42,7 @@ export class PaymentService {
       tmnCode: env.VNPAY_TMN_CODE,
       secret: env.VNPAY_HASH_SECRET,
       returnUrl: env.VNPAY_RETURN_URL,
+      paymentUrl: env.VNPAY_PAYMENT_URL,
     });
   }
   async create(
