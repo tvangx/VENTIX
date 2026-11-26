@@ -135,6 +135,32 @@ describe("S-202 seat map", () => {
       .expect(({ body }) => expect(body.items).toHaveLength(1));
   });
 
+  it("stores placements and rejects partial ones without writing", async () => {
+    const position = { shape: "rect", x: 100, y: 100, width: 200, height: 100 };
+    const canvas = { width: 1000, height: 1000 };
+    const [zone] = layout(1000).zones;
+    const placed = {
+      canvas,
+      stage: { ...position, y: 800 },
+      zones: [{ ...zone, blocks: [{ ...zone.blocks[0], position }] }],
+    };
+
+    await post({ ...placed, zones: [...placed.zones, { ...zone, name: "C" }] })
+      .expect(400)
+      .expect(({ body }) => expect(body.code).toBe("PARTIAL_PLACEMENT"));
+    await post({ ...placed, canvas: { width: 100, height: 100 } })
+      .expect(400)
+      .expect(({ body }) => expect(body.code).toBe("INVALID_PLACEMENT"));
+
+    const created = await post(placed).expect(201);
+    expect(created.body).toMatchObject({ version: 1, layout: placed });
+    await app.http
+      .get(`${EVENTS}/${eventId}/seat-maps/1`)
+      .auth(token, { type: "bearer" })
+      .expect(200)
+      .expect(({ body }) => expect(body.layout).toEqual(placed));
+  });
+
   describe("ga_areas", () => {
     async function createClass(kind: "SEATED" | "GA", name: string, event = eventId) {
       const response = await app.http

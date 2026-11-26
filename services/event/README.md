@@ -150,6 +150,45 @@ Layout có thêm `ga_areas` (tùy chọn) để khai báo khu đứng; khu đứ
   map được đánh dấu `published_at` để catalog công khai trả `seat_map`, nhưng `EventApproved`
   vẫn mang `seat_map_version=0` (booking không có ghế để prefetch giá).
 
+### Vị trí và hình dạng (issue #106)
+
+Tất cả trường dưới đây là tùy chọn:
+
+```json
+{
+  "canvas": { "width": 1000, "height": 1000 },
+  "stage": { "shape": "rect", "x": 400, "y": 900, "width": 200, "height": 60 },
+  "zones": [],
+  "ga_areas": [
+    {
+      "name": "Fanzone",
+      "ticket_class_id": "<uuid hạng GA>",
+      "position": {
+        "shape": {
+          "polygon": [
+            [350, 700],
+            [650, 700],
+            [500, 850]
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+- `canvas`: gốc trên-trái, trục y hướng xuống, mỗi cạnh trong `(0, 10000]`; bắt buộc nếu có
+  `stage` hoặc `position`.
+- `stage`, `zones[].blocks[].position`, `ga_areas[].position`: `shape` là `rect` hoặc `ellipse`
+  (kèm `x`, `y`, `width`, `height`, tùy chọn `rotation` từ -360 đến 360) hoặc
+  `{ "polygon": [[x, y], …] }` (3–50 đỉnh).
+- `rotation` tính bằng độ, theo chiều kim đồng hồ, quanh tâm khung. Server kiểm khung trước khi
+  xoay nằm trong `canvas`; không kiểm chồng lấn.
+- Mọi Khu (`zones[].blocks[]`) và khu đứng đều có `position`, hoặc không cái nào có
+  (`400 PARTIAL_PLACEMENT`). `stage` không tính vào quy tắc này.
+- Sai canvas, hình dạng hoặc vượt canvas: `400 INVALID_PLACEMENT`.
+- Vị trí không ảnh hưởng ghế được sinh ra; không có migration, layout cũ vẫn hợp lệ.
+
 ## S-203 — Duyệt và công khai sự kiện
 
 | Vai trò   | Endpoint                                            | Chuyển trạng thái                           |

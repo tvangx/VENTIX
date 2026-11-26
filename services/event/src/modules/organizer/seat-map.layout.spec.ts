@@ -88,4 +88,79 @@ describe("seat map layout", () => {
       ).toThrow();
     });
   });
+
+  describe("placement", () => {
+    const canvas = { width: 1000, height: 800 };
+    const box = { shape: "rect", x: 100, y: 100, width: 200, height: 100 };
+    const points = [
+      [0, 0],
+      [1000, 0],
+      [500, 800],
+    ];
+    const polygon = { shape: { polygon: points } };
+    const gaArea = { name: "Fanzone", ticket_class_id: "00000000-0000-4000-8000-000000000002" };
+
+    function placed(position: object = box, extra: object = { canvas }) {
+      const [zone] = layout.zones;
+      return { ...extra, zones: [{ ...zone, blocks: [{ ...zone.blocks[0], position }] }] };
+    }
+
+    function rejects(value: unknown, code = "INVALID_PLACEMENT") {
+      expect(() => parseSeatMapLayout(value)).toThrow(expect.objectContaining({ code }));
+    }
+
+    it("keeps stage, rect, ellipse and polygon placements unchanged", () => {
+      const value = {
+        ...placed({ ...box, rotation: -15 }),
+        stage: { ...box, shape: "ellipse" },
+        ga_areas: [{ ...gaArea, position: polygon }],
+      };
+      expect(parseSeatMapLayout(value)).toEqual({ layout: value, seatCount: 10 });
+    });
+
+    it("accepts a stage or a canvas without area positions", () => {
+      expect(() => parseSeatMapLayout({ ...layout, canvas, stage: box })).not.toThrow();
+      expect(() => parseSeatMapLayout({ ...layout, canvas })).not.toThrow();
+    });
+
+    it("accepts a box touching the canvas edges", () => {
+      const full = { shape: "rect", x: 0, y: 0, ...canvas };
+      expect(() => parseSeatMapLayout(placed(full))).not.toThrow();
+    });
+
+    it("requires a canvas for any placement", () => {
+      rejects(placed(box, {}));
+      rejects({ ...layout, stage: box });
+    });
+
+    it("rejects placements outside the canvas", () => {
+      rejects(placed({ ...box, x: 801 }));
+      rejects(placed({ ...box, y: 701 }));
+      rejects(placed({ ...box, x: -1 }));
+      rejects(placed({ shape: { polygon: [...points, [1001, 0]] } }));
+      rejects(placed({ shape: { polygon: [...points, [0, 801]] } }));
+      rejects({ ...layout, canvas, stage: { ...box, width: 901 } });
+    });
+
+    it("rejects malformed canvas and shapes", () => {
+      rejects({ ...layout, canvas: { width: 10001, height: 800 } });
+      rejects({ ...layout, canvas: { width: 0, height: 800 } });
+      rejects(placed({ ...box, width: 0 }));
+      rejects(placed({ ...box, rotation: 361 }));
+      rejects(placed({ ...box, shape: "arc" }));
+      rejects(placed({ shape: "rect", x: 1, y: 1 }));
+      rejects(placed({ shape: { polygon: points.slice(0, 2) } }));
+      rejects(placed({ shape: { polygon: Array.from({ length: 51 }, () => [1, 1]) } }));
+      rejects(placed({ ...polygon, x: 1 }));
+    });
+
+    it("rejects positions on only some areas", () => {
+      rejects({ ...placed(), ga_areas: [gaArea] }, "PARTIAL_PLACEMENT");
+      rejects({ ...layout, canvas, ga_areas: [{ ...gaArea, position: box }] }, "PARTIAL_PLACEMENT");
+    });
+
+    it("reports INVALID_SEAT_MAP when other fields are also invalid", () => {
+      rejects({ ...placed({ ...box, width: 0 }), extra: true }, "INVALID_SEAT_MAP");
+    });
+  });
 });
