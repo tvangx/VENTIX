@@ -188,9 +188,54 @@ class SeatMapRowDto {
   @ApiProperty({ format: "uuid" }) ticket_class_id!: string;
 }
 
+class SeatMapCanvasDto {
+  @ApiProperty({ minimum: 0, exclusiveMinimum: true, maximum: 10000 }) width!: number;
+  @ApiProperty({ minimum: 0, exclusiveMinimum: true, maximum: 10000 }) height!: number;
+}
+
+class SeatMapPlacementDto {
+  @ApiProperty({
+    oneOf: [
+      { type: "string", enum: ["rect", "ellipse"] },
+      {
+        type: "object",
+        required: ["polygon"],
+        properties: {
+          polygon: {
+            type: "array",
+            minItems: 3,
+            maxItems: 50,
+            items: { type: "array", minItems: 2, maxItems: 2, items: { type: "number" } },
+          },
+        },
+      },
+    ],
+    description: "rect/ellipse cần x, y, width, height; polygon không dùng các trường đó",
+  })
+  shape!: "rect" | "ellipse" | { polygon: number[][] };
+
+  @ApiPropertyOptional({ minimum: 0, description: "Cạnh trái của khung" }) x?: number;
+  @ApiPropertyOptional({ minimum: 0, description: "Cạnh trên của khung" }) y?: number;
+  @ApiPropertyOptional({ minimum: 0, exclusiveMinimum: true }) width?: number;
+  @ApiPropertyOptional({ minimum: 0, exclusiveMinimum: true }) height?: number;
+  @ApiPropertyOptional({
+    minimum: -360,
+    maximum: 360,
+    default: 0,
+    description: "Độ, theo chiều kim đồng hồ, quanh tâm khung",
+  })
+  rotation?: number;
+}
+
+const POSITION_DESCRIPTION =
+  "Có ở tất cả Khu (zones[].blocks[]) và khu đứng, hoặc không có ở đâu cả; cần canvas";
+
 class SeatMapBlockDto {
   @ApiProperty({ maxLength: 128 }) name!: string;
   @ApiProperty({ type: [SeatMapRowDto] }) rows!: SeatMapRowDto[];
+
+  @ApiPropertyOptional({ type: SeatMapPlacementDto, description: POSITION_DESCRIPTION })
+  position?: SeatMapPlacementDto;
 }
 
 class SeatMapZoneDto {
@@ -202,9 +247,21 @@ class SeatMapGaAreaDto {
   @ApiProperty({ maxLength: 128 }) name!: string;
   @ApiProperty({ format: "uuid", description: "Hạng vé GA, mỗi hạng chỉ gắn một khu đứng" })
   ticket_class_id!: string;
+
+  @ApiPropertyOptional({ type: SeatMapPlacementDto, description: POSITION_DESCRIPTION })
+  position?: SeatMapPlacementDto;
 }
 
 class SeatMapLayoutDto {
+  @ApiPropertyOptional({
+    type: SeatMapCanvasDto,
+    description: "Hệ tọa độ (gốc trên-trái, y xuống); bắt buộc khi có stage hoặc position",
+  })
+  canvas?: SeatMapCanvasDto;
+
+  @ApiPropertyOptional({ type: SeatMapPlacementDto })
+  stage?: SeatMapPlacementDto;
+
   @ApiProperty({
     type: [SeatMapZoneDto],
     maxItems: 100,

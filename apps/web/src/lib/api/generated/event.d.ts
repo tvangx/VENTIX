@@ -660,6 +660,27 @@ export interface components {
             /** Format: uuid */
             next_cursor: string | null;
         };
+        SeatMapCanvasDto: {
+            width: number;
+            height: number;
+        };
+        SeatMapPlacementDto: {
+            /** @description rect/ellipse cần x, y, width, height; polygon không dùng các trường đó */
+            shape: ("rect" | "ellipse") | {
+                polygon: number[][];
+            };
+            /** @description Cạnh trái của khung */
+            x?: number;
+            /** @description Cạnh trên của khung */
+            y?: number;
+            width?: number;
+            height?: number;
+            /**
+             * @description Độ, theo chiều kim đồng hồ, quanh tâm khung
+             * @default 0
+             */
+            rotation: number;
+        };
         SeatMapRowDto: {
             label: string;
             seats: number;
@@ -669,6 +690,8 @@ export interface components {
         SeatMapBlockDto: {
             name: string;
             rows: components["schemas"]["SeatMapRowDto"][];
+            /** @description Có ở tất cả Khu (zones[].blocks[]) và khu đứng, hoặc không có ở đâu cả; cần canvas */
+            position?: components["schemas"]["SeatMapPlacementDto"];
         };
         SeatMapZoneDto: {
             name: string;
@@ -681,8 +704,13 @@ export interface components {
              * @description Hạng vé GA, mỗi hạng chỉ gắn một khu đứng
              */
             ticket_class_id: string;
+            /** @description Có ở tất cả Khu (zones[].blocks[]) và khu đứng, hoặc không có ở đâu cả; cần canvas */
+            position?: components["schemas"]["SeatMapPlacementDto"];
         };
         SeatMapLayoutDto: {
+            /** @description Hệ tọa độ (gốc trên-trái, y xuống); bắt buộc khi có stage hoặc position */
+            canvas?: components["schemas"]["SeatMapCanvasDto"];
+            stage?: components["schemas"]["SeatMapPlacementDto"];
             /** @description Được phép rỗng nếu có ga_areas (sự kiện toàn vé đứng) */
             zones: components["schemas"]["SeatMapZoneDto"][];
             ga_areas?: components["schemas"]["SeatMapGaAreaDto"][];
