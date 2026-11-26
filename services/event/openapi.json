@@ -4137,6 +4137,85 @@
         },
         "required": ["items", "next_cursor"]
       },
+      "SeatMapCanvasDto": {
+        "type": "object",
+        "properties": {
+          "width": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 10000
+          },
+          "height": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 10000
+          }
+        },
+        "required": ["width", "height"]
+      },
+      "SeatMapPlacementDto": {
+        "type": "object",
+        "properties": {
+          "shape": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": ["rect", "ellipse"]
+              },
+              {
+                "type": "object",
+                "required": ["polygon"],
+                "properties": {
+                  "polygon": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 50,
+                    "items": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "description": "rect/ellipse cần x, y, width, height; polygon không dùng các trường đó"
+          },
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Cạnh trái của khung"
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Cạnh trên của khung"
+          },
+          "width": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "height": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "rotation": {
+            "type": "number",
+            "minimum": -360,
+            "maximum": 360,
+            "default": 0,
+            "description": "Độ, theo chiều kim đồng hồ, quanh tâm khung"
+          }
+        },
+        "required": ["shape"]
+      },
       "SeatMapRowDto": {
         "type": "object",
         "properties": {
@@ -4168,6 +4247,14 @@
             "items": {
               "$ref": "#/components/schemas/SeatMapRowDto"
             }
+          },
+          "position": {
+            "description": "Có ở tất cả Khu (zones[].blocks[]) và khu đứng, hoặc không có ở đâu cả; cần canvas",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeatMapPlacementDto"
+              }
+            ]
           }
         },
         "required": ["name", "rows"]
@@ -4199,6 +4286,14 @@
             "type": "string",
             "format": "uuid",
             "description": "Hạng vé GA, mỗi hạng chỉ gắn một khu đứng"
+          },
+          "position": {
+            "description": "Có ở tất cả Khu (zones[].blocks[]) và khu đứng, hoặc không có ở đâu cả; cần canvas",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeatMapPlacementDto"
+              }
+            ]
           }
         },
         "required": ["name", "ticket_class_id"]
@@ -4206,6 +4301,17 @@
       "SeatMapLayoutDto": {
         "type": "object",
         "properties": {
+          "canvas": {
+            "description": "Hệ tọa độ (gốc trên-trái, y xuống); bắt buộc khi có stage hoặc position",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SeatMapCanvasDto"
+              }
+            ]
+          },
+          "stage": {
+            "$ref": "#/components/schemas/SeatMapPlacementDto"
+          },
           "zones": {
             "maxItems": 100,
             "description": "Được phép rỗng nếu có ga_areas (sự kiện toàn vé đứng)",
