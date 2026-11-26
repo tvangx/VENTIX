@@ -23,7 +23,12 @@ function parsePayDate(value: string): Date | null {
 const fields = z.record(z.string().max(2048));
 export class VnpayAdapter implements IPaymentAdapter {
   constructor(
-    private readonly config: { tmnCode: string; secret: string; returnUrl: string },
+    private readonly config: {
+      tmnCode: string;
+      secret: string;
+      returnUrl: string;
+      paymentUrl?: string;
+    },
     private readonly now: () => Date = () => new Date(),
   ) {}
   sign(params: Record<string, string>): string {
@@ -54,7 +59,7 @@ export class VnpayAdapter implements IPaymentAdapter {
       vnp_ExpireDate: gmt7(input.expiresAt),
     };
     return {
-      redirect_url: `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?${canonicalQuery(params)}&vnp_SecureHash=${this.sign(params)}`,
+      redirect_url: `${this.config.paymentUrl ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"}?${canonicalQuery(params)}&vnp_SecureHash=${this.sign(params)}`,
     };
   }
   verifyIpn(input: unknown): Notification | null {

@@ -1,0 +1,62 @@
+# Overlay tùy chọn, dùng cùng docker-compose.prod.yml; xem docs/ops/vps-setup.md.
+services:
+  kong:
+    networks:
+      tunnel-origin:
+        ipv4_address: 172.30.207.3
+    environment:
+      KONG_TRUSTED_IPS: 172.30.207.2/32
+      KONG_REAL_IP_HEADER: CF-Connecting-IP
+      KONG_REAL_IP_RECURSIVE: "off"
+
+  cloudflared:
+    image: ${CLOUDFLARED_IMAGE:?Set CLOUDFLARED_IMAGE to a verified digest}
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks:
+      tunnel-egress:
+      tunnel-origin:
+        ipv4_address: 172.30.207.2
+    command:
+      - tunnel
+      - --metrics
+      - 127.0.0.1:2000
+      - --loglevel
+      - warn
+      - run
+      - --token-file
+      - /run/secrets/cloudflared-token
+    volumes:
+      - type: bind
+        source: ${CLOUDFLARED_TOKEN_FILE:?Set an absolute path to the external token file}
+        target: /run/secrets/cloudflared-token
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      kong:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "--metrics", "127.0.0.1:2000", "ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  # Chỉ Kong và connector dùng mạng này; trust đúng một địa chỉ, không cả subnet.
+  tunnel-origin:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.207.0/29
+  tunnel-egress:
+    driver: bridge

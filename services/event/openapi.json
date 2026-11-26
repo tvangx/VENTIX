@@ -72,6 +72,65 @@
         "tags": ["whoami"]
       }
     },
+    "/v1/events/{id}/seats": {
+      "get": {
+        "operationId": "PublicSeatsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "seat_map_version",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSeatsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID, version or cursor/limit"
+          },
+          "404": {
+            "description": "EVENT_NOT_FOUND; event/map not published or version absent"
+          }
+        },
+        "summary": "Read paginated seat UUIDs and positions for a published seat map version",
+        "tags": ["public-events"]
+      }
+    },
     "/v1/organizer/events/{eventId}/banner/presign": {
       "post": {
         "operationId": "BannerController_presign",
@@ -3319,6 +3378,60 @@
         },
         "required": ["userId", "roles"]
       },
+      "Object": {
+        "type": "object",
+        "properties": {}
+      },
+      "PublicSeat": {
+        "type": "object",
+        "properties": {
+          "seat_id": {
+            "type": "string"
+          },
+          "ticket_class_id": {
+            "type": "string"
+          },
+          "zone_name": {
+            "type": "string"
+          },
+          "block_name": {
+            "type": "string"
+          },
+          "row_label": {
+            "type": "string"
+          },
+          "seat_no": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "seat_id",
+          "ticket_class_id",
+          "zone_name",
+          "block_name",
+          "row_label",
+          "seat_no"
+        ]
+      },
+      "PublicSeatsPage": {
+        "type": "object",
+        "properties": {
+          "seat_map_version": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSeat"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["seat_map_version", "items", "next_cursor"]
+      },
       "OrganizerProblemResponse": {
         "type": "object",
         "properties": {
@@ -3431,10 +3544,6 @@
           }
         },
         "required": ["banner_key", "banner_url", "thumbnail_url", "version"]
-      },
-      "Object": {
-        "type": "object",
-        "properties": {}
       },
       "VenueResponse": {
         "type": "object",

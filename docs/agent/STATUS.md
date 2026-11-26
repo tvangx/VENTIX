@@ -3,35 +3,38 @@
 Trạng thái: `Todo` · `Doing` · `In review` · `Done` · `Blocked` · `Human` (việc Tuấn tự làm).
 **Agent** chỉ được đổi `Todo → Doing → In review`. **Tuấn** chuyển sang `Done` sau khi merge.
 
-Đối chiếu phần Sơn ngày 2026-11-12: S-301 đã merge #70; S-302–S-404 ở #85 đang chờ reviewer dù CI xanh. S-502 đang triển khai độc lập trên main, xem [run report S-502](runs/S-502.md) và [SON_STATUS](SON_STATUS.md). T-402 #59 đã merge; snapshot In review trong bảng được giữ để Tuấn cập nhật Done. S-405/S-501 chờ #82; chưa nghiệm thu G3.
+Đối chiếu task Tuấn ngày 2026-11-25 theo ủy quyền trực tiếp của Tuấn: đã xác minh GitHub `merged=true`, base `main` và merge commit cho 10 task được chuyển từ Doing/In review sang Done. T-102/T-103 bổ sung link PR đã merge. T-207 giữ In review vì phần bổ sung ở [#109](https://github.com/tvangx/VENTIX/pull/109) chưa merge; base [#47](https://github.com/tvangx/VENTIX/pull/47) đã merge. Done ghi nhận phần triển khai đã merge; các giới hạn kiểm chứng thực tế vẫn được giữ trong ghi chú/run report. Bằng chứng chi tiết: [lần chạy 3 T-207](runs/T-207.md#12-lần-chạy-3--đối-chiếu-status-theo-yêu-cầu-tuấn-2026-11-25).
+
+Snapshot theo dõi Sơn ngày 2026-11-12 (chưa đối chiếu lại trong lượt cập nhật task Tuấn này): S-301 đã merge #70; S-302–S-404 ở #85 đang chờ reviewer dù CI xanh. S-502 đang triển khai độc lập trên main, xem [run report S-502](runs/S-502.md) và [SON_STATUS](SON_STATUS.md). S-405/S-501 chờ #82; chưa nghiệm thu G3 theo snapshot này.
 
 | ID     | Tuần | Tên                                                                 | Phụ thuộc                  | Trạng thái | PR  | Ghi chú                                                |
 | ------ | ---- | ------------------------------------------------------------------- | -------------------------- | ---------- | --- | ------------------------------------------------------ |
 | T-101  | 1    | Monorepo                                                            | —                          | Done       | —   | Phase 0                                                |
-| T-102  | 1    | Template NestJS service                                             | T-101                      | Done       |     | Chặn Sơn/Vũ; PR chưa mở (xem runs/T-102.md)            |
+| T-102  | 1    | Template NestJS service                                             | T-101                      | Done       | #31 | Đã merge #31; xem runs/T-102.md                       |
 | T-301a | 1    | Chốt hợp đồng saga (event-contracts, ADR-0009/0010, OpenAPI nội bộ) | T-107                      | Done       |     | Đã cài đặt sẵn; Tuấn review + commit; không giao agent |
-| T-103  | 1    | outbox-inbox                                                        | T-102                      | Done       |     | Mã lõi, 2 người đọc; PR chưa mở                        |
+| T-103  | 1    | outbox-inbox                                                        | T-102                      | Done       | #35 | Đã merge #35; mã lõi outbox/inbox                      |
 | T-104  | 1    | Hạ tầng compose                                                     | T-101                      | Done       | —   | Phase 0 (đã vá Git Bash)                               |
 | T-105  | 1    | CI GitHub Actions                                                   | T-102                      | Done       |     | Chưa chạy trên GitHub                                  |
 | T-106  | 1    | VNPay sandbox + cloudflared + đo RAM                                | —                          | Human      |     |                                                        |
 | T-107  | 1    | Workshop xác nhận hợp đồng                                          | —                          | Human      |     | Quyết định đã chốt; chỉ cần Sơn/Vũ xác nhận            |
 | T-201  | 1    | Schema booking_db                                                   | T-102, T-103               | Done       | #45 | Mã lõi (unique index)                                  |
-| T-207  | 1    | VPS + deploy thử                                                    | —                          | In review  | #47 | Agent: file prod; Tuấn: VPS/domain/secrets             |
+| T-207  | 1    | VPS + deploy thử                                                    | —                          | In review  | #109 | #47 đã merge; bổ sung stdin/timeout + tunnel container, xem runs/T-207.md; Tuấn nghiệm thu HTTPS |
+| T-208 | Demo | Đóng gói và triển khai demo ứng dụng | Infra đã Tuấn nghiệm thu; backend Done | In review | #111 | Local artifact/checksum + 39 smoke checks; CONTRACT CHANGE đã duyệt; EC2/sandbox thật Tuấn nghiệm thu; không thay T-403/T-505/T-601; xem runs/T-208.md |
 | T-202  | 2    | Lua giữ ghế + /holds                                                | T-201                      | Done       | #48 | Mã lõi; cần 2 người đọc                                |
-| T-206  | 2    | Hoàn thiện Kong (+ chặn /internal)                                  | T-104, T-202               | In review  | #50 | Kong 3.8.0: 95 checks đạt; xem runs/T-206.md              |
+| T-206  | 2    | Hoàn thiện Kong (+ chặn /internal)                                  | T-104, T-202               | Done       | #50 | Đã merge; Kong 3.8.0: 95 checks đạt; xem runs/T-206.md   |
 | T-203  | 2    | Consumer event + rehydrate                                          | T-103, T-201, S-203        | Done  | #51 | CONTRACT CHANGE lifecycle v2; cần 2 người đọc           |
-| T-204  | 2    | Seat status + SSE + sweeper                                         | T-202                      | In review  | #52 | H tối đa 309 ms; 126 test pass; cần 2 người đọc Lua |
-| T-205  | 2    | k6 S1 + verify oversell                                             | T-202                      | In review  | #53 | Verifier 0; S1 5k lỗi kết nối; chưa nghiệm thu G1        |
-| T-203b | 2    | Prefetch seat_pricing                                               | T-203, S-206               | In review  | #54 | 104 integration test pass; cần 2 người đọc; xem runs/T-203b.md |
-| T-301  | 3    | Checkout API                                                        | T-202, T-301a, T-203b      | In review  | #55 | Mã lõi                                                 |
-| T-302  | 3    | payment-service + adapter                                           | T-103, T-301a              | Doing      |     | Cần VNPay sandbox                                      |
-| T-303  | 3    | IPN idempotent + sweeper + bù trừ                                   | T-301, T-302               | In review  | #57 | Node 20: 240 test pass; cần 2 người đọc; xem runs/T-303.md |
-| T-304  | 3    | Waiting Room                                                        | T-202, T-206               | In review  | #58 | 232 test pass; Kong 95 checks; cần 2 người đọc Lua       |
+| T-204  | 2    | Seat status + SSE + sweeper                                         | T-202                      | Done       | #52 | Đã merge; H tối đa 309 ms; 126 test pass; xem runs/T-204.md |
+| T-205  | 2    | k6 S1 + verify oversell                                             | T-202                      | Done       | #53 | Đã merge; verifier 0; S1 5k lỗi kết nối ở lần đo lịch sử, xem runs/T-205.md |
+| T-203b | 2    | Prefetch seat_pricing                                               | T-203, S-206               | Done       | #54 | Đã merge; 104 integration test pass; xem runs/T-203b.md |
+| T-301  | 3    | Checkout API                                                        | T-202, T-301a, T-203b      | Done       | #55 | Đã merge; mã lõi; xem runs/T-301.md                    |
+| T-302  | 3    | payment-service + adapter                                           | T-103, T-301a              | Done       | #56 | Đã merge; E2E VNPay sandbox thật chưa được xác minh lại trong lượt này |
+| T-303  | 3    | IPN idempotent + sweeper + bù trừ                                   | T-301, T-302               | Done       | #57 | Đã merge; Node 20: 240 test pass; xem runs/T-303.md     |
+| T-304  | 3    | Waiting Room                                                        | T-202, T-206               | Done       | #58 | Đã merge; 232 test pass; Kong 95 checks                |
 | T-401  | 4    | Refund, hoàn lô, tự hoàn tiền (LATE_PAYMENT, EventCancelled)        | T-302, T-303               | Todo       |     | Hoàn tiền = tiền thật, 2 người đọc                     |
-| T-402  | 4    | finance-service (sổ cái, VAT, audit, thống kê, DLQ admin)           | T-103, T-303               | In review  | #59 | 32 test pass; cần 2 người đọc; xem runs/T-402.md          |
+| T-402  | 4    | finance-service (sổ cái, VAT, audit, thống kê, DLQ admin)           | T-103, T-303               | Done       | #59 | Đã merge; 32 test pass; xem runs/T-402.md              |
 | T-403  | 4    | Load test vòng 1 + tối ưu                                           | G2, T-304 (T-404 nên xong) | Todo       |     | Bạn chạy k6 từ máy thứ hai                             |
 | T-404  | 4    | Prometheus + Grafana                                                | T-102                      | Todo       |     |                                                        |
-| T-405  | 4    | Payment cho đơn resale (C7)                                         | T-302, T-303, S-405        | In review  | #61 | 54 test pass; producer giả S-405; cần 2 người đọc; xem runs/T-405.md |
+| T-405  | 4    | Payment cho đơn resale (C7)                                         | T-302, T-303, S-405        | Done       | #61 | Đã merge; 54 test pass; producer giả S-405; xem runs/T-405.md |
 | T-501  | 5    | Dashboard + Loki + Jaeger                                           | T-404                      | Todo       |     |                                                        |
 | T-502  | 5    | Chaos S4 + sửa lỗi                                                  | T-403                      | Todo       |     | Bạn chạy kịch bản thật                                 |
 | T-503  | 5    | Hardening                                                           | —                          | Todo       |     |                                                        |

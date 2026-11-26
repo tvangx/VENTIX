@@ -311,11 +311,13 @@ function SeatSelection({ event, layout }: { event: CatalogDetail; layout: SeatMa
                 </div>
               </div>
             </section>
-            <Button type="button" size="lg" disabled className="h-16 text-[19px]">
-              Tiếp tục thanh toán
+            <Button asChild size="lg" className="h-16 text-[19px]">
+              <Link to={`/events/${event.id}/buy`} state={{ keys: selected }}>
+                Tiếp tục giữ ghế
+              </Link>
             </Button>
             <p className="m-0 text-sm text-[#a1a1aa]">
-              Giữ ghế và thanh toán sắp có. Ghế bạn chọn lúc này chưa được giữ cho bạn.
+              Ghế sẽ được giữ sau khi vào phòng chờ và tạo đơn ở bước tiếp theo.
             </p>
             {message ? (
               <p role="status" className="m-0 bg-[#a7e8c5] px-5 py-4 font-bold text-[#1c1c20]">

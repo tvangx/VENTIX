@@ -520,3 +520,19 @@ Phase 0 đã có route 9 service + CORS + request-id + rate limit toàn cục. C
 6. T-404 dời sang đầu tuần 5.
 
 **Không được cắt:** Lua + unique index, saga/outbox/inbox, hoàn tiền đúng một lần, sổ cái cân bằng, load test + báo cáo, chaos test cơ bản (kịch bản 1–4), restore diễn tập, deploy.
+
+## T-208 Đóng gói và triển khai demo ứng dụng — Tuấn duyệt 2026-11-25
+
+**Mục tiêu:** đóng gói web/backend thật để Tuấn nâng cấp artifact local lên EC2 Ubuntu 24.04 amd64, 2 vCPU/8 GiB, base c5003f5 (#109 đã merge theo xác nhận trực tiếp). Domain `https://ventixxx.dpdns.org`, Tunnel → Kong, project `ticketing-prod`.
+
+**Phạm vi được duyệt:** file đóng gói apps/, cấu hình infra/, env mẫu/validate, Dockerfile workspace/Prisma, migration trước service, route SPA/API/SSE, build linux/amd64 + docker save/load, artifact không Git + checksum, runbook upgrade/rollback giữ volume/credential/mạng/trust connector. Agent chỉ local; Tuấn nhập secret và thao tác server/Cloudflare/VNPay sandbox. Không đổi logic/API/Kafka/schema; không dùng mock UI để tuyên bố tích hợp.
+
+**Đầu ra:** `infra/compose/docker-compose.apps.yml`, `infra/deploy/{Dockerfile,app-entrypoint.cjs,demo.sh,package-demo.ps1,demo.env.example,demo-config.test.cjs}`, `infra/kong/kong.demo.yml`, `apps/web/{Dockerfile,server.mjs}`, `docs/ops/demo-deploy.md`, `docs/agent/runs/T-208.md`.
+
+**Phụ thuộc:** hạ tầng T-207 đã được Tuấn nghiệm thu trực tiếp; T-103/T-201/T-202/T-203/T-203b/T-204/T-206/T-301/T-302/T-303/T-304 đã Done. UI mua vé/ví vé chưa có: ghi giới hạn, không tự mở rộng nghiệp vụ UI.
+
+**Kiểm chứng:** pull base image mới thật, build 6 image, kiểm config port/volume/network/trust/thiếu env, migration/health local, web/API/SPA/SSE/smoke backend theo khả năng code; lint/typecheck/unit phù hợp, format:check và build toàn repo. Sandbox thật/HTTPS browser/EC2 do Tuấn nghiệm thu riêng.
+
+**Ngoài phạm vi:** không thay nghiệm thu **T-403/T-505/T-601**, không đánh dấu Done pipeline/giám sát/benchmark/chaos/backup drill; không tự merge. Xem run report để biết kết quả chạy thực tế.
+
+**Mở rộng T-208 được Tuấn duyệt 2026-11-26:** cho phép hoàn thiện frontend thật từ giữ ghế/checkout/VNPAY tới Return đọc đơn và vé API; thêm VNPAY_PAYMENT_URL validate/test. CONTRACT CHANGE additive đã duyệt: Booking GET /v1/orders/{orderId} chỉ chủ đơn; Event GET /v1/events/{id}/seats phân trang theo version, chỉ map/event công khai và ánh xạ UUID/vị trí. Cho phép sửa vùng Event/OpenAPI; không đổi DB schema/Kafka. ADR-0019, PR #111 và run report T-208 ghi kết quả local; EC2 và sandbox thật do Tuấn nghiệm thu.

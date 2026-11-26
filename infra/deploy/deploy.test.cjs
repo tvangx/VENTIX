@@ -11,14 +11,16 @@ const posix = (value) =>
   value.replace(/\\/g, "/").replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`);
 const script = posix(resolve(__dirname, "deploy.sh"));
 
-function run(failure = "", timeout = "1") {
+function run(failure = "", timeout = "1", input, tunnel = "") {
   const dir = mkdtempSync(join(tmpdir(), "ticketing-t207-deploy-"));
   const mock = join(dir, "docker");
   const envFile = join(dir, ".env.prod");
   const logFile = join(dir, "calls");
+  const tokenFile = join(dir, "token");
   try {
     writeFileSync(envFile, "# mock only, no secrets\n");
     writeFileSync(logFile, "");
+    writeFileSync(tokenFile, tunnel === "empty" ? "" : "test-only-token-sentinel");
     writeFileSync(
       mock,
       `#!/usr/bin/env bash
@@ -39,6 +41,16 @@ for arg in "$@"; do
       fi
       exit 0 ;;
     pull|up|exec|run|ps)
+      if [[ "$arg" == exec || "$arg" == run ]]; then
+        if [[ "$TEST_FAIL" == stdin ]]; then
+          if IFS= read -r line; then echo 'unexpected inherited stdin' >&2; exit 20; fi
+          [[ " $* " == *" -T "* && " $* " == *" --interactive=false "* ]] || exit 21
+        fi
+        if [[ "$TEST_FAIL" == "hang-$arg" ]]; then
+          trap '' TERM
+          sleep 30
+        fi
+      fi
       if [[ "$arg" == exec && "$TEST_FAIL" == kong && " $* " == *" http://kong:8000/health/infra "* ]]; then exit 13; fi
       [[ "$TEST_FAIL" != "$arg" ]] || exit 13
       exit 0 ;;
@@ -53,23 +65,34 @@ exit 14
       bash,
       [
         "-c",
-        'export PATH="$1:/usr/bin:/bin"; exec bash "$2" "$3" "$4"',
+        'export PATH="$1:/usr/bin:/bin"; shift; exec bash "$@"',
         "--",
         posix(dir),
         script,
         posix(envFile),
         timeout,
+        ...(tunnel
+          ? [
+              "--tunnel",
+              tunnel === "missing"
+                ? `${posix(tokenFile)}-missing`
+                : tunnel === "relative"
+                  ? "relative-token"
+                  : posix(tokenFile),
+            ]
+          : []),
       ],
       {
         encoding: "utf8",
         timeout: 15000,
+        input,
         env: { ...process.env, TEST_FAIL: failure, TEST_CALLS: posix(logFile) },
       },
     );
     if (result.error) throw result.error;
     return { ...result, calls: readFileSync(logFile, "utf8") };
   } finally {
-    for (const file of [mock, envFile, logFile]) unlinkSync(file);
+    for (const file of [mock, envFile, logFile, tokenFile]) unlinkSync(file);
     rmdirSync(dir);
   }
 }
@@ -83,9 +106,9 @@ test("success: validates, pulls, waits, probes MinIO, initializes topics, report
     "config --images",
     "pull",
     "up -d --no-build --wait --wait-timeout 1",
-    "exec -T redis",
+    "exec -T --interactive=false redis",
     "http://kong:8000/health/infra",
-    "run --rm --no-deps kafka-init",
+    "run -T --interactive=false --rm --no-deps kafka-init",
     "ps",
   ];
   let previous = -1;
@@ -96,6 +119,22 @@ test("success: validates, pulls, waits, probes MinIO, initializes topics, report
   }
   assert.match(result.stdout, /Infrastructure health checks passed/);
 });
+
+test("piped input never reaches Docker exec/run and interactive mode is disabled", () => {
+  const result = run("stdin", "1", "must-not-be-consumed\n");
+  assert.equal(result.status, 0, result.stderr);
+});
+
+for (const stage of ["exec", "run"]) {
+  test(`hung ${stage} ignoring TERM is killed within a bounded deadline`, () => {
+    const start = Date.now();
+    const result = run(`hang-${stage}`);
+    assert.equal(result.status, stage === "exec" ? 1 : 137, result.stderr);
+    assert.ok(Date.now() - start < 10000, "Timeout must escalate when TERM is ignored");
+    assert.ok(!result.calls.includes(" ps "), result.calls);
+    assert.doesNotMatch(result.stdout, /Infrastructure health checks passed/);
+  });
+}
 
 for (const [failure, forbidden] of [
   ["config", " pull "],
@@ -108,7 +147,7 @@ for (const [failure, forbidden] of [
 ]) {
   test(`failure at ${failure}: nonzero exit, no later stage or success message`, () => {
     const result = run(failure);
-    assert.notEqual(result.status, 0);
+    assert.equal(result.status, ["unpinned", "exec", "kong"].includes(failure) ? 1 : 13);
     assert.ok(!result.calls.includes(forbidden), result.calls);
     assert.doesNotMatch(result.stdout, /Infrastructure health checks passed/);
   });
@@ -119,3 +158,21 @@ test("invalid health timeout fails before any Docker command", () => {
   assert.notEqual(result.status, 0);
   assert.equal(result.calls, "");
 });
+
+test("tunnel is explicit and its overlay applies to every compose stage", () => {
+  const result = run("", "1", undefined, "valid");
+  assert.equal(result.status, 0, result.stderr);
+  for (const line of result.calls.trim().split("\n")) {
+    if (!line.includes(" version ")) assert.match(line, /docker-compose\.tunnel\.yml/);
+  }
+  assert.doesNotMatch(result.calls + result.stdout + result.stderr, /test-only-token-sentinel/);
+  assert.doesNotMatch(run().calls, /docker-compose\.tunnel\.yml/);
+});
+
+for (const invalid of ["missing", "empty", "relative"]) {
+  test(`invalid tunnel token file (${invalid}) fails before Docker`, () => {
+    const result = run("", "1", undefined, invalid);
+    assert.notEqual(result.status, 0);
+    assert.equal(result.calls, "");
+  });
+}

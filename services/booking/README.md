@@ -1,5 +1,7 @@
 # Booking service — T-201 / T-202 / T-203 / T-204 / T-301 / T-303 / T-304
 
+T-208 bổ sung `GET /v1/orders/{orderId}` (JWT, chỉ chủ đơn). Trả trạng thái backend, tổng tiền VND, hạn thanh toán và items; đơn không tồn tại hoặc khác chủ đều 404. Không cache công khai. Frontend Return chỉ đọc endpoint này, không xác nhận thanh toán từ query VNPay. Hợp đồng additive được Tuấn duyệt tại ADR-0019.
+
 Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis; T-203b thêm prefetch seat pricing; T-204 thêm trạng thái ghế, SSE và sweeper hold. T-301 thêm checkout và stock saga; T-303 thêm saga thanh toán và sweeper order. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
 
 ## Waiting Room (T-304)

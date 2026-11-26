@@ -153,8 +153,8 @@ describe("trang chọn ghế", () => {
 
   it("nút tiếp tục thanh toán còn tắt (giữ ghế là V-301)", async () => {
     await openSeats(KICH);
-    const button = screen.getByRole("button", { name: "Tiếp tục thanh toán" }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
+    const button = screen.getByRole("link", { name: "Tiếp tục giữ ghế" });
+    expect(button.getAttribute("href")).toContain("/buy");
     expect(text(screen.getByRole("region", { name: "Ghế của bạn" }))).toContain("0 / 6 ghế");
   });
 

@@ -73,6 +73,8 @@ function cardOf(event: SeedEvent, now: number): CatalogCard {
   const venue = venueOf(event);
   return {
     ...baseOf(event),
+    banner_url: null,
+    thumbnail_url: null,
     venue_name: venue.name,
     venue_address: venue.address,
     min_ticket_price_vnd: minPrice(event),
@@ -85,6 +87,8 @@ function detailOf(event: SeedEvent): CatalogDetail {
   const meta = { version: 1, created_at: SEED_TIME, updated_at: SEED_TIME };
   return {
     ...baseOf(event),
+    banner_url: null,
+    thumbnail_url: null,
     venue: { ...venue, ...meta, organizer_id: event.organizer_id },
     ticket_classes: [...event.ticket_classes]
       .sort((a, b) => a.id.localeCompare(b.id))

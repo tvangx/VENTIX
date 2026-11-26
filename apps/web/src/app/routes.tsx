@@ -9,6 +9,7 @@ import { EventDetailPage } from "@/pages/event/event-detail-page";
 import { ExplorePage } from "@/pages/explore/explore-page";
 import { HomePage } from "@/pages/home";
 import { NotFoundPage } from "@/pages/not-found";
+import { BuyPage, OrderPage, TicketsPage } from "@/pages/booking/demo-flow";
 
 // Tách khỏi router.tsx để test dùng createMemoryRouter với cùng cây route.
 // Khu ban tổ chức (V-203) có layout riêng ("hậu trường"), tải lười: chỉ organizer mới cần.
@@ -27,12 +28,14 @@ export const routes: RouteObject[] = [
         }),
       },
       // Phòng chờ, mua vé đứng, thanh toán làm ở V-301/T-304; tạm là trang "Sắp có".
-      { path: "events/:id/buy", element: <ComingSoonPage title="Mua vé" /> },
       { path: "resale", element: <ComingSoonPage title="Sàn bán lại" /> },
       {
         element: <RequireAuth />,
         children: [
-          { path: "tickets", element: <ComingSoonPage title="Vé của tôi" /> },
+          { path: "events/:id/buy", element: <BuyPage /> },
+          { path: "orders/:orderId", element: <OrderPage /> },
+          { path: "payments/return", element: <OrderPage returned /> },
+          { path: "tickets", element: <TicketsPage /> },
           { path: "account", element: <AccountPage /> },
         ],
       },

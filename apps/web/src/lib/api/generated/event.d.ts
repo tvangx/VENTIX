@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/events/{id}/seats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read paginated seat UUIDs and positions for a published seat map version */
+        get: operations["PublicSeatsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/organizer/events/{eventId}/banner/presign": {
         parameters: {
             query?: never;
@@ -398,6 +415,20 @@ export interface components {
             roles: string[];
             organizerId?: string;
         };
+        Object: Record<string, never>;
+        PublicSeat: {
+            seat_id: string;
+            ticket_class_id: string;
+            zone_name: string;
+            block_name: string;
+            row_label: string;
+            seat_no: number;
+        };
+        PublicSeatsPage: {
+            seat_map_version: number;
+            items: components["schemas"]["PublicSeat"][];
+            next_cursor: string | null;
+        };
         OrganizerProblemResponse: {
             type: string;
             title: string;
@@ -443,7 +474,6 @@ export interface components {
             /** @description Phiên bản mới của sự kiện */
             version: number;
         };
-        Object: Record<string, never>;
         VenueResponse: {
             /** Format: uuid */
             id: string;
@@ -852,6 +882,45 @@ export interface operations {
             };
             /** @description Missing or invalid token (problem+json) */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicSeatsController_list: {
+        parameters: {
+            query: {
+                seat_map_version: number;
+                cursor?: string;
+                limit?: components["schemas"]["Object"];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSeatsPage"];
+                };
+            };
+            /** @description Invalid UUID, version or cursor/limit */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description EVENT_NOT_FOUND; event/map not published or version absent */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
