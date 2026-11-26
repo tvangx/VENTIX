@@ -16,7 +16,7 @@ const dir = join(root, "dist/obs/smoke");
 mkdirSync(dir, { recursive: true });
 const envFile = join(dir, "obs.env");
 const project = "ticketing-t404-smoke";
-const network = `${project}-backend`;
+const network = `${project}-internal`;
 const relay = `${project}-relay-${Date.now()}`;
 const services = ["identity", "event", "booking", "payment", "ticket"];
 const password = "synthetic-t404-password-only";
@@ -100,8 +100,9 @@ async function main() {
   try {
     docker("network", "inspect", network);
   } catch {
-    docker("network", "create", network);
+    docker("network", "create", "--internal", network);
   }
+  assert.equal(docker("network", "inspect", network, "--format", "{{.Internal}}").trim(), "true");
   for (const [index, service] of services.entries()) {
     const pg = await new PostgreSqlContainer("postgres:16")
       .withUsername(`${service}_user`)
@@ -149,6 +150,9 @@ async function main() {
     relayCode,
   );
   madeRelay = true;
+  // Relay only: an egress leg reaches the host bootstraps while target DNS stays
+  // on an internal backend just like prod. Real deployed apps need no relay.
+  docker("network", "connect", "bridge", relay);
   console.log(obs("start"));
   console.log("Checking HTTP smoke and Kong metrics boundary");
   if (process.env.K6_BINARY) {
@@ -187,6 +191,8 @@ async function main() {
     `type=bind,src=${join(root, "infra/kong/kong.demo.yml")},dst=/kong/kong.yml,readonly`,
     "kong:3.8",
   );
+  // Like the deployed Kong backend+edge topology, the test gateway needs a host-access leg.
+  docker("network", "connect", "bridge", gateway);
   try {
     await until(async () => (await fetch("http://127.0.0.1:18040/health/infra")).status === 200);
     for (const service of services) {

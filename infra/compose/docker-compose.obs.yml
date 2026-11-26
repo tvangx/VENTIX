@@ -3,7 +3,7 @@ services:
   prometheus:
     image: ${PROMETHEUS_IMAGE:?Set pinned PROMETHEUS_IMAGE}
     restart: unless-stopped
-    networks: [obs-backend]
+    networks: [obs-backend, obs-access]
     mem_limit: 512m
     cpus: 0.5
     security_opt: [no-new-privileges:true]
@@ -27,7 +27,7 @@ services:
   grafana:
     image: ${GRAFANA_IMAGE:?Set pinned GRAFANA_IMAGE}
     restart: unless-stopped
-    networks: [obs-backend]
+    networks: [obs-access]
     mem_limit: 512m
     cpus: 0.5
     security_opt: [no-new-privileges:true]
@@ -52,6 +52,10 @@ services:
       options: { max-size: "5m", max-file: "2" }
 
 networks:
+  # An internal-only bridge cannot serve the host-published UI port on all engines.
+  # This bridge belongs only to obs; no application/connector network is modified.
+  obs-access:
+    driver: bridge
   obs-backend:
     external: true
     name: ${OBS_NETWORK:?Set the existing application Docker network}

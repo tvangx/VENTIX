@@ -381,8 +381,8 @@ Lua nằm trong `src/seat-hold/lua`, nạp bằng ioredis defineCommand (EVALSHA
 
 Metrics có `seat_hold_requests_total{outcome="success|conflict|limit"}` và histogram HTTP hiện có; không dùng event/user/seat làm label. Integration dùng PostgreSQL + Redis `redis:7.4-alpine` Testcontainers (cùng tag hạ tầng dev), kiểm chứng qua HTTP/JWT và Pub/Sub/Stream thật. Concurrency dùng 100 kết nối Redis đã đồng bộ trước khi gửi; API test thêm 100 user HTTP khi Redis client vừa khởi tạo. Kết quả thật: [run report T-202](../../docs/agent/runs/T-202.md).
 
-## Gi?m s?t HTTP (T-404)
+## Giám sát HTTP (T-404)
 
-`/metrics` xu?t histogram `http_server_request_duration_seconds{service,method,route,status_class}` thay t?n HTTP c? `http_request_duration_seconds`. Route l? m?u ??ng k?; URL kh?ng kh?p d?ng `unmatched`, kh?ng g?n ID/raw URL v?o nh?n. Middleware global ghi m?i response ho?n t?t m?t l?n, bao g?m l?i guard/filter v? 404; l??t scrape kh?ng ???c t?nh. Metric nghi?p v? v? endpoint hi?n c? gi? nguy?n.
+`/metrics` xuất histogram `http_server_request_duration_seconds{service,method,route,status_class}` thay tên HTTP cũ `http_request_duration_seconds`. Route là mẫu đăng ký; URL không khớp dùng `unmatched`, không gắn ID/raw URL vào nhãn. Middleware global ghi mỗi response hoàn tất một lần, bao gồm lỗi guard/filter và 404; lượt scrape không được tính. Metric nghiệp vụ và endpoint hiện có giữ nguyên.
 
-Prometheus/Grafana, rollout backend v? ch?n metrics qua Kong: [runbook observability](../../docs/ops/observability.md). Kh?ng public `/metrics`.
+Prometheus/Grafana, rollout backend và chặn metrics qua Kong: [runbook observability](../../docs/ops/observability.md). Không public `/metrics`.

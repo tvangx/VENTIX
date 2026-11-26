@@ -14,7 +14,7 @@ Muốn RED mới trên EC2, Tuấn cần duyệt một đợt rebuild/redeploy *
 
 ## Truy cập và tài nguyên
 
-- Prometheus: host **127.0.0.1:9090**, Grafana: **127.0.0.1:3030**. Không public route/hostname, không sửa Kong/Cloudflare. Không mount docker.sock. Mạng duy nhất là mạng ứng dụng có sẵn, default `ticketing-prod_backend`; không tạo lại mạng đó.
+- Prometheus: host **127.0.0.1:9090**, Grafana: **127.0.0.1:3030**. Không public route/hostname hoặc đổi trust Kong/Cloudflare. Không mount docker.sock. Prometheus nối backend có sẵn `ticketing-prod_backend` và bridge riêng `ticketing-prod_obs-access` để phục vụ port loopback. Grafana chỉ nối bridge obs này, không trực tiếp vào backend. Không tạo lại hoặc đổi mạng ứng dụng; backend prod vẫn internal. Bridge riêng tránh mất truy cập host khi chỉ nối mạng internal, đã được kiểm tra thực tế.
 - Grafana tắt anonymous/sign-up, dùng admin riêng. Không đưa secret vào repo/chat/history. File env bên ngoài artifact, quyền 0600. Không in `docker compose config` đầy đủ với env thật.
 - Prometheus: 512 MiB, 0,5 CPU; Grafana: 512 MiB, 0,5 CPU; log local 2×5 MB/container. Tổng trần obs 1 GiB, 1 CPU; cần kiểm tra headroom thực tế trên máy 8 GiB trước start. Không coi trần này là footprint đo được.
 - Scrape 15s/timeout 5s; 20.000 samples/target/scrape để chặn bùng nổ nhãn. Retention **7 ngày hoặc 1 GiB** (ngưỡng đạt trước); WAL/head/compaction vẫn có thể làm disk lớn hơn 1 GiB. Không phải disk quota. Dành thêm dung lượng cho WAL, Grafana SQLite, image/archive; theo dõi `df -h`, `docker stats`, `du` định kỳ. Không tăng EC2/dùng dịch vụ trả phí.

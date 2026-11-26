@@ -42,6 +42,14 @@ check(result.status === 0, result.stderr);
 const config = JSON.parse(result.stdout);
 check(Object.keys(config.services).sort().join(",") === "grafana,prometheus", "Only obs services");
 check(config.networks["obs-backend"].external === true, "Existing external app network");
+check(
+  config.networks["obs-access"].driver === "bridge",
+  "Separate obs access bridge for loopback ports",
+);
+check(
+  !Object.hasOwn(config.services.grafana.networks, "obs-backend"),
+  "Grafana cannot access the app backend directly",
+);
 for (const svc of Object.values(config.services)) {
   check(svc.ports.length === 1 && svc.ports[0].host_ip === "127.0.0.1", "Loopback only");
   check(!JSON.stringify(svc).includes("docker.sock"), "No docker socket");

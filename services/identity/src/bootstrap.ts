@@ -54,7 +54,7 @@ export async function createApp(env: Env, logger: Logger): Promise<INestApplicat
   // logger: false → mọi log đi qua pino (JSON), không lẫn log mặc định của Nest.
   const app = await NestFactory.create(AppModule.register(env, logger), { logger: false });
 
-  // Global Express middleware bao ph? c? URL kh?ng kh?p /v1 (404).
+  // Global Express middleware bao phủ cả URL không khớp /v1 (404).
   const httpMetrics = new MetricsMiddleware(app.get(MetricsService));
   app.use(httpMetrics.use.bind(httpMetrics));
   app.use(helmet());

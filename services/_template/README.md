@@ -31,8 +31,8 @@ OpenTelemetry chỉ bật khi đặt `OTEL_EXPORTER_OTLP_ENDPOINT`.
 
 `GET /v1/whoami` là endpoint mẫu: xóa khi viết module thật.
 
-## Gi?m s?t HTTP (T-404)
+## Giám sát HTTP (T-404)
 
-`/metrics` xu?t histogram `http_server_request_duration_seconds{service,method,route,status_class}` thay t?n HTTP c? `http_request_duration_seconds`. Route l? m?u ??ng k?; URL kh?ng kh?p d?ng `unmatched`, kh?ng g?n ID/raw URL v?o nh?n. Middleware global ghi m?i response ho?n t?t m?t l?n, bao g?m l?i guard/filter v? 404; l??t scrape kh?ng ???c t?nh. Metric nghi?p v? v? endpoint hi?n c? gi? nguy?n.
+`/metrics` xuất histogram `http_server_request_duration_seconds{service,method,route,status_class}` thay tên HTTP cũ `http_request_duration_seconds`. Route là mẫu đăng ký; URL không khớp dùng `unmatched`, không gắn ID/raw URL vào nhãn. Middleware global ghi mỗi response hoàn tất một lần, bao gồm lỗi guard/filter và 404; lượt scrape không được tính. Metric nghiệp vụ và endpoint hiện có giữ nguyên.
 
-Prometheus/Grafana, rollout backend v? ch?n metrics qua Kong: [runbook observability](../../docs/ops/observability.md). Kh?ng public `/metrics`.
+Prometheus/Grafana, rollout backend và chặn metrics qua Kong: [runbook observability](../../docs/ops/observability.md). Không public `/metrics`.

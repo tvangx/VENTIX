@@ -33,7 +33,7 @@ describe("HTTP metrics (real Nest/Express requests)", () => {
     metrics = module.get(MetricsService);
     const middleware = new MetricsMiddleware(metrics);
     const use = (req: Request, res: Response, next: NextFunction) => middleware.use(req, res, next);
-    // ??ng k? l?p c? ?: m?t response ch? ???c ghi m?t l?n.
+    // Đăng ký lặp cố ý: một response chỉ được ghi một lần.
     app.use(use);
     app.use(use);
     app.setGlobalPrefix("v1", { exclude: ["metrics"] });

@@ -17,7 +17,7 @@ plugins:
       max_age: 3600
 
 routes:
-  # /metrics ch? d?nh cho scrape n?i b?, k? c? khi service d?ng route prefix r?ng.
+  # /metrics chỉ dành cho scrape nội bộ, kể cả khi service dùng route prefix rộng.
   - name: block-metrics
     paths: ["~/(?i:(?:.*/)?metrics)(?:/|$)"]
     regex_priority: 1000
