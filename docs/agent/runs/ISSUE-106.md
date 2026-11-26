@@ -1,6 +1,6 @@
 # Run report — Issue #106 vị trí và hình dạng trong layout seat map (PR 1)
 
-- **Ngày:** 2026-11-26 · **Agent/IDE:** Claude Code · **Nhánh:** `feat/event-issue106-seat-map-placement` · **PR:** chưa mở
+- **Ngày:** 2026-11-26 · **Agent/IDE:** Claude Code · **Nhánh:** `feat/event-issue106-seat-map-placement` · **PR:** [#113](https://github.com/tvangx/VENTIX/pull/113)
 - **Trạng thái:** Hoàn thành một phần (ảnh nền và web chưa làm)
 
 ## 1. Kiểm tra điều kiện (Bước 0)
