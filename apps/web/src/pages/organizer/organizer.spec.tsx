@@ -26,7 +26,15 @@ function pngFile(size: number): File {
 // jsdom không có object URL (xem trước ảnh banner).
 const realCreate = URL.createObjectURL;
 const realRevoke = URL.revokeObjectURL;
-beforeAll(() => {
+beforeAll(async () => {
+  // Các trang ban tổ chức tải lười (wizard kéo theo Konva): lần import nguội trên CI đông máy
+  // có thể quá 1s mặc định của findBy*. Nạp sẵn ở đây để route lazy chỉ lấy module đã có.
+  await Promise.all([
+    import("@/pages/organizer/organizer-layout"),
+    import("@/pages/organizer/events-page"),
+    import("@/pages/organizer/wizard/wizard-page"),
+  ]);
+
   URL.createObjectURL = () => "blob:banner-preview";
   URL.revokeObjectURL = () => undefined;
 });
