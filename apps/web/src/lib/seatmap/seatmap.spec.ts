@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { seedEvents } from "@/mocks/seed";
 import { mockSeatMapLayout } from "@/mocks/seat-map";
-import { buildGeometry, SEAT_RADIUS, SEAT_SPACING, seatKey } from "./geometry";
+import { buildGeometry, GA_DEPTH, SEAT_RADIUS, SEAT_SPACING, seatKey } from "./geometry";
+import { textOn } from "./colors";
 import { SeatIndex } from "./hit-test";
 import { parseLayout, type SeatMapLayout } from "./layout";
 import { toggleSeat, type SeatStatus } from "./selection";
@@ -107,6 +108,63 @@ describe("dàn sơ đồ", () => {
     // Hai ghế liền kề cách nhau SEAT_SPACING theo cung; đo theo dây cung nên ngắn hơn rất ít.
     const [a, b] = geo.seats;
     expect(a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0).toBeCloseTo(SEAT_SPACING, 1);
+  });
+});
+
+describe("khu đứng (ga_areas)", () => {
+  const GA_1 = "31000000-0000-4000-8000-000000000021";
+  const GA_2 = "31000000-0000-4000-8000-000000000022";
+  const withGa: SeatMapLayout = {
+    ...SMALL,
+    ga_areas: [
+      { name: "Fanzone trái", ticket_class_id: GA_1 },
+      { name: "Fanzone phải", ticket_class_id: GA_2 },
+    ],
+  };
+
+  it("vẽ mỗi khu đứng một mảng liền sát sân khấu, ghế lùi ra sau", () => {
+    const plain = buildGeometry(SMALL);
+    const geo = buildGeometry(withGa);
+    expect(geo.gaAreas.map((a) => [a.name, a.ticketClassId])).toEqual([
+      ["Fanzone trái", GA_1],
+      ["Fanzone phải", GA_2],
+    ]);
+    const [left, right] = geo.gaAreas;
+    if (!left || !right) throw new Error("thiếu khu đứng");
+    expect(left.innerRadius).toBeGreaterThan(geo.stageRadius);
+    expect(left.outerRadius - left.innerRadius).toBe(GA_DEPTH);
+    // Trái sang phải, không chồng nhau.
+    expect(left.endAngle).toBeLessThan(right.startAngle);
+    expect(left.center.x).toBeLessThan(0);
+    expect(right.center.x).toBeGreaterThan(0);
+    // Mọi ghế nằm sau dải khu đứng; số ghế không đổi.
+    const nearest = Math.min(...geo.seats.map((s) => Math.hypot(s.x, s.y)));
+    expect(nearest).toBeGreaterThan(left.outerRadius);
+    expect(geo.seats).toHaveLength(plain.seats.length);
+    // Khung nhìn chứa cả khu đứng.
+    expect(geo.bounds.minX).toBeLessThanOrEqual(left.bounds.minX);
+    expect(geo.bounds.maxX).toBeGreaterThanOrEqual(right.bounds.maxX);
+  });
+
+  it("layout chỉ có khu đứng vẫn dựng được sơ đồ", () => {
+    const geo = buildGeometry({
+      zones: [],
+      ga_areas: [{ name: "Khu đứng", ticket_class_id: GA_1 }],
+    });
+    expect(geo.seats).toHaveLength(0);
+    expect(geo.zones).toHaveLength(0);
+    expect(geo.gaAreas).toHaveLength(1);
+    expect(geo.bounds.minY).toBeLessThan(-geo.stageRadius);
+  });
+
+  it("không có khu đứng thì sơ đồ như cũ", () => {
+    expect(buildGeometry(SMALL).gaAreas).toEqual([]);
+    expect(buildGeometry({ ...SMALL, ga_areas: [] }).seats).toEqual(buildGeometry(SMALL).seats);
+  });
+
+  it("chữ tên khu tương phản với màu hạng vé", () => {
+    expect(textOn("#a7e8c5")).toBe("#1c1c20");
+    expect(textOn("#11804a")).toBe("#ffffff");
   });
 });
 

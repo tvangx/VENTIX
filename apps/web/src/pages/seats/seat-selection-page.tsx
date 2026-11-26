@@ -125,8 +125,10 @@ function SeatSelection({ event, layout }: { event: CatalogDetail; layout: SeatMa
       zone?.blocks[seat.block]?.name ?? ""
     }`;
   };
+  // Hạng vé đứng chỉ vào chú thích khi sơ đồ có vẽ khu đứng của hạng đó.
+  const drawnGa = new Set(geometry.gaAreas.map((area) => area.ticketClassId));
   const legendClasses = [...event.ticket_classes]
-    .filter((tc) => tc.kind === "SEATED")
+    .filter((tc) => tc.kind === "SEATED" || drawnGa.has(tc.id))
     .sort((a, b) => b.price_vnd - a.price_vnd);
 
   return (
@@ -185,7 +187,11 @@ function SeatSelection({ event, layout }: { event: CatalogDetail; layout: SeatMa
                 statuses={NO_STATUS}
                 selected={selectedSet}
                 onSeatPress={press}
-                label={`Sơ đồ ${geometry.seats.length.toLocaleString("vi-VN")} ghế, ${geometry.zones.length} block. Dùng bộ chọn ghế bên dưới nếu không dùng chuột hoặc cảm ứng.`}
+                label={`Sơ đồ ${geometry.seats.length.toLocaleString("vi-VN")} ghế, ${geometry.zones.length} block${
+                  geometry.gaAreas.length > 0
+                    ? `, khu đứng ${geometry.gaAreas.map((area) => area.name).join(", ")}`
+                    : ""
+                }. Dùng bộ chọn ghế bên dưới nếu không dùng chuột hoặc cảm ứng.`}
                 className="size-full"
               />
               <span className="pointer-events-none absolute top-3 left-3 max-w-[calc(100%-5rem)] rounded-[14px] bg-[#1c1c20] px-3 py-1.5 text-xs">
@@ -218,6 +224,7 @@ function SeatSelection({ event, layout }: { event: CatalogDetail; layout: SeatMa
                 <li key={tc.id} className="inline-flex items-center gap-2">
                   <Dot color={classColors.get(tc.id) ?? MAP_COLORS.label} />
                   {tc.name} · {formatVnd(tc.price_vnd)}
+                  {tc.kind === "GA" ? " · vé đứng" : ""}
                 </li>
               ))}
               <li className="inline-flex items-center gap-2">

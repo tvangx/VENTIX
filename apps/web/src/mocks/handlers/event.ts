@@ -61,6 +61,9 @@ function baseOf(event: SeedEvent) {
     title: event.title,
     description: event.description,
     banner_key: event.banner_key,
+    // Như event-service: khóa seed (`seed/banners/*`) không có URL công khai.
+    banner_url: null,
+    thumbnail_url: null,
     start_at: new Date(event.start_at).toISOString(),
     end_at: new Date(event.end_at).toISOString(),
   };

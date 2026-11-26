@@ -5,6 +5,7 @@ import { AppProviders } from "@/app/providers";
 import { createQueryClient } from "@/app/query-client";
 import { routes } from "@/app/routes";
 import { useAuthStore } from "@/lib/http/auth-store";
+import { useTenantStore } from "@/lib/organizer/tenant";
 import { resetMockState } from "@/mocks/db";
 import { mockServer } from "@/mocks/node";
 
@@ -29,6 +30,7 @@ export function setupAppHarness(): void {
   beforeEach(() => {
     resetMockState();
     useAuthStore.setState({ accessToken: null, status: "unknown" });
+    useTenantStore.setState({ organizerId: null, token: null, epoch: 0 });
     window.localStorage.clear();
     window.sessionStorage.clear();
   });

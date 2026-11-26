@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { useMe } from "@/lib/auth/auth-api";
 import { authErrorMessage } from "@/lib/auth/errors";
 
@@ -37,6 +39,13 @@ export function AccountPage() {
               : `${me.data.memberships.length} ban tổ chức`}
           </dd>
         </dl>
+      ) : null}
+      {me.data?.memberships.some((m) => m.role === "ORGANIZER") ? (
+        <div>
+          <Button asChild size="lg">
+            <Link to="/organizer/events">Vào hậu trường ban tổ chức</Link>
+          </Button>
+        </div>
       ) : null}
     </section>
   );

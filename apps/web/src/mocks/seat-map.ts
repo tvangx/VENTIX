@@ -42,5 +42,9 @@ export function mockSeatMapLayout(event: SeedEvent): SeatMapLayout | null {
         })),
       };
     }),
+    // Khu đứng (issue #98): mỗi hạng GA một khu, tên lấy theo hạng.
+    ga_areas: event.ticket_classes
+      .filter((tc) => tc.kind === "GA")
+      .map((tc) => ({ name: tc.name, ticket_class_id: tc.id })),
   };
 }

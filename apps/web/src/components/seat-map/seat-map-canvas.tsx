@@ -8,7 +8,7 @@ import {
 } from "react";
 import Konva from "konva";
 import { SEAT_RADIUS, type Bounds, type SeatMapGeometry } from "@/lib/seatmap/geometry";
-import { MAP_COLORS } from "@/lib/seatmap/colors";
+import { MAP_COLORS, textOn } from "@/lib/seatmap/colors";
 import { SeatIndex } from "@/lib/seatmap/hit-test";
 import type { SeatStatus } from "@/lib/seatmap/selection";
 
@@ -53,11 +53,19 @@ export const SeatMapCanvas = forwardRef<SeatMapHandle, SeatMapCanvasProps>(funct
   const drawState = useRef({ classColors, statuses, selected });
   const pressRef = useRef(onSeatPress);
   const handleRef = useRef<SeatMapHandle | null>(null);
+  const gaShapesRef = useRef<
+    { area: SeatMapGeometry["gaAreas"][number]; shape: Konva.Arc; text: Konva.Text }[]
+  >([]);
   const index = useMemo(() => new SeatIndex(geometry.seats), [geometry]);
 
   // Đổi trạng thái/lựa chọn/màu: cập nhật dữ liệu vẽ rồi chỉ vẽ lại layer, không dựng lại Stage.
   useLayoutEffect(() => {
     drawState.current = { classColors, statuses, selected };
+    for (const { area, shape, text } of gaShapesRef.current) {
+      const color = classColors.get(area.ticketClassId) ?? MAP_COLORS.label;
+      shape.fill(color);
+      text.fill(textOn(color));
+    }
     layerRef.current?.batchDraw();
   }, [classColors, statuses, selected]);
   useLayoutEffect(() => {
@@ -103,6 +111,41 @@ export const SeatMapCanvas = forwardRef<SeatMapHandle, SeatMapCanvasProps>(funct
         fill: MAP_COLORS.stageText,
       }),
     );
+
+    // Khu đứng: mỗi khu một hình quạt liền màu hạng vé, tên khu ở giữa.
+    // Konva.Arc đo góc theo chiều kim đồng hồ từ trục x; góc của geometry đo từ trục thẳng lên.
+    const gaShapes = geometry.gaAreas.map((area) => {
+      const color = drawState.current.classColors.get(area.ticketClassId) ?? MAP_COLORS.label;
+      const fontSize = Math.min(16, Math.max(9, area.arcLength / 10));
+      const shape = new Konva.Arc({
+        x: 0,
+        y: 0,
+        innerRadius: area.innerRadius,
+        outerRadius: area.outerRadius,
+        rotation: -90 + (area.startAngle * 180) / Math.PI,
+        angle: ((area.endAngle - area.startAngle) * 180) / Math.PI,
+        fill: color,
+      });
+      const width = area.arcLength * 0.9;
+      const text = new Konva.Text({
+        x: area.center.x - width / 2,
+        y: area.center.y - fontSize * 1.1,
+        width,
+        height: fontSize * 2.4,
+        align: "center",
+        verticalAlign: "middle",
+        text: area.name,
+        fontSize,
+        fontStyle: "800",
+        fontFamily: "Bricolage Grotesque, system-ui, sans-serif",
+        fill: textOn(color),
+        wrap: "word",
+        ellipsis: true,
+      });
+      layer.add(shape, text);
+      return { area, shape, text };
+    });
+    gaShapesRef.current = gaShapes;
 
     for (const block of geometry.blocks) {
       layer.add(
@@ -255,6 +298,7 @@ export const SeatMapCanvas = forwardRef<SeatMapHandle, SeatMapCanvasProps>(funct
       stage.destroy();
       stageRef.current = null;
       layerRef.current = null;
+      gaShapesRef.current = [];
       handleRef.current = null;
     };
   }, [geometry, index]);

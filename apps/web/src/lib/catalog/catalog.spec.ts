@@ -191,8 +191,6 @@ function ticketClass(id: string, price: number, kind: "SEATED" | "GA" = "SEATED"
 
 function detail(patch: Partial<CatalogDetail>): CatalogDetail {
   return {
-    banner_url: null,
-    thumbnail_url: null,
     id: META.event_id,
     version: 1,
     created_at: META.created_at,
@@ -203,6 +201,8 @@ function detail(patch: Partial<CatalogDetail>): CatalogDetail {
     title: "Đêm thử",
     description: "Mô tả",
     banner_key: null,
+    banner_url: null,
+    thumbnail_url: null,
     start_at: "2026-12-19T12:00:00Z",
     end_at: "2026-12-19T15:00:00Z",
     venue: {
