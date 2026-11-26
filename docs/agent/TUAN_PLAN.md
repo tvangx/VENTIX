@@ -534,3 +534,5 @@ Phase 0 đã có route 9 service + CORS + request-id + rate limit toàn cục. C
 **Kiểm chứng:** pull base image mới thật, build 6 image, kiểm config port/volume/network/trust/thiếu env, migration/health local, web/API/SPA/SSE/smoke backend theo khả năng code; lint/typecheck/unit phù hợp, format:check và build toàn repo. Sandbox thật/HTTPS browser/EC2 do Tuấn nghiệm thu riêng.
 
 **Ngoài phạm vi:** không thay nghiệm thu **T-403/T-505/T-601**, không đánh dấu Done pipeline/giám sát/benchmark/chaos/backup drill; không tự merge. Xem run report để biết kết quả chạy thực tế.
+
+**Mở rộng T-208 được Tuấn duyệt 2026-11-26:** cho phép hoàn thiện frontend thật từ giữ ghế/checkout/VNPAY tới Return đọc đơn và vé API; thêm VNPAY_PAYMENT_URL validate/test. CONTRACT CHANGE additive đã duyệt: Booking GET /v1/orders/{orderId} chỉ chủ đơn; Event GET /v1/events/{id}/seats phân trang theo version, chỉ map/event công khai và ánh xạ UUID/vị trí. Cho phép sửa vùng Event/OpenAPI; không đổi DB schema/Kafka. ADR-0019, PR #111 và run report T-208 ghi kết quả local; EC2 và sandbox thật do Tuấn nghiệm thu.
