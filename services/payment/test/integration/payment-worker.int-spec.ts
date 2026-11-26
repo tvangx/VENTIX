@@ -32,8 +32,11 @@ describe("payment background flow with real Kafka + PostgreSQL", () => {
             Topics.BOOKING_ORDERS,
             Topics.RESALE_EVENTS,
             Topics.PAYMENT_EVENTS,
+            Topics.EVENT_LIFECYCLE,
+            Topics.AUDIT_EVENTS,
             `${Topics.BOOKING_ORDERS}.dlq`,
             `${Topics.RESALE_EVENTS}.dlq`,
+            `${Topics.EVENT_LIFECYCLE}.dlq`,
           ].map((topic) => ({ topic, numPartitions: 1 })),
         });
         app = await createApp(
@@ -118,11 +121,48 @@ describe("payment background flow with real Kafka + PostgreSQL", () => {
         );
         expect(
           (
-            await db.pool.query("SELECT * FROM processed_events WHERE message_id=$1", [
-              message.message_id,
-            ])
+            await db.pool.query(
+              "SELECT * FROM processed_events WHERE message_id=$1 AND consumer='payment-payables'",
+              [message.message_id],
+            )
           ).rows,
         ).toHaveLength(1);
+        if (purpose === "ORDER") {
+          const cancelled = newMessage("OrderCancelled", {
+            order_id: order,
+            event_id: s.event,
+            reason: "LATE_PAYMENT",
+          });
+          await producer.send({
+            topic: Topics.BOOKING_ORDERS,
+            messages: Array.from({ length: 3 }, () => ({
+              key: order,
+              value: JSON.stringify(cancelled),
+            })),
+          });
+          await until(async () =>
+            seen.some((value) => (value as { type: string }).type === "RefundCompleted"),
+          );
+          expect(
+            seen.filter((value) => (value as { type: string }).type === "RefundCompleted"),
+          ).toHaveLength(1);
+          expect(
+            (
+              await db.pool.query(
+                "SELECT count(*)::int n FROM refunds r JOIN payments p ON p.id=r.payment_id WHERE p.ref_id=$1 AND r.status='SUCCEEDED'",
+                [order],
+              )
+            ).rows[0].n,
+          ).toBe(1);
+          expect(
+            (
+              await db.pool.query(
+                "SELECT count(*)::int n FROM processed_events WHERE message_id=$1 AND consumer='payment-refunds'",
+                [cancelled.message_id],
+              )
+            ).rows[0].n,
+          ).toBe(1);
+        }
       } finally {
         await consumer.disconnect();
         await producer.disconnect();

@@ -8,10 +8,17 @@ import { Counter, Histogram, Registry, collectDefaultMetrics } from "prom-client
 export class MetricsService {
   readonly registry = new Registry();
   readonly paymentResults: Counter<"provider" | "code">;
+  readonly refunds: Counter<"status">;
   readonly httpDuration: Histogram<"method" | "route" | "status">;
 
   constructor() {
     collectDefaultMetrics({ register: this.registry });
+    this.refunds = new Counter({
+      name: "refunds_total",
+      help: "Durably recorded refund attempt outcomes",
+      labelNames: ["status"],
+      registers: [this.registry],
+    });
     this.paymentResults = new Counter({
       name: "payment_callback_total",
       help: "Payment callback outcomes",

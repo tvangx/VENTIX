@@ -1,4 +1,8 @@
 import { PermanentError, type InboxHandler } from "@ticketing/outbox-inbox";
+import { OutboxService } from "@ticketing/outbox-inbox";
+import { newMessage } from "@ticketing/event-contracts";
+import { releaseOrderStock, SagaOrder } from "../orders/order-saga";
+import { transition } from "../orders/order-state";
 
 /** Inbox và snapshot/stock dùng chung executor, rollback cùng nhau. */
 export const handleEventLifecycle: InboxHandler = async (exec, message) => {
@@ -46,15 +50,25 @@ export const handleEventLifecycle: InboxHandler = async (exec, message) => {
     ],
   );
   if (!updated.length) {
-    const owner = await exec.query<{ organizer_id: string }>(
-      "SELECT organizer_id FROM event_snapshots WHERE event_id=$1::uuid",
+    const owner = await exec.query<{ organizer_id: string; status: string; event_version: number }>(
+      "SELECT organizer_id,status,event_version FROM event_snapshots WHERE event_id=$1::uuid",
       [data.event_id],
     );
     if (owner[0]?.organizer_id !== data.organizer_id.toLowerCase())
       throw new PermanentError("Snapshot organizer mismatch");
+    // Replay T-401: snapshot đã hủy trước khi consumer biết hủy order.
+    if (
+      cancelled &&
+      owner[0]?.status === "CANCELLED" &&
+      owner[0].event_version === data.event_version
+    )
+      await cancelUnfinishedOrders(exec, message);
     return;
   }
   // Chỉ bản snapshot được chấp nhận mới được thay đổi stock.
+  if (cancelled) {
+    await cancelUnfinishedOrders(exec, message);
+  }
   for (const ticketClass of [...classes].sort((a, b) => a.id.localeCompare(b.id))) {
     await exec.query(
       `INSERT INTO ticket_class_stock (class_id,total,sold) VALUES ($1::uuid,$2,0)
@@ -64,3 +78,28 @@ export const handleEventLifecycle: InboxHandler = async (exec, message) => {
     );
   }
 };
+
+async function cancelUnfinishedOrders(
+  exec: Parameters<InboxHandler>[0],
+  message: Parameters<InboxHandler>[1],
+): Promise<void> {
+  if (message.type !== "EventCancelled") return;
+  // Snapshot đang bị khóa: checkout FOR SHARE không thể tạo order sau lần quét này.
+  const orders = await exec.query<SagaOrder>(
+    "SELECT * FROM orders WHERE event_id=$1::uuid AND status IN ('PENDING','AWAITING_PAYMENT') ORDER BY id FOR UPDATE",
+    [message.data.event_id],
+  );
+  for (const order of orders) {
+    await transition(exec, order.id, order.status, "CANCELLED", order.version);
+    await releaseOrderStock(exec, order);
+    await new OutboxService().add(
+      exec,
+      newMessage(
+        "OrderCancelled",
+        { order_id: order.id, event_id: order.event_id, reason: "EVENT_CANCELLED" },
+        { trace_id: message.trace_id ?? message.message_id, tenant_id: message.data.organizer_id },
+      ),
+      order.id,
+    );
+  }
+}

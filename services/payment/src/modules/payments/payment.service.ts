@@ -11,6 +11,7 @@ import { MockAdapter } from "./mock-adapter";
 import { VnpayAdapter } from "./vnpay-adapter";
 import { MetricsService } from "../../metrics/metrics";
 import { Notification, Provider } from "./payment-adapter";
+import { lockRefundEvent, refundCancelledPayment } from "../refunds/refund.handler";
 
 export const IPN_CODES = {
   "00": "Confirm Success",
@@ -31,18 +32,47 @@ export class PaymentService {
     @Inject(LOGGER) private readonly logger: Logger,
     private readonly metrics: MetricsService,
   ) {
-    this.mock = new MockAdapter({
-      minDelayMs: env.MOCK_DELAY_MS,
-      maxDelayMs: env.MOCK_MAX_DELAY_MS,
-      successRate: env.MOCK_SUCCESS_RATE,
-      outcome: env.MOCK_OUTCOME,
-      duplicate: env.MOCK_DUPLICATE_IPN,
-    });
+    this.mock = new MockAdapter(
+      {
+        minDelayMs: env.MOCK_DELAY_MS,
+        maxDelayMs: env.MOCK_MAX_DELAY_MS,
+        successRate: env.MOCK_SUCCESS_RATE,
+        outcome: env.MOCK_OUTCOME,
+        duplicate: env.MOCK_DUPLICATE_IPN,
+        refundFailureRate: env.MOCK_REFUND_FAILURE_RATE,
+        refundOutcome: env.MOCK_REFUND_OUTCOME,
+      },
+      undefined,
+      {
+        find: async (input) =>
+          (
+            await repo.pool.query(
+              "SELECT id FROM mock_refund_receipts WHERE id=$1::uuid AND payment_id=$2::uuid AND amount_vnd=$3",
+              [input.refundId, input.paymentId, input.amountVnd],
+            )
+          ).rowCount === 1,
+        save: async (input) => {
+          await repo.pool.query(
+            "INSERT INTO mock_refund_receipts(id,payment_id,amount_vnd) VALUES($1::uuid,$2::uuid,$3) ON CONFLICT(id) DO NOTHING",
+            [input.refundId, input.paymentId, input.amountVnd],
+          );
+          const row = await repo.pool.query(
+            "SELECT id FROM mock_refund_receipts WHERE id=$1::uuid AND payment_id=$2::uuid AND amount_vnd=$3",
+            [input.refundId, input.paymentId, input.amountVnd],
+          );
+          if (row.rowCount !== 1) throw new Error("MOCK_REFUND_KEY_REUSED");
+        },
+      },
+    );
     this.vnpay = new VnpayAdapter({
       tmnCode: env.VNPAY_TMN_CODE,
       secret: env.VNPAY_HASH_SECRET,
       returnUrl: env.VNPAY_RETURN_URL,
       paymentUrl: env.VNPAY_PAYMENT_URL,
+      refundUrl: env.VNPAY_REFUND_URL,
+      refundEnabled: env.VNPAY_REFUND_ENABLED,
+      refundIp: env.VNPAY_REFUND_IP,
+      refundTimeoutMs: env.VNPAY_REFUND_TIMEOUT_MS,
     });
   }
   async create(
@@ -132,6 +162,11 @@ export class PaymentService {
   }
   async receive(provider: Provider, data: Notification, traceId: string): Promise<IpnCode> {
     const code = await this.repo.db.transaction<IpnCode>(async (exec) => {
+      const [event] = await exec.query<{ event_id: string }>(
+        "SELECT event_id FROM payments WHERE id=$1::uuid",
+        [data.paymentId],
+      );
+      if (event) await lockRefundEvent(exec, event.event_id);
       const tx = new PaymentTransaction(exec);
       const p = await tx.payment(data.paymentId);
       if (!p || p.provider !== provider) return "01";
@@ -160,6 +195,8 @@ export class PaymentService {
           )
         : newMessage("PaymentFailed", { ...base, reason: data.reason }, { trace_id: traceId });
       await new OutboxService().add(exec, message, p.ref_id);
+      if (data.succeeded && p.purpose === "ORDER")
+        await refundCancelledPayment(exec, p.event_id, traceId, p.ref_id);
       return "00";
     });
     this.metrics.paymentResults.inc({ provider, code });

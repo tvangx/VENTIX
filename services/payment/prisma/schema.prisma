@@ -73,6 +73,7 @@ model RefundBatch {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
   version   Int      @default(0)
+  automatic Boolean  @default(false)
   refunds   Refund[]
 
   @@map("refund_batches")
@@ -93,10 +94,56 @@ model Refund {
   createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
   version          Int          @default(0)
+  sentAt           DateTime?    @map("sent_at") @db.Timestamptz(6)
+  leaseUntil       DateTime?    @map("lease_until") @db.Timestamptz(6)
+  claimToken       String?      @map("claim_token") @db.Uuid
+  traceId          String       @default("refund") @map("trace_id") @db.VarChar
   payment          Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   batch            RefundBatch? @relation(fields: [batchId], references: [id], onDelete: Restrict)
 
   @@map("refunds")
+}
+
+model RefundEvent {
+  id           String   @id @db.Uuid // ref:event_db.events
+  organizerId  String   @map("organizer_id") @db.Uuid
+  eventVersion Int      @map("event_version")
+  cancelled    Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  version      Int      @default(0)
+
+  @@map("refund_events")
+}
+
+model RefundDispatch {
+  id        String   @id @db.Uuid
+  nextAt    DateTime @default(now()) @map("next_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  version   Int      @default(0)
+
+  @@map("refund_dispatch")
+}
+
+model RefundRequest {
+  id          String   @id @db.Uuid
+  key         String   @unique @db.VarChar(200)
+  requestHash String   @map("request_hash") @db.VarChar(64)
+  response    Json     @db.JsonB
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("refund_requests")
+}
+
+// Provider giả có ledger bền vững, transaction độc lập với kết quả worker.
+model MockRefundReceipt {
+  id        String   @id @db.Uuid
+  paymentId String   @unique @map("payment_id") @db.Uuid
+  amountVnd BigInt   @map("amount_vnd")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("mock_refund_receipts")
 }
 
 model ReconciliationRun {

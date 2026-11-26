@@ -129,7 +129,7 @@ pnpm format:check && pnpm build
 Unit có vector Python hmac/hashlib độc lập. Integration/concurrency dùng PostgreSQL thật;
 luồng worker dùng Kafka thật trong Testcontainers. Cần Docker; dùng lại image có sẵn trong repo.
 DB có sáu bảng nghiệp vụ theo ERD cùng Outbox/Inbox. Payables giữ PK kép và thêm UUID unique.
-Refund/reconciliation mới có schema; refund() báo chưa hỗ trợ tới T-401.
+T-401 bổ sung refund toàn phần cho ORDER; reconciliation payment độc lập vẫn ngoài phạm vi này.
 Resale dùng chung IPN, mock worker và Outbox với ORDER; sự kiện kết quả có
 `purpose=RESALE`, `resale_order_id` và không có `order_id`.
 Booking consumers, expiry sweeper, bù trừ thuộc T-303.
@@ -141,8 +141,32 @@ RspCode=02, chỉ một payment_transaction và một sự kiện Outbox. Chữ 
 không thay đổi payment; provider_txn_id đã thuộc payment khác trả 99 và không trả
 tiền nhầm order. Callback thất bại trùng cũng chỉ phát PaymentFailed một lần.
 Định dạng phản hồi giữ theo [tài liệu chính thức VNPay](https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay/pay.html).
-Booking xử lý success đến muộn và phát LATE_PAYMENT trong T-303; tự hoàn tiền
-khi nhận sự kiện này vẫn thuộc T-401.
+Booking xử lý success đến muộn và phát LATE_PAYMENT trong T-303; T-401 tự tạo refund khi nhận sự kiện này.
+
+## T-401: hoàn tiền và kết quả không rõ
+
+API JWT role ADMIN, tiền tố `/v1/admin`: `POST /refunds {order_id,reason}`, `POST /refund-batches {event_id,reason}`, `GET /refund-batches/{id}`, `GET /refunds?status=&cursor=`, `POST /refunds/{id}/retry`. POST cần Idempotency-Key; cùng key khác nội dung trả 422. Mỗi hành động thành công, kể cả GET/replay POST, phát AuditRecorded qua Outbox cùng transaction. Danh sách tối đa 50 dòng, có next_cursor; tiền trả chuỗi số nguyên VND. ADMIN không có organizer_id là admin toàn hệ thống; ADMIN có organizer_id bị giới hạn theo lifecycle snapshot trong payment DB, không tin X-Tenant-Id từ client. Lỗi dùng problem+json.
+
+Consumer payment-refunds replay booking.orders và event.lifecycle qua Inbox. LATE_PAYMENT tạo một refund cho payment ORDER SUCCEEDED. EventCancelled v2 tạo batch tự động và refund cho mọi payment ORDER SUCCEEDED; callback đến sau batch dùng cùng khóa event nên cũng được đưa vào batch. Payable ORDER của event hủy bị đóng. Resale không bị đưa vào refund. Lifecycle sai tenant/owner/v1 vào DLQ; bản cũ không ghi đè snapshot mới. Không gọi DB booking/event.
+
+Worker claim bằng SKIP LOCKED, commit dấu gửi/lease/token trước HTTP. refund_dispatch giới hạn concurrency và thời điểm bắt đầu request trên toàn bộ replica (cùng cấu hình). Retry có backoff lũy thừa, cap và jitter 50–100%; default tối đa 5 attempts. Thành công và RefundCompleted cùng transaction. Kết quả không rõ giữ dấu gửi, lên lịch đối soát có backoff qua cùng quota; không đủ chứng cứ thì NEEDS_MANUAL. Retry tay chỉ cho NEEDS_MANUAL, vẫn giữ dấu gửi. NOT_PERFORMED chỉ là bằng chứng chắc chắn từ mock, cho phép gửi lại; VNPay không tự gửi refund lại sau dấu gửi.
+
+| Env                                       | Mặc định                                                     | Ý nghĩa                                            |
+| ----------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------- |
+| VNPAY_REFUND_ENABLED                      | false                                                        | Xác minh endpoint/quyền merchant trước khi bật EC2 |
+| VNPAY_REFUND_URL                          | https://sandbox.vnpayment.vn/merchant_webapi/api/transaction | Allowlist JSON tham chiếu, độc lập payment URL     |
+| VNPAY_REFUND_IP                           | 127.0.0.1                                                    | IP server ghi vào request                          |
+| VNPAY_REFUND_TIMEOUT_MS                   | 10000                                                        | Timeout HTTP, gồm đọc body                         |
+| REFUND_CONCURRENCY / REFUND_RATE_PER_SEC  | 5 / 5                                                        | Quota chung giữa replica, bao gồm query            |
+| REFUND_MAX_ATTEMPTS                       | 5                                                            | Giới hạn đợt thử; retry tay mở đợt mới             |
+| REFUND_LEASE_MS                           | 30000                                                        | Phải lớn hơn HTTP timeout                          |
+| REFUND_BACKOFF_MS / REFUND_BACKOFF_MAX_MS | 1000 / 60000                                                 | Backoff lũy thừa có cap và jitter                  |
+| MOCK_REFUND_FAILURE_RATE                  | 0                                                            | Tỷ lệ NOT_PERFORMED khi outcome RANDOM             |
+| MOCK_REFUND_OUTCOME                       | SUCCESS                                                      | SUCCESS, FAILURE, RANDOM hoặc LOST_RESPONSE        |
+
+Mock receipt lưu trong mock_refund_receipts bằng transaction độc lập để phục hồi sau restart. Metric refunds_total{status} đếm attempt sau commit (best effort); log có request_id/trace_id/refund_id/payment_id/batch_id. Tiến độ batch đọc DB, không suy từ counter. Refund đã có trước batch được gắn vào batch để không hoàn lần hai; RefundCompleted cũ không phát lại.
+
+VNPay lấy RequestId từ refund.id bỏ gạch (32 ký tự), TransactionDate từ vnp_CreateDate trong redirect_url đã lưu từ T-302, không dùng paid_at thay thế. HMAC-SHA512 theo các trường phân cách `|`, khác chữ ký query-string payment. Chỉ refund toàn phần đã xác thực đúng liên kết/số tiền, code/status 00/00 mới hoàn tất. Query payment gốc 00 không chứng minh đã hoàn tiền; query hiện chưa đủ bảo đảm lookup refund nên phải đối soát tay. Chưa kiểm chứng merchant thực tế/E2E refund. Xem [ADR-0020](../../docs/adr/0020-refund-delivery-uncertainty.md), [nâng cấp T-208](../../docs/ops/t401-upgrade.md).
 
 ## Resale khi S-405 chưa sẵn sàng
 

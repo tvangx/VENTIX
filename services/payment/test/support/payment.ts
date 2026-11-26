@@ -16,7 +16,7 @@ import { PaymentService } from "../../src/modules/payments/payment.service";
 import { PaymentWorker } from "../../src/messaging/payment-worker";
 import { payableHandler } from "../../src/messaging/payable.handler";
 
-export async function fixture() {
+export async function fixture(overrides: Record<string, unknown> = {}) {
   const pg = await new PostgreSqlContainer("postgres:16")
     .withUsername("payment_user")
     .withPassword("payment_test")
@@ -46,6 +46,7 @@ export async function fixture() {
     VNPAY_HASH_SECRET: "synthetic-test-secret",
     VNPAY_RETURN_URL: "https://example.test/return",
     VNPAY_IPN_URL: "https://example.test/ipn",
+    ...overrides,
   };
   const env = envSchema.parse(rawEnv);
   const app = await createApp(env, createLogger("payment-test", { level: "silent" }));
@@ -62,8 +63,8 @@ export async function fixture() {
       dead.push(letter);
     },
   });
-  const token = (user: string) =>
-    new SignJWT({ roles: ["USER"] })
+  const token = (user: string, roles: string[] = ["USER"], organizerId?: string) =>
+    new SignJWT({ roles, ...(organizerId ? { organizer_id: organizerId } : {}) })
       .setProtectedHeader({ alg: "RS256" })
       .setSubject(user)
       .setIssuer("payment-test")

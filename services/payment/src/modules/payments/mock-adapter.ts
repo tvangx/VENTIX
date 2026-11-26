@@ -1,6 +1,18 @@
 import { randomInt } from "node:crypto";
 import { z } from "zod";
-import { CreatePayment, IPaymentAdapter, Notification, PaymentLink } from "./payment-adapter";
+import {
+  CreatePayment,
+  IPaymentAdapter,
+  Notification,
+  PaymentLink,
+  RefundInput,
+  RefundResult,
+} from "./payment-adapter";
+
+export interface MockRefundLedger {
+  find(input: RefundInput): Promise<boolean>;
+  save(input: RefundInput): Promise<void>;
+}
 
 const notification = z.object({
   paymentId: z.string().uuid(),
@@ -18,9 +30,13 @@ export class MockAdapter implements IPaymentAdapter {
       successRate: number;
       outcome: "RANDOM" | "SUCCESS" | "FAILURE";
       duplicate: boolean;
+      refundFailureRate?: number;
+      refundOutcome?: "RANDOM" | "SUCCESS" | "FAILURE" | "LOST_RESPONSE";
     },
     private readonly random: () => number = () => randomInt(1000000) / 1000000,
+    private readonly ledger?: MockRefundLedger,
   ) {}
+  private readonly receipts = new Map<string, string>();
   createPayment(input: CreatePayment): PaymentLink {
     const delay =
       this.config.minDelayMs +
@@ -53,7 +69,34 @@ export class MockAdapter implements IPaymentAdapter {
   verifyReturn(input: unknown): Notification | null {
     return this.verifyIpn(input);
   }
-  async refund(): Promise<never> {
-    throw new Error("Refund not implemented; T-401");
+  private fingerprint(input: RefundInput): string {
+    return `${input.paymentId}:${input.amountVnd}`;
+  }
+  async refund(input: RefundInput): Promise<RefundResult> {
+    if (
+      this.receipts.has(input.refundId) &&
+      this.receipts.get(input.refundId) !== this.fingerprint(input)
+    )
+      throw new Error("MOCK_REFUND_KEY_REUSED");
+    const previous = await this.reconcileRefund(input);
+    if (previous.status === "SUCCEEDED") return previous;
+    const outcome = this.config.refundOutcome ?? "SUCCESS";
+    if (
+      outcome === "FAILURE" ||
+      (outcome === "RANDOM" && this.random() < (this.config.refundFailureRate ?? 0))
+    )
+      return { status: "NOT_PERFORMED", code: "MOCK_NOT_PERFORMED" };
+    if (this.ledger) await this.ledger.save(input);
+    else this.receipts.set(input.refundId, this.fingerprint(input));
+    if (outcome === "LOST_RESPONSE") throw new Error("MOCK_RESPONSE_LOST");
+    return { status: "SUCCEEDED", providerRefundId: `mock-refund-${input.refundId}` };
+  }
+  async reconcileRefund(input: RefundInput): Promise<RefundResult> {
+    const found = this.ledger
+      ? await this.ledger.find(input)
+      : this.receipts.get(input.refundId) === this.fingerprint(input);
+    return found
+      ? { status: "SUCCEEDED", providerRefundId: `mock-refund-${input.refundId}` }
+      : { status: "UNKNOWN", code: "MOCK_NO_RECEIPT" };
   }
 }
