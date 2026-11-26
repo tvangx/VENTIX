@@ -1,0 +1,7 @@
+[
+  { "targets": ["identity:3001"], "labels": { "service": "identity" } },
+  { "targets": ["event:3002"], "labels": { "service": "event" } },
+  { "targets": ["booking:3003"], "labels": { "service": "booking" } },
+  { "targets": ["payment:3004"], "labels": { "service": "payment" } },
+  { "targets": ["ticket:3005"], "labels": { "service": "ticket" } }
+]

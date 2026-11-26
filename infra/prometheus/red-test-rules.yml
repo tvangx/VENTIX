@@ -1,0 +1,13 @@
+groups:
+  - name: red-test
+    rules:
+      - record: test:panel3
+        expr: sum by (service) (rate(http_server_request_duration_seconds_count{service=~".*",job="application",route!~"/health/.*"}[1m])) and on(service) (min by (service) (up{job="application",service=~".*"}) == 1)
+      - record: test:panel4
+        expr: 100 * ((sum by (service) (rate(http_server_request_duration_seconds_count{service=~".*",job="application",route!~"/health/.*",status_class="5xx"}[1m])) or on(service) (0 * sum by (service) (rate(http_server_request_duration_seconds_count{service=~".*",job="application",route!~"/health/.*"}[1m])))) / (sum by (service) (rate(http_server_request_duration_seconds_count{service=~".*",job="application",route!~"/health/.*"}[1m])) > 0)) and on(service) (min by (service) (up{job="application",service=~".*"}) == 1)
+      - record: test:panel5
+        expr: histogram_quantile(0.5, sum by (le, service) (rate(http_server_request_duration_seconds_bucket{service=~".*",job="application",route!~"/health/.*"}[1m]))) and on(service) (sum by (service) (rate(http_server_request_duration_seconds_count{service=~".*",job="application",route!~"/health/.*"}[1m])) > 0) and on(service) (min by (service) (up{job="application",service=~".*"}) == 1)
+      - record: test:panel6
+        expr: histogram_quantile(0.95, sum by (le, service) (rate(http_server_request_duration_seconds_bucket{service=~".*",job="application",route!~"/health/.*"}[1m]))) and on(service) (sum by (service) (rate(http_server_request_duration_seconds_count{service=~".*",job="application",route!~"/health/.*"}[1m])) > 0) and on(service) (min by (service) (up{job="application",service=~".*"}) == 1)
+      - record: test:panel7
+        expr: histogram_quantile(0.99, sum by (le, service) (rate(http_server_request_duration_seconds_bucket{service=~".*",job="application",route!~"/health/.*"}[1m]))) and on(service) (sum by (service) (rate(http_server_request_duration_seconds_count{service=~".*",job="application",route!~"/health/.*"}[1m])) > 0) and on(service) (min by (service) (up{job="application",service=~".*"}) == 1)

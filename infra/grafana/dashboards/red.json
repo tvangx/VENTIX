@@ -1,0 +1,358 @@
+{
+  "uid": "ventix-red",
+  "title": "VENTIX ? HTTP RED",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "tags": ["ventix", "T-404"],
+  "timezone": "browser",
+  "refresh": "15s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": ["15s", "30s", "1m", "5m"]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "Service",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": "label_values(up{job=\"application\"}, service)",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Scrape availability (1 = reachable, not application health)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min by (service) (up{job=\"application\",service=~\"$service\"})",
+          "legendFormat": "{{service}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "No data",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 2,
+      "title": "HTTP metric present (0 = absent / app upgrade needed)",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "description": "Absence may mean no completed request yet or backend still emits legacy metric. Generate a smoke request and check version.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count by (service) (http_server_request_duration_seconds_count{service=~\"$service\",job=\"application\"}) > bool 0 or on(service) (0 * min by (service) (up{job=\"application\",service=~\"$service\"}))",
+          "legendFormat": "{{service}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "No data",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "colorMode": "value"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Request rate",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "description": "Application requests including 404; excludes /metrics at source and health probes here. Missing target yields no data, not zero.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (service) (rate(http_server_request_duration_seconds_count{service=~\"$service\",job=\"application\",route!~\"/health/.*\"}[$__rate_interval])) and on(service) (min by (service) (up{job=\"application\",service=~\"$service\"}) == 1)",
+          "legendFormat": "{{service}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "No data",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "5xx ratio (no traffic = no data)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "description": "Zero errors is shown only with positive request rate. Requires a reachable target. No data does not mean healthy.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * ((sum by (service) (rate(http_server_request_duration_seconds_count{service=~\"$service\",job=\"application\",route!~\"/health/.*\",status_class=\"5xx\"}[$__rate_interval])) or on(service) (0 * sum by (service) (rate(http_server_request_duration_seconds_count{service=~\"$service\",job=\"application\",route!~\"/health/.*\"}[$__rate_interval])))) / (sum by (service) (rate(http_server_request_duration_seconds_count{service=~\"$service\",job=\"application\",route!~\"/health/.*\"}[$__rate_interval])) > 0)) and on(service) (min by (service) (up{job=\"application\",service=~\"$service\"}) == 1)",
+          "legendFormat": "{{service}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "No data",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "p50 request duration",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "description": "Classic histogram estimate. No completed traffic or fewer than two scrape samples gives no data. Long-lived SSE is recorded on completion.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le, service) (rate(http_server_request_duration_seconds_bucket{service=~\"$service\",job=\"application\",route!~\"/health/.*\"}[$__rate_interval]))) and on(service) (sum by (service) (rate(http_server_request_duration_seconds_count{service=~\"$service\",job=\"application\",route!~\"/health/.*\"}[$__rate_interval])) > 0) and on(service) (min by (service) (up{job=\"application\",service=~\"$service\"}) == 1)",
+          "legendFormat": "{{service}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "No data",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "p95 request duration",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "description": "Classic histogram estimate. No completed traffic or fewer than two scrape samples gives no data. Long-lived SSE is recorded on completion.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(http_server_request_duration_seconds_bucket{service=~\"$service\",job=\"application\",route!~\"/health/.*\"}[$__rate_interval]))) and on(service) (sum by (service) (rate(http_server_request_duration_seconds_count{service=~\"$service\",job=\"application\",route!~\"/health/.*\"}[$__rate_interval])) > 0) and on(service) (min by (service) (up{job=\"application\",service=~\"$service\"}) == 1)",
+          "legendFormat": "{{service}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "No data",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "p99 request duration",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "description": "Classic histogram estimate. No completed traffic or fewer than two scrape samples gives no data. Long-lived SSE is recorded on completion.",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le, service) (rate(http_server_request_duration_seconds_bucket{service=~\"$service\",job=\"application\",route!~\"/health/.*\"}[$__rate_interval]))) and on(service) (sum by (service) (rate(http_server_request_duration_seconds_count{service=~\"$service\",job=\"application\",route!~\"/health/.*\"}[$__rate_interval])) > 0) and on(service) (min by (service) (up{job=\"application\",service=~\"$service\"}) == 1)",
+          "legendFormat": "{{service}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "No data",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ],
+  "annotations": {
+    "list": []
+  }
+}

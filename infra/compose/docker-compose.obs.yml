@@ -1,0 +1,61 @@
+# Standalone additive stack; shares only the existing application network.
+services:
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:?Set pinned PROMETHEUS_IMAGE}
+    restart: unless-stopped
+    networks: [obs-backend]
+    mem_limit: 512m
+    cpus: 0.5
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.size=1GB
+      - --storage.tsdb.wal-compression
+      - --query.max-concurrency=4
+      - --query.max-samples=1000000
+    ports: ["127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"]
+    volumes:
+      - ../prometheus:/etc/prometheus:ro
+      - obs-prometheus:/prometheus
+    logging:
+      driver: local
+      options: { max-size: "5m", max-file: "2" }
+
+  grafana:
+    image: ${GRAFANA_IMAGE:?Set pinned GRAFANA_IMAGE}
+    restart: unless-stopped
+    networks: [obs-backend]
+    mem_limit: 512m
+    cpus: 0.5
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?Set GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+    ports: ["127.0.0.1:${GRAFANA_PORT:-3030}:3000"]
+    volumes:
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - obs-grafana:/var/lib/grafana
+    logging:
+      driver: local
+      options: { max-size: "5m", max-file: "2" }
+
+networks:
+  obs-backend:
+    external: true
+    name: ${OBS_NETWORK:?Set the existing application Docker network}
+
+volumes:
+  obs-prometheus:
+  obs-grafana:

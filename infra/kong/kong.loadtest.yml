@@ -23,6 +23,20 @@ plugins:
       max_age: 3600
 
 routes:
+  # /metrics ch? d?nh cho scrape n?i b?, k? c? khi service d?ng route prefix r?ng.
+  - name: block-metrics
+    paths: ["~/(?i:(?:.*/)?metrics)(?:/|$)"]
+    regex_priority: 1000
+    plugins:
+      - name: request-termination
+        config:
+          status_code: 404
+          content_type: application/json
+          body: '{"message":"Not found"}'
+      - name: cors
+        config:
+          preflight_continue: true
+
   # Không gắn service: không thể forward internal sang upstream.
   # Không giới hạn method/host để tránh route public thắng nhờ nhiều tiêu chí hơn.
   - name: block-internal
