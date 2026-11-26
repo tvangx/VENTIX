@@ -285,6 +285,8 @@ Phase 0 đã có route 9 service + CORS + request-id + rate limit toàn cục. C
 
 **Mục tiêu:** mọi khoản tiền đã thu mà không còn vé hợp lệ đều được hoàn đúng một lần, kể cả khi sự cố xảy ra giữa chừng.
 
+**Quyết định Tuấn duyệt 2026-11-26:** endpoint JSON refund/query tham chiếu là `https://sandbox.vnpayment.vn/merchant_webapi/api/transaction`, cấu hình riêng và validate, không đổi hostname theo payment URL. Chưa xác nhận tương thích/quyền merchant; phải xác minh trước khi bật refund sandbox EC2. Lưu dấu gửi bền vững trước network call. Timeout/crash sau dấu gửi, đang xử lý hoặc kết quả không rõ: không tự gửi lại; chỉ đối soát bằng bằng chứng provider xác thực được, không đủ thì `NEEDS_MANUAL`. Retry thủ công không xóa dấu gửi để gửi lại mù. Chỉ gửi lại khi chắc chắn chưa thực hiện và tài liệu provider cho phép. Query thanh toán gốc thành công không chứng minh refund thành công. `vnp_RequestId` lấy từ refund UUID bỏ gạch, không được coi là bảo đảm provider idempotent bền vững. Các quy định này thay thế giả định provider idempotent trong các gạch đầu dòng bên dưới; không tuyên bố VNPay tự phục hồi hoàn toàn/E2E đạt khi chưa thử thực tế.
+
 **Đầu ra** (`services/payment`, một phần `services/booking`)
 
 - **[M] Tự hoàn tiền (C3, ADR-0009):** consumer `OrderCancelled{reason: LATE_PAYMENT}` ⇒ nếu `payments` của order có `status=SUCCEEDED` và chưa có refund ⇒ tạo `refunds(PENDING)` rồi worker xử lý.

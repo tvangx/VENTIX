@@ -22,5 +22,20 @@ export interface IPaymentAdapter {
   createPayment(input: CreatePayment): PaymentLink;
   verifyReturn(input: unknown): Notification | null;
   verifyIpn(input: unknown): Notification | null;
-  refund(): Promise<never>;
+  refund(input: RefundInput): Promise<RefundResult>;
+  reconcileRefund(input: RefundInput): Promise<RefundResult>;
 }
+
+export interface RefundInput {
+  refundId: string;
+  paymentId: string;
+  amountVnd: number;
+  transactionDate: string;
+  providerTxnId: string;
+  sentAt: Date;
+  actorId: string;
+}
+export type RefundResult =
+  | { status: "SUCCEEDED"; providerRefundId: string }
+  | { status: "NOT_PERFORMED"; code: string }
+  | { status: "UNKNOWN"; code: string };

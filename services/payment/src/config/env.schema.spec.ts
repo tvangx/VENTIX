@@ -41,6 +41,25 @@ describe("envSchema", () => {
 });
 
 describe("payment configuration", () => {
+  it("keeps refund disabled and validates its endpoint independently of the payment URL", () => {
+    const env = envSchema.parse({
+      ...base,
+      VNPAY_PAYMENT_URL: "https://sandbox.vnpaytest.vn/paymentv2/vpcpay.html",
+    });
+    expect(env.VNPAY_REFUND_ENABLED).toBe(false);
+    expect(env.VNPAY_REFUND_URL).toBe(
+      "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction",
+    );
+    for (const url of [
+      "http://sandbox.vnpayment.vn/merchant_webapi/api/transaction",
+      "https://sandbox.vnpaytest.vn/merchant_webapi/api/transaction",
+      "https://evil.test/refund",
+    ])
+      expect(envSchema.safeParse({ ...base, VNPAY_REFUND_URL: url }).success).toBe(false);
+    expect(envSchema.safeParse({ ...base, VNPAY_REFUND_ENABLED: "true" }).success).toBe(false);
+    expect(envSchema.safeParse({ ...base, REFUND_LEASE_MS: 1000 }).success).toBe(false);
+    expect(envSchema.safeParse({ ...base, REFUND_RATE_PER_SEC: 0 }).success).toBe(false);
+  });
   it.each([
     "http://sandbox.vnpaytest.vn/paymentv2/vpcpay.html",
     "https://evil.test/paymentv2/vpcpay.html",

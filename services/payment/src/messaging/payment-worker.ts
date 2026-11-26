@@ -20,6 +20,7 @@ import { PaymentRepository } from "../modules/payments/payment.repository";
 import { PaymentService } from "../modules/payments/payment.service";
 import { MetricsService } from "../metrics/metrics";
 import { payableHandler } from "./payable.handler";
+import { refundHandler } from "../modules/refunds/refund.handler";
 
 const mockData = z.object({
   dueAt: z.string().datetime(),
@@ -30,6 +31,7 @@ const mockData = z.object({
 export class PaymentWorker implements OnApplicationBootstrap, BeforeApplicationShutdown {
   private consumer?: InboxConsumer;
   private relay?: OutboxRelay;
+  private refunds?: InboxConsumer;
   private timer?: NodeJS.Timeout;
   private pending?: Promise<void>;
   constructor(
@@ -57,6 +59,16 @@ export class PaymentWorker implements OnApplicationBootstrap, BeforeApplicationS
     });
     try {
       await this.consumer.start();
+      this.refunds = createInboxConsumer({
+        kafka,
+        groupId: "payment-refunds",
+        consumerName: "payment-refunds",
+        topics: [Topics.BOOKING_ORDERS, Topics.EVENT_LIFECYCLE],
+        db: this.repo.db,
+        logger: this.logger,
+        handler: refundHandler,
+      });
+      await this.refunds.start();
       this.relay = new OutboxRelay({
         kafka,
         db: this.repo.db,
@@ -80,6 +92,7 @@ export class PaymentWorker implements OnApplicationBootstrap, BeforeApplicationS
       this.timer.unref();
     } catch (error) {
       await this.consumer.stop();
+      await this.refunds?.stop();
       await this.relay?.stop();
       throw error;
     }
@@ -98,6 +111,7 @@ export class PaymentWorker implements OnApplicationBootstrap, BeforeApplicationS
     if (this.timer) clearInterval(this.timer);
     await this.pending;
     await this.consumer?.stop();
+    await this.refunds?.stop();
     await this.relay?.stop();
   }
 }

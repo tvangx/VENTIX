@@ -32,6 +32,25 @@ export const envSchema = z
       ])
       .default("https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"),
     VNPAY_HASH_SECRET: z.string().default(""),
+    VNPAY_REFUND_ENABLED: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
+    VNPAY_REFUND_URL: z
+      .literal("https://sandbox.vnpayment.vn/merchant_webapi/api/transaction")
+      .default("https://sandbox.vnpayment.vn/merchant_webapi/api/transaction"),
+    VNPAY_REFUND_IP: z.string().ip().default("127.0.0.1"),
+    VNPAY_REFUND_TIMEOUT_MS: z.coerce.number().int().min(100).max(60000).default(10000),
+    REFUND_CONCURRENCY: z.coerce.number().int().min(1).max(50).default(5),
+    REFUND_RATE_PER_SEC: z.coerce.number().int().min(1).max(1000000).default(5),
+    REFUND_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+    REFUND_LEASE_MS: z.coerce.number().int().min(1000).max(300000).default(30000),
+    REFUND_BACKOFF_MS: z.coerce.number().int().min(1).max(3600000).default(1000),
+    REFUND_BACKOFF_MAX_MS: z.coerce.number().int().min(1).max(86400000).default(60000),
+    MOCK_REFUND_FAILURE_RATE: z.coerce.number().min(0).max(1).default(0),
+    MOCK_REFUND_OUTCOME: z
+      .enum(["RANDOM", "SUCCESS", "FAILURE", "LOST_RESPONSE"])
+      .default("SUCCESS"),
     VNPAY_RETURN_URL: z.union([z.literal(""), z.string().url().max(255)]).default(""),
     VNPAY_IPN_URL: z.union([z.literal(""), z.string().url().max(255)]).default(""),
     MOCK_DELAY_MS: z.coerce.number().int().min(0).max(3600000).default(1000),
@@ -46,6 +65,24 @@ export const envSchema = z
   })
   .superRefine((env, ctx) => {
     refineAuthEnv(env, ctx);
+    if (env.VNPAY_REFUND_ENABLED && !env.VNPAY_ENABLED)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["VNPAY_REFUND_ENABLED"],
+        message: "requires VNPAY_ENABLED",
+      });
+    if (env.REFUND_LEASE_MS <= env.VNPAY_REFUND_TIMEOUT_MS)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["REFUND_LEASE_MS"],
+        message: "must exceed provider timeout",
+      });
+    if (env.REFUND_BACKOFF_MAX_MS < env.REFUND_BACKOFF_MS)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["REFUND_BACKOFF_MAX_MS"],
+        message: "must be >= REFUND_BACKOFF_MS",
+      });
     if (env.MOCK_MAX_DELAY_MS < env.MOCK_DELAY_MS)
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

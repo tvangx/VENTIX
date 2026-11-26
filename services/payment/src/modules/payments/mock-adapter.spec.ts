@@ -33,7 +33,7 @@ describe("MockAdapter", () => {
     expect(a.verifyIpn({})).toBeNull();
     expect(a.verifyReturn(a.createPayment(input).mock?.notification)?.succeeded).toBe(false);
   });
-  it("leaves refund to T-401", async () => {
+  it("refunds once and reconciles the same refund without repeating the effect", async () => {
     const a = new MockAdapter({
       minDelayMs: 0,
       maxDelayMs: 0,
@@ -41,6 +41,51 @@ describe("MockAdapter", () => {
       outcome: "SUCCESS",
       duplicate: false,
     });
-    await expect(a.refund()).rejects.toThrow("T-401");
+    const refund = {
+      refundId: input.paymentId,
+      paymentId: input.paymentId,
+      amountVnd: 10000,
+      transactionDate: "20260101070000",
+      providerTxnId: "123",
+      sentAt: input.createdAt,
+      actorId: input.paymentId,
+    };
+    const result = await a.refund(refund);
+    expect(result.status).toBe("SUCCEEDED");
+    expect(await a.refund(refund)).toEqual(result);
+    expect(await a.reconcileRefund(refund)).toEqual(result);
+    await expect(a.refund({ ...refund, amountVnd: 1 })).rejects.toThrow("MOCK_REFUND_KEY_REUSED");
+  });
+  it("supports deterministic failures and response loss with receipt reconciliation", async () => {
+    const config = {
+      minDelayMs: 0,
+      maxDelayMs: 0,
+      successRate: 1,
+      outcome: "SUCCESS" as const,
+      duplicate: false,
+    };
+    const refund = {
+      refundId: input.paymentId,
+      paymentId: input.paymentId,
+      amountVnd: 10000,
+      transactionDate: "20260101070000",
+      providerTxnId: "123",
+      sentAt: input.createdAt,
+      actorId: input.paymentId,
+    };
+    for (const options of [
+      { refundOutcome: "FAILURE" as const },
+      { refundOutcome: "RANDOM" as const, refundFailureRate: 1 },
+    ]) {
+      const a = new MockAdapter({ ...config, ...options }, () => 0);
+      expect(await a.refund(refund)).toEqual({
+        status: "NOT_PERFORMED",
+        code: "MOCK_NOT_PERFORMED",
+      });
+      expect((await a.reconcileRefund(refund)).status).toBe("UNKNOWN");
+    }
+    const lost = new MockAdapter({ ...config, refundOutcome: "LOST_RESPONSE" });
+    await expect(lost.refund(refund)).rejects.toThrow("MOCK_RESPONSE_LOST");
+    expect((await lost.reconcileRefund(refund)).status).toBe("SUCCEEDED");
   });
 });

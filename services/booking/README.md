@@ -4,6 +4,8 @@ T-208 bổ sung `GET /v1/orders/{orderId}` (JWT, chỉ chủ đơn). Trả trạ
 
 Scaffold có sẵn từ T-102, cổng 3003. T-201 thêm schema `booking_db`; T-202 thêm Lua và API holds; T-203 thêm consumer lifecycle và rehydrate Redis; T-203b thêm prefetch seat pricing; T-204 thêm trạng thái ghế, SSE và sweeper hold. T-301 thêm checkout và stock saga; T-303 thêm saga thanh toán và sweeper order. Health, JWT, log JSON, metrics và endpoint mẫu `/v1/whoami` được giữ từ template.
 
+T-401: EventCancelled v2 hủy order PENDING/AWAITING_PAYMENT bằng cập nhật có điều kiện, nhả allocation/GA trong cùng transaction, ghi Outbox OrderCancelled(EVENT_CANCELLED) và durable RELEASE work cho Redis. Order CONFIRMED chuyển REFUNDED qua RefundCompleted như T-303. Consumer riêng `booking-event-cancel-orders-t401` replay cancellation đã được Inbox lifecycle cũ xử lý trước nâng cấp; snapshot hiện vẫn CANCELLED cùng event_version mới được áp dụng lại phần hủy order. Chạy lặp không nhả stock hai lần. Không đổi schema/OpenAPI booking; không gọi DB payment. Khi Kafka hết retention cần kiểm kê/backfill có kiểm soát. Xem [hướng dẫn nâng cấp](../../docs/ops/t401-upgrade.md).
+
 ## Waiting Room (T-304)
 
 Mặc định `ADMISSION_REQUIRED=true`. Với sale phase đang hoạt động có `queue_enabled=true`, client dùng JWT đăng nhập RS256 để gọi `POST /v1/queue/join {event_id}`, rồi mở `GET /v1/queue/status?event_id=<UUID>` bằng SSE có header Authorization. Không gửi token trong URL; trình duyệt dùng fetch streaming để gửi header.

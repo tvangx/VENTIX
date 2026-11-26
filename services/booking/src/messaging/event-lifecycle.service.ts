@@ -22,6 +22,7 @@ export class EventLifecycleService implements OnApplicationShutdown {
   private stock?: InboxConsumer;
   private payment?: InboxConsumer;
   private relay?: OutboxRelay;
+  private cancellations?: InboxConsumer;
   constructor(
     @Inject(ENV) private readonly env: Env,
     @Inject(LOGGER) private readonly logger: Logger,
@@ -61,6 +62,19 @@ export class EventLifecycleService implements OnApplicationShutdown {
       },
     });
     await this.consumer.start();
+    // Consumer mới replay lịch sử; Inbox cũ đã đánh dấu EventCancelled trước T-401.
+    this.cancellations = createInboxConsumer({
+      kafka,
+      groupId: "booking-event-cancel-orders-t401",
+      consumerName: "booking-event-cancel-orders-t401",
+      topics: [Topics.EVENT_LIFECYCLE],
+      db: pgDatabase(this.pool),
+      logger: this.logger,
+      handler: async (exec, message) => {
+        if (message.type === "EventCancelled") await handleEventLifecycle(exec, message);
+      },
+    });
+    await this.cancellations.start();
     this.stock = createInboxConsumer({
       kafka,
       groupId: "booking-checkout-stock",
@@ -97,6 +111,7 @@ export class EventLifecycleService implements OnApplicationShutdown {
   }
   async stop(): Promise<void> {
     await this.consumer?.stop();
+    await this.cancellations?.stop();
     await this.stock?.stop();
     await this.payment?.stop();
     await this.relay?.stop();
