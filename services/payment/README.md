@@ -186,3 +186,9 @@ Kafka key là listing_id theo contracts. Replay snapshot không ghi đè hoặc 
 
 **Hạn chế đã biết:** chưa hỗ trợ hoàn tiền đơn resale theo ADR-0009 C7; chưa kiểm chứng
 escrow/chuyển quyền vé với resale-service thực tế. Script giả không tạo listing/vé thật.
+
+## Giám sát HTTP (T-404)
+
+`/metrics` xuất histogram `http_server_request_duration_seconds{service,method,route,status_class}` thay tên HTTP cũ `http_request_duration_seconds`. Route là mẫu đăng ký; URL không khớp dùng `unmatched`, không gắn ID/raw URL vào nhãn. Middleware global ghi mỗi response hoàn tất một lần, bao gồm lỗi guard/filter và 404; lượt scrape không được tính. Metric nghiệp vụ và endpoint hiện có giữ nguyên.
+
+Prometheus/Grafana, rollout backend và chặn metrics qua Kong: [runbook observability](../../docs/ops/observability.md). Không public `/metrics`.

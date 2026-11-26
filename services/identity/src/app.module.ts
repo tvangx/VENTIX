@@ -6,7 +6,7 @@ import { HttpLoggingMiddleware } from "./common/http-logging.middleware";
 import type { Env } from "./config/env.schema";
 import { DbModule } from "./db/db-health.service";
 import { HealthController } from "./health/health.controller";
-import { MetricsController, MetricsMiddleware, MetricsService } from "./metrics/metrics";
+import { MetricsController, MetricsService } from "./metrics/metrics";
 import { WhoamiController } from "./modules/whoami/whoami.controller";
 import { PrismaService } from "./db/prisma.service";
 import { AuthKeys } from "./modules/auth/auth-keys";
@@ -106,6 +106,6 @@ export class AppModule implements NestModule {
   }
 
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestIdMiddleware, HttpLoggingMiddleware, MetricsMiddleware).forRoutes("*");
+    consumer.apply(RequestIdMiddleware, HttpLoggingMiddleware).forRoutes("*");
   }
 }

@@ -1,8 +1,10 @@
 import { Controller, Get, Injectable, NestMiddleware, Res } from "@nestjs/common";
 import { ApiExcludeController } from "@nestjs/swagger";
+import { HttpMetrics } from "@ticketing/common";
+import { SERVICE_NAME } from "../service.constants";
 import { Public } from "@ticketing/auth-guard";
 import type { NextFunction, Request, Response } from "express";
-import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from "prom-client";
+import { Counter, Gauge, Registry, collectDefaultMetrics } from "prom-client";
 
 @Injectable()
 export class MetricsService {
@@ -61,7 +63,7 @@ export class MetricsService {
     labelNames: ["operation"] as const,
     registers: [this.registry],
   });
-  readonly httpDuration: Histogram<"method" | "route" | "status">;
+  readonly http: HttpMetrics;
   readonly seatHoldOutcomes = new Counter({
     name: "seat_hold_requests_total",
     help: "Atomic hold attempts by outcome",
@@ -71,13 +73,7 @@ export class MetricsService {
 
   constructor() {
     collectDefaultMetrics({ register: this.registry });
-    this.httpDuration = new Histogram({
-      name: "http_request_duration_seconds",
-      help: "HTTP request duration in seconds",
-      labelNames: ["method", "route", "status"],
-      buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
-      registers: [this.registry],
-    });
+    this.http = new HttpMetrics(this.registry, SERVICE_NAME);
   }
 }
 
@@ -86,13 +82,7 @@ export class MetricsMiddleware implements NestMiddleware {
   constructor(private readonly metrics: MetricsService) {}
 
   use(req: Request, res: Response, next: NextFunction): void {
-    const end = this.metrics.httpDuration.startTimer();
-    res.on("finish", () => {
-      // Dùng route mẫu (không phải URL thật) để tránh bùng nổ cardinality.
-      const route = req.route?.path ? `${req.baseUrl}${req.route.path}` : "unmatched";
-      end({ method: req.method, route, status: String(res.statusCode) });
-    });
-    next();
+    this.metrics.http.observe(req, res, next);
   }
 }
 

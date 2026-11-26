@@ -277,3 +277,9 @@ không truyền phiên bản, Event chọn seat map đã publish mới nhất. M
 trang mặc định 1.000 ghế, tối đa 5.000. Dùng next_cursor của trang trước
 cho tới khi nhận null. Hợp đồng xem tại
 [seat-classes.yaml](../../docs/api/internal/seat-classes.yaml).
+
+## Giám sát HTTP (T-404)
+
+`/metrics` xuất histogram `http_server_request_duration_seconds{service,method,route,status_class}` thay tên HTTP cũ `http_request_duration_seconds`. Route là mẫu đăng ký; URL không khớp dùng `unmatched`, không gắn ID/raw URL vào nhãn. Middleware global ghi mỗi response hoàn tất một lần, bao gồm lỗi guard/filter và 404; lượt scrape không được tính. Metric nghiệp vụ và endpoint hiện có giữ nguyên.
+
+Prometheus/Grafana, rollout backend và chặn metrics qua Kong: [runbook observability](../../docs/ops/observability.md). Không public `/metrics`.

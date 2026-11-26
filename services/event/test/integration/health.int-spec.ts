@@ -70,7 +70,15 @@ describe("service template (integration, Postgres via Testcontainers)", () => {
 
   it("GET /metrics exposes Prometheus metrics", async () => {
     const res = await request(app.getHttpServer()).get("/metrics").expect(200);
-    expect(res.text).toContain("http_request_duration_seconds");
+    expect(res.text).toContain("http_server_request_duration_seconds");
+    await request(app.getHttpServer()).get("/missing/private-id?token=private-token").expect(404);
+    const first = await request(app.getHttpServer()).get("/metrics").expect(200);
+    const second = await request(app.getHttpServer()).get("/metrics").expect(200);
+    const http = (text: string) =>
+      text.split("\n").filter((line) => line.startsWith("http_server_request_duration_seconds"));
+    expect(http(second.text)).toEqual(http(first.text));
+    expect(first.text).toContain('route="unmatched",status_class="4xx"');
+    expect(first.text).not.toMatch(/private-id|private-token|http_request_duration_seconds/);
   });
 
   it("GET /docs serves Swagger UI", async () => {

@@ -3,6 +3,7 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, OpenAPIObject, SwaggerModule } from "@nestjs/swagger";
 import { Logger, ProblemJsonFilter } from "@ticketing/common";
 import helmet from "helmet";
+import { MetricsMiddleware, MetricsService } from "./metrics/metrics";
 import { AppModule } from "./app.module";
 import type { Env } from "./config/env.schema";
 import { SERVICE_NAME } from "./service.constants";
@@ -53,6 +54,9 @@ export async function createApp(env: Env, logger: Logger): Promise<INestApplicat
   // logger: false → mọi log đi qua pino (JSON), không lẫn log mặc định của Nest.
   const app = await NestFactory.create(AppModule.register(env, logger), { logger: false });
 
+  // Global Express middleware bao phủ cả URL không khớp /v1 (404).
+  const httpMetrics = new MetricsMiddleware(app.get(MetricsService));
+  app.use(httpMetrics.use.bind(httpMetrics));
   app.use(helmet());
   app.setGlobalPrefix("v1", {
     exclude: ["health/live", "health/ready", "metrics", ".well-known/jwks.json"],

@@ -2,6 +2,8 @@
 export MSYS_NO_PATHCONV=1
 
 COMPOSE = docker compose --env-file .env -f infra/compose/docker-compose.yml
+OBS_ENV ?= /etc/ticketing/.env.obs
+OBS_PROJECT ?= ticketing-prod
 
 .PHONY: help env up down reset ps logs tools verify psql redis-cli kong-reload kong-loadtest kong-routes
 
@@ -48,3 +50,13 @@ kong-loadtest: ## Nạp hạn mức nới cho load test LOCAL; khôi phục bằ
 
 kong-routes: ## Xem route Kong đang nạp
 	@curl -s localhost:8001/routes | head -c 2000; echo
+
+.PHONY: obs-check obs-up obs-down
+obs-check: ## Kiểm tra cấu hình observability, không đổi ứng dụng
+	@bash infra/obs/obs.sh check "$(OBS_ENV)" "$(OBS_PROJECT)"
+
+obs-up: ## Bật riêng Prometheus/Grafana
+	@bash infra/obs/obs.sh start "$(OBS_ENV)" "$(OBS_PROJECT)"
+
+obs-down: ## Dừng riêng Prometheus/Grafana, giữ volume và ứng dụng
+	@bash infra/obs/obs.sh stop "$(OBS_ENV)" "$(OBS_PROJECT)"

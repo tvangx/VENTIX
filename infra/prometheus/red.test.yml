@@ -1,0 +1,69 @@
+rule_files: [red-test-rules.yml]
+evaluation_interval: 15s
+tests:
+  - name: zero traffic is not healthy ratio or quantiles
+    interval: 15s
+    input_series:
+      - series: 'up{job="application",service="booking"}'
+        values: "1x10"
+      - series: 'http_server_request_duration_seconds_count{job="application",service="booking",route="/v1/orders",status_class="2xx"}'
+        values: "0x10"
+      - series: 'http_server_request_duration_seconds_bucket{job="application",service="booking",route="/v1/orders",status_class="2xx",le="+Inf"}'
+        values: "0x10"
+    promql_expr_test:
+      - expr: test:panel4
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel5
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel6
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel7
+        eval_time: 2m
+        exp_samples: []
+  - name: absent targets do not become zero success
+    interval: 15s
+    input_series: []
+    promql_expr_test:
+      - expr: test:panel3
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel4
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel5
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel6
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel7
+        eval_time: 2m
+        exp_samples: []
+  - name: down target hides stale RED data
+    interval: 15s
+    input_series:
+      - series: 'up{job="application",service="booking"}'
+        values: "0x10"
+      - series: 'http_server_request_duration_seconds_count{job="application",service="booking",route="/v1/orders",status_class="2xx"}'
+        values: "0+1x10"
+      - series: 'http_server_request_duration_seconds_bucket{job="application",service="booking",route="/v1/orders",status_class="2xx",le="+Inf"}'
+        values: "0+1x10"
+    promql_expr_test:
+      - expr: test:panel3
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel4
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel5
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel6
+        eval_time: 2m
+        exp_samples: []
+      - expr: test:panel7
+        eval_time: 2m
+        exp_samples: []

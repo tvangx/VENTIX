@@ -179,3 +179,9 @@ Log, chuyển trạng thái, TicketCheckedIn offline=true và receipt batch cùn
 Batch append-only có trigger và quyền SQL hạn chế. Cột id được cấp UPDATE riêng để PostgreSQL lấy KEY SHARE khi kiểm tra FK, trigger chặn cả `UPDATE id=id`. Test kiểm tra UPDATE dữ liệu/DELETE bị từ chối và trigger từ chối mọi sửa ID. Quyền khóa hàng này được mô tả trong tài liệu PostgreSQL. [PostgreSQL 16 SELECT](https://www.postgresql.org/docs/16/sql-select.html)
 
 Metric `ticket_offline_scan_responses_total{result}` đếm item trong response đã commit, bao gồm replay. Phần PIN/IndexedDB/hàng đợi và hiển thị conflict ở Staff PWA thuộc V-401/V-402. Vòng đời lưu trữ khóa thiết bị/receipt cần được nhóm thống nhất khi chuẩn bị production.
+
+## Giám sát HTTP (T-404)
+
+`/metrics` xuất histogram `http_server_request_duration_seconds{service,method,route,status_class}` thay tên HTTP cũ `http_request_duration_seconds`. Route là mẫu đăng ký; URL không khớp dùng `unmatched`, không gắn ID/raw URL vào nhãn. Middleware global ghi mỗi response hoàn tất một lần, bao gồm lỗi guard/filter và 404; lượt scrape không được tính. Metric nghiệp vụ và endpoint hiện có giữ nguyên.
+
+Prometheus/Grafana, rollout backend và chặn metrics qua Kong: [runbook observability](../../docs/ops/observability.md). Không public `/metrics`.
