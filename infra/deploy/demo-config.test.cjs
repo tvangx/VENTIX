@@ -20,7 +20,7 @@ writeFileSync(
 );
 const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const fixtures = {
-  DEMO_RELEASE: "t208",
+  DEMO_RELEASE: process.env.DEMO_RELEASE ?? "t208",
   DEMO_ORIGIN: "https://ventixxx.dpdns.org",
   INTERNAL_API_KEY: "t208-local-internal-fixture-only",
   ADMISSION_TOKEN_SECRET: "t208-local-admission-fixture-only-32",

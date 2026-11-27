@@ -35,7 +35,7 @@ Snapshot theo dõi Sơn ngày 2026-11-12 (chưa đối chiếu lại trong lư�
 | T-403  | 4    | Load test vòng 1 + tối ưu                                           | G2, T-304 (T-404 nên xong) | Todo       |     | Bạn chạy k6 từ máy thứ hai                             |
 | T-404  | 4    | Prometheus + Grafana                                                | T-102                      | Done       | #114 | Đã merge tại 74fb557 (#114); local pass, chờ ảnh/EC2    |
 | T-405  | 4    | Payment cho đơn resale (C7)                                         | T-302, T-303, S-405        | Done       | #61 | Đã merge; 54 test pass; producer giả S-405; xem runs/T-405.md |
-| T-501  | 5    | Dashboard + Loki + Jaeger                                           | T-404                      | In review  |     | Tuấn miễn 2 người review riêng; PR T-501 chờ mở       |
+| T-501  | 5    | Dashboard + Loki + Jaeger                                           | T-404                      | In review  | #119 + fix PR chờ mở | #119 đã merge; sửa runtime wiring Alloy/log cho năm app demo đang ở nhánh `fix/infra-t501-runtime-wiring`; Tuấn miễn 2 người review riêng |
 | T-502  | 5    | Chaos S4 + sửa lỗi                                                  | T-403                      | Todo       |     | Bạn chạy kịch bản thật                                 |
 | T-503  | 5    | Hardening                                                           | —                          | Todo       |     |                                                        |
 | T-504  | 5    | Load test vòng 2 + soak                                             | T-502, T-501, T-503        | Todo       |     | Bạn chạy k6 từ máy thứ hai                             |
