@@ -1,4 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { appendFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { context, trace } from "@opentelemetry/api";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { NodeSDK } from "@opentelemetry/sdk-node";
 import { Topics } from "@ticketing/event-contracts";
 import type { Kafka } from "kafkajs";
 import {
@@ -9,6 +14,7 @@ import {
   pgDatabase,
 } from "../../src";
 import type { InboxConsumer, InboxHandler } from "../../src";
+import type { Logger } from "../../src/logger";
 import { createTopics, startKafka, startPostgres } from "../helpers/containers";
 import type { TestKafka, TestPostgres } from "../helpers/containers";
 import {
@@ -26,6 +32,9 @@ let tk: TestKafka;
 let kafka: Kafka;
 const outbox = new OutboxService();
 const running: Array<{ stop(): Promise<void> }> = [];
+const otelEndpoint = process.env.OTEL_TEST_ENDPOINT;
+let telemetry: NodeSDK | undefined;
+const otelLogPath = process.env.OTEL_TEST_LOG_PATH;
 
 const db = () => pgDatabase(pg.pool);
 const count = async (sql: string, params: unknown[] = []): Promise<number> =>
@@ -73,6 +82,13 @@ function startConsumer(
 }
 
 beforeAll(async () => {
+  if (otelEndpoint) {
+    telemetry = new NodeSDK({
+      serviceName: "outbox-inbox-kafka-int",
+      traceExporter: new OTLPTraceExporter({ url: `${otelEndpoint.replace(/\/$/, "")}/v1/traces` }),
+    });
+    telemetry.start();
+  }
   [pg, tk] = await Promise.all([startPostgres(), startKafka()]);
   kafka = tk.kafka;
   await createTopics(kafka, [
@@ -86,7 +102,9 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await Promise.allSettled([pg?.stop(), tk?.stop()]);
+  const cleanup = [pg?.stop(), tk?.stop()];
+  if (telemetry) cleanup.push(telemetry.shutdown());
+  await Promise.allSettled(cleanup);
 });
 
 describe("1. Ghi nghiệp vụ + outbox cùng transaction", () => {
@@ -391,6 +409,96 @@ describe("5. Thứ tự trong cùng key", () => {
         );
       expect(seqs).toEqual(Array.from({ length: perKey }, (_, i) => i + 1));
       expect(new Set(records.filter((r) => r.key === key).map((r) => r.partition)).size).toBe(1);
+    }
+  });
+});
+
+const kafkaTrace = otelEndpoint ? it : it.skip;
+describe("6. Kafka trace context", () => {
+  kafkaTrace("relay injects W3C context and inbox consumer processes the same trace", async () => {
+    const message = orderMessage();
+    let pendingLogWrites = Promise.resolve();
+    const traceLogger: Logger = {
+      info: (fields, msg) => {
+        const span = trace.getSpan(context.active())?.spanContext();
+        if (!otelLogPath || !span) return;
+        const entry = JSON.stringify({
+          service: "outbox-inbox-kafka-int",
+          level: "info",
+          message: msg,
+          trace_id: span.traceId,
+          span_id: span.spanId,
+          ...fields,
+        });
+        pendingLogWrites = pendingLogWrites.then(() => {
+          mkdirSync(dirname(otelLogPath), { recursive: true });
+          appendFileSync(otelLogPath, `${entry}\n`);
+        });
+      },
+      warn: () => undefined,
+      error: () => undefined,
+    };
+    const root = trace.getTracer("outbox-inbox-int").startSpan("checkout root");
+    await context.with(trace.setSpan(context.active(), root), async () => {
+      await db().transaction((exec) => outbox.add(exec, message, message.data.order_id));
+    });
+    const traceId = root.spanContext().traceId;
+    root.end();
+
+    const relay = new OutboxRelay({ db: db(), kafka, pollIntervalMs: 20, logger: traceLogger });
+    running.push(relay);
+    await relay.start();
+    await waitFor("traced message published", async () =>
+      (await count(
+        `SELECT count(*) AS n FROM outbox_events WHERE id = $1::uuid AND published_at IS NOT NULL`,
+        [message.message_id],
+      )) === 1
+        ? true
+        : undefined,
+    );
+    await relay.stop();
+    const record = (await readTopicToEnd(kafka, TOPIC)).find(
+      (item) => item.headers["message-id"] === message.message_id,
+    );
+    expect(record?.headers.traceparent).toContain(traceId);
+
+    const groupId = `trace-${randomUUID()}`;
+    const consumer = startConsumer(groupId, `trace-${randomUUID()}`, async () => undefined, {
+      logger: traceLogger,
+    });
+    await consumer.start();
+    await waitForGroupCaughtUp(kafka, groupId, TOPIC);
+    const jaegerUrl = process.env.OTEL_TEST_JAEGER_URL ?? "http://127.0.0.1:16686";
+    await waitFor("producer and consumer spans exported to Jaeger", async () => {
+      const response = await fetch(`${jaegerUrl}/api/traces/${traceId}`);
+      if (!response.ok) return undefined;
+      const body = (await response.json()) as {
+        data?: Array<{ spans?: Array<{ operationName?: string }> }>;
+      };
+      const operations =
+        body.data?.flatMap((item) => item.spans?.map((span) => span.operationName) ?? []) ?? [];
+      return operations.includes("messaging publish") && operations.includes("messaging process")
+        ? true
+        : undefined;
+    });
+    await pendingLogWrites;
+    if (otelLogPath) {
+      const lokiUrl = process.env.OTEL_TEST_LOKI_URL ?? "http://127.0.0.1:3100";
+      await waitFor("Kafka relay and consumer logs correlated in Loki", async () => {
+        const query = encodeURIComponent(`{service="outbox-inbox-kafka-int"} |= "${traceId}"`);
+        const response = await fetch(`${lokiUrl}/loki/api/v1/query_range?query=${query}`);
+        if (!response.ok) return undefined;
+        const body = (await response.json()) as {
+          data?: { result?: Array<{ values?: string[][] }> };
+        };
+        const lines =
+          body.data?.result?.flatMap((result) => result.values?.map((value) => value[1]) ?? []) ??
+          [];
+        return lines.some((line) => line.includes("outbox event published")) &&
+          lines.some((line) => line.includes("inbox message handled"))
+          ? true
+          : undefined;
+      });
     }
   });
 });

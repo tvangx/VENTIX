@@ -4,6 +4,14 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
+  - job_name: exporters
+    static_configs:
+      - targets: ["kafka-exporter:9308"]
+        labels: { exporter: kafka }
+      - targets: ["redis-exporter:9121"]
+        labels: { exporter: redis }
+      - targets: ["postgres-exporter:9187"]
+        labels: { exporter: postgres }
   - job_name: application
     honor_labels: true
     metrics_path: /metrics

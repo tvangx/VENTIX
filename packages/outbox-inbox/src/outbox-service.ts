@@ -1,5 +1,6 @@
 import { parseMessage, topicOf } from "@ticketing/event-contracts";
 import type { SqlExecutor } from "./sql-executor";
+import { captureTraceContext } from "./trace-context";
 
 export type ParsedMessage = ReturnType<typeof parseMessage>;
 
@@ -19,11 +20,19 @@ export class OutboxService {
       throw new Error("Outbox message key must not be empty");
     }
     const parsed = parseMessage(message);
+    const traceContext = captureTraceContext();
     await exec.query(
-      `INSERT INTO outbox_events (id, topic, message_key, event_type, payload)
-       VALUES ($1::uuid, $2, $3, $4, $5::jsonb)
+      `INSERT INTO outbox_events (id, topic, message_key, event_type, payload, trace_context)
+       VALUES ($1::uuid, $2, $3, $4, $5::jsonb, $6::jsonb)
        RETURNING id`,
-      [parsed.message_id, topicOf[parsed.type], key, parsed.type, JSON.stringify(parsed)],
+      [
+        parsed.message_id,
+        topicOf[parsed.type],
+        key,
+        parsed.type,
+        JSON.stringify(parsed),
+        traceContext ? JSON.stringify(traceContext) : null,
+      ],
     );
     return parsed;
   }

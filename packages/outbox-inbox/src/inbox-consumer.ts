@@ -5,6 +5,8 @@ import { errorMessage, noopLogger } from "./logger";
 import type { Logger } from "./logger";
 import type { ParsedMessage } from "./outbox-service";
 import type { Database, SqlExecutor } from "./sql-executor";
+import { SpanKind, trace } from "@opentelemetry/api";
+import { extractTraceContext, parseStoredTraceContext } from "./trace-context";
 
 /** Handler nghiệp vụ. Mọi ghi DB phải đi qua `exec` để nằm cùng transaction với dòng Inbox. */
 export type InboxHandler = (exec: SqlExecutor, message: ParsedMessage) => Promise<void>;
@@ -24,6 +26,7 @@ export interface InboxRecord {
   offset: string;
   key: Buffer | null;
   value: Buffer | null;
+  headers?: Record<string, Buffer | string | Array<Buffer | string> | undefined>;
 }
 
 export interface DeadLetter {
@@ -74,6 +77,37 @@ export class InboxProcessor {
    * Ném lỗi khi KHÔNG được commit offset: gửi DLQ thất bại hoặc đang shutdown giữa lúc retry.
    */
   async process(record: InboxRecord): Promise<InboxOutcome> {
+    const headers = record.headers ?? {};
+    const carrier: Record<string, string> = {};
+    for (const name of ["traceparent", "tracestate"] as const) {
+      const value = headers[name];
+      const single = Array.isArray(value) ? value[0] : value;
+      if (typeof single === "string") carrier[name] = single;
+      else if (Buffer.isBuffer(single)) carrier[name] = single.toString("utf8");
+    }
+    const parent = extractTraceContext(parseStoredTraceContext(carrier));
+    return trace.getTracer("ticketing.inbox").startActiveSpan(
+      "messaging process",
+      {
+        kind: SpanKind.CONSUMER,
+        attributes: {
+          "messaging.system": "kafka",
+          "messaging.destination.name": record.topic,
+          "messaging.kafka.partition": record.partition,
+        },
+      },
+      parent,
+      async (span) => {
+        try {
+          return await this.processInternal(record);
+        } finally {
+          span.end();
+        }
+      },
+    );
+  }
+
+  private async processInternal(record: InboxRecord): Promise<InboxOutcome> {
     let message: ParsedMessage;
     try {
       const text = record.value?.toString("utf8");
@@ -101,7 +135,12 @@ export class InboxProcessor {
           await this.options.handler(exec, message);
           return true;
         });
-        return handled ? "processed" : "duplicate";
+        const outcome: InboxOutcome = handled ? "processed" : "duplicate";
+        this.logger.info(
+          { message_id: message.message_id, type: message.type, outcome },
+          "inbox message handled",
+        );
+        return outcome;
       } catch (err) {
         const permanent = err instanceof PermanentError;
         if (permanent || attempt >= this.maxAttempts) {
@@ -211,6 +250,7 @@ export function createInboxConsumer(options: InboxConsumerOptions): InboxConsume
             offset: message.offset,
             key: message.key,
             value: message.value,
+            headers: message.headers,
           });
           await consumer.commitOffsets([
             { topic, partition, offset: (BigInt(message.offset) + 1n).toString() },

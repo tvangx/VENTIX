@@ -1,5 +1,7 @@
 import pino, { Logger, LoggerOptions } from "pino";
+import { context, trace } from "@opentelemetry/api";
 import { requestContext } from "./request-context";
+import { RotatingLogDestination } from "./rotating-log-destination";
 
 export type { Logger } from "pino";
 
@@ -9,7 +11,11 @@ export type { Logger } from "pino";
  */
 export function createLogger(
   service: string,
-  options: { level?: string; destination?: pino.DestinationStream } = {},
+  options: {
+    level?: string;
+    destination?: pino.DestinationStream;
+    file?: { path: string; maxBytes: number; maxFiles: number };
+  } = {},
 ): Logger {
   const config: LoggerOptions = {
     level: options.level ?? "info",
@@ -28,8 +34,30 @@ export function createLogger(
     },
     mixin() {
       const ctx = requestContext.get();
-      return { request_id: ctx?.requestId ?? null, trace_id: ctx?.traceId ?? null };
+      const spanContext = trace.getSpanContext(context.active());
+      // Prefer the active OTel span; the request header is retained only before telemetry is enabled.
+      return {
+        request_id: ctx?.requestId ?? null,
+        trace_id: spanContext?.traceId ?? ctx?.traceId ?? null,
+        span_id: spanContext?.spanId ?? null,
+      };
     },
   };
-  return options.destination ? pino(config, options.destination) : pino(config);
+  if (options.destination) return pino(config, options.destination);
+  if (options.file) {
+    return pino(
+      config,
+      pino.multistream([
+        { stream: pino.destination(1) },
+        {
+          stream: new RotatingLogDestination(
+            options.file.path,
+            options.file.maxBytes,
+            options.file.maxFiles,
+          ),
+        },
+      ]),
+    );
+  }
+  return pino(config);
 }

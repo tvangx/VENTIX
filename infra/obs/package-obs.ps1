@@ -21,7 +21,7 @@ function Invoke-Docker([string[]]$Arguments) {
 $images = @()
 $manifest = @()
 foreach ($line in Get-Content -LiteralPath "infra/obs/obs.env.example") {
-  if ($line -match '^(PROMETHEUS_IMAGE|GRAFANA_IMAGE)=(.+)$') {
+  if ($line -match '^(PROMETHEUS_IMAGE|GRAFANA_IMAGE|ALLOY_IMAGE|LOKI_IMAGE|JAEGER_IMAGE|KAFKA_EXPORTER_IMAGE|REDIS_EXPORTER_IMAGE|POSTGRES_EXPORTER_IMAGE)=(.+)$') {
     $field = $Matches[1]; $pinned = $Matches[2]; $tag = $pinned.Split('@')[0]
     Invoke-Docker @("pull", "--platform", "linux/amd64", $pinned)
     $inspection = & docker image inspect $pinned --format '{{.Id}} {{.Os}}/{{.Architecture}}'
@@ -31,11 +31,14 @@ foreach ($line in Get-Content -LiteralPath "infra/obs/obs.env.example") {
     $manifest += "$field $tag $inspection $pinned"
   }
 }
-if ($images.Count -ne 2) { throw "Expected two pinned obs images" }
+if ($images.Count -ne 8) { throw "Expected eight pinned obs images" }
 $files = @(
   "infra/compose/docker-compose.obs.yml", "infra/prometheus/prometheus.yml", "infra/prometheus/targets/apps.json",
-  "infra/grafana/provisioning/datasources/prometheus.yml", "infra/grafana/provisioning/dashboards/red.yml",
-  "infra/grafana/dashboards/red.json", "infra/obs/obs.sh", "infra/obs/obs.env.example", "docs/ops/observability.md"
+  "infra/grafana/provisioning/datasources/prometheus.yml", "infra/grafana/provisioning/datasources/loki.yml",
+  "infra/grafana/provisioning/datasources/jaeger.yml", "infra/grafana/provisioning/dashboards/red.yml",
+  "infra/grafana/dashboards/red.json", "infra/grafana/dashboards/system.json", "infra/grafana/dashboards/business.json", "infra/grafana/dashboards/logs.json",
+  "infra/alloy/config.alloy", "infra/loki/config.yml", "infra/jaeger/config.yml", "infra/postgres/monitoring-role.sql",
+  "infra/obs/obs.sh", "infra/obs/obs.env.example", "docs/ops/observability.md"
 )
 foreach ($file in $files) {
   $target = Join-Path $bundle $file
@@ -54,7 +57,7 @@ $checksums = Get-ChildItem -LiteralPath $bundle -Recurse -File | Sort-Object Ful
 }
 [IO.File]::WriteAllText((Join-Path $bundle "OBS_SHA256SUMS"), ($checksums -join "`n") + "`n", $utf8)
 $archive = Join-Path $output "$Release.tar"
-& tar -cf $archive -C $output $Release
+& (Join-Path $env:SystemRoot "System32/tar.exe") -cf $archive -C $output $Release
 if ($LASTEXITCODE -ne 0) { throw "Archive failed" }
 [IO.File]::WriteAllText("$archive.sha256", "$((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLower())  $Release.tar`n", $utf8)
 Write-Output "Prepared $archive ($((Get-Item -LiteralPath $archive).Length) bytes). No upload or app changes performed."

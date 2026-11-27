@@ -17,11 +17,14 @@
     "test:conc": "jest --config jest.conc.config.js --runInBand --passWithNoTests"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
     "@ticketing/event-contracts": "workspace:*",
     "kafkajs": "^2.2.4",
     "prom-client": "^15.1.3"
   },
   "devDependencies": {
+    "@opentelemetry/exporter-trace-otlp-http": "^0.54.0",
+    "@opentelemetry/sdk-node": "^0.54.0",
     "@testcontainers/postgresql": "^10.13.2",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.16.0",

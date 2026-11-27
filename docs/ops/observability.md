@@ -1,4 +1,4 @@
-# T-404 — Prometheus/Grafana bổ sung vào demo
+# T-501 — Observability: logs, traces, exporters và dashboards
 
 Agent chỉ chuẩn bị và kiểm chứng local. Tuấn chuyển artifact, tạo secret và thực hiện trên EC2 Ubuntu 24.04 amd64 (2 vCPU/8 GiB/40 GiB). Không có thao tác SSH/deploy/Cloudflare trong task. Không đổi project `ticketing-prod`, credential/volume ứng dụng, subnet/IP trust Tunnel → Kong. Không cần Git hoặc Node trên EC2.
 
@@ -10,14 +10,14 @@ Sáu service được duyệt (Identity/Event/Booking/Payment/Ticket/template) �
 
 Dashboard mới chỉ đọc tên mới. Kiểm tra query/dashboard ngoài repo nếu có đang dùng tên cũ. Finance/Resale/Merch/Notification chưa chuyển instrumentation trong T-404 và không nằm trong target mặc định; các assertion cũ của chúng được giữ nguyên. Khi triển khai thêm service, cần chuyển instrumentation tương ứng và thêm `{targets:["service:port"],labels:{service:"service"}}` vào `infra/prometheus/targets/apps.json`, rồi chạy promtool/check và kiểm chứng `up=1`/histogram. Không thêm target giả để coi service chưa chạy là đã giám sát.
 
-Muốn RED mới trên EC2, Tuấn cần duyệt một đợt rebuild/redeploy **năm image backend** `ticketing-demo/{identity,event,booking,payment,ticket}:<release-moi>` từ source đã chứa T-401 và T-404. Không có migration DB mới trong T-404; khi nâng từ release cũ vẫn phải đối chiếu migration của toàn bộ khoảng commit và quy trình T-208. Template không phải daemon EC2; Web không có thay đổi instrumentation. Artifact obs chỉ chứa hai image observability và config/runbook; không có `demo.sh`, `deploy.sh`, env ứng dụng hoặc image ứng dụng.
+Muốn tracing/Outbox mới trên EC2, Tuấn cần rebuild/redeploy **năm image backend demo** `ticketing-demo/{identity,event,booking,payment,ticket}:<release-mới>` từ source T-501; Web được đóng cùng demo artifact hiện có. Resale/Finance có migration `trace_context` additive nhưng chưa là daemon trong demo compose, nên không có image demo để rollout trong lượt này. Template không phải daemon EC2. Artifact obs chứa tám image observability và config/runbook, không có `demo.sh`, `deploy.sh`, env ứng dụng hoặc image ứng dụng.
 
 ## Truy cập và tài nguyên
 
-- Prometheus: host **127.0.0.1:9090**, Grafana: **127.0.0.1:3030**. Không public route/hostname hoặc đổi trust Kong/Cloudflare. Không mount docker.sock. Prometheus nối backend có sẵn `ticketing-prod_backend` và bridge riêng `ticketing-prod_obs-access` để phục vụ port loopback. Grafana chỉ nối bridge obs này, không trực tiếp vào backend. Không tạo lại hoặc đổi mạng ứng dụng; backend prod vẫn internal. Bridge riêng tránh mất truy cập host khi chỉ nối mạng internal, đã được kiểm tra thực tế.
+- Prometheus: host **127.0.0.1:9090**, Grafana: **127.0.0.1:3030**, Loki: **127.0.0.1:3100**, Jaeger: **127.0.0.1:16686**, Alloy OTLP/HTTP: **127.0.0.1:4318**. Không public route/hostname hoặc đổi trust Kong/Cloudflare. Không mount docker.sock. Prometheus, Alloy và exporters nối backend có sẵn `ticketing-prod_backend`; Grafana, Loki và Jaeger chỉ nối bridge obs-access. Không tạo lại hoặc đổi mạng ứng dụng; backend prod vẫn internal.
 - Grafana tắt anonymous/sign-up, dùng admin riêng. Không đưa secret vào repo/chat/history. File env bên ngoài artifact, quyền 0600. Không in `docker compose config` đầy đủ với env thật.
-- Prometheus: 512 MiB, 0,5 CPU; Grafana: 512 MiB, 0,5 CPU; log local 2×5 MB/container. Tổng trần obs 1 GiB, 1 CPU; cần kiểm tra headroom thực tế trên máy 8 GiB trước start. Không coi trần này là footprint đo được.
-- Scrape 15s/timeout 5s; 20.000 samples/target/scrape để chặn bùng nổ nhãn. Retention **7 ngày hoặc 1 GiB** (ngưỡng đạt trước); WAL/head/compaction vẫn có thể làm disk lớn hơn 1 GiB. Không phải disk quota. Dành thêm dung lượng cho WAL, Grafana SQLite, image/archive; theo dõi `df -h`, `docker stats`, `du` định kỳ. Không tăng EC2/dùng dịch vụ trả phí.
+- Tổng trần container observability là **2.47 GiB RAM và 2.75 CPU**: Prometheus 512 MiB/0.5, Grafana 512 MiB/0.5, Loki 384 MiB/0.4, Jaeger 512 MiB/0.5, Alloy 256 MiB/0.3, Kafka exporter 128 MiB/0.2, Redis exporter 96 MiB/0.15, PostgreSQL exporter 128 MiB/0.2. Đây là giới hạn bảo vệ, không phải footprint; phải kiểm tra `free -h`, `df -h`, `docker stats` trên EC2 8 GiB trước start.
+- Scrape 15s/timeout 5s; 20.000 samples/target/scrape để chặn bùng nổ nhãn. Prometheus retention **7 ngày hoặc 1 GiB** (ngưỡng đạt trước); Loki retention 7 ngày; Jaeger Badger TTL 7 ngày. WAL/head/compaction và Badger có thể tạm vượt dữ liệu hữu dụng, nên không coi đây là disk quota. Dành headroom cho WAL, Grafana SQLite, image/archive; theo dõi `df -h`, `docker stats`, `du` định kỳ. Không tăng EC2/dùng dịch vụ trả phí.
 - Dashboard chọn service và thời gian, mặc định 15 phút; rate window dùng `$__rate_interval`. Health probes bị loại khỏi RED; 404 vẫn tính. Scrape availability không đồng nghĩa app healthy. Panel metric presence giúp phát hiện backend cũ. Không traffic thì ratio/quantile là No data, không tô khỏe giả. Histogram cần tối thiểu hai scrape; low traffic có thể làm quantile thiếu/ước lượng thô.
 
 ## Đóng gói trên Windows
@@ -28,7 +28,7 @@ Sau khi commit source, Docker Desktop Linux chạy được, đủ chỗ trên �
 powershell -NoProfile -File infra/obs/package-obs.ps1 -Release obs-YYYYMMDD-<commit>
 ```
 
-Script pull hai image amd64 ghim digest trong `infra/obs/obs.env.example`, save `obs-images.tar`, copy allowlist runtime, ghi `OBS_IMAGES`, `OBS_SOURCE_COMMIT`, `OBS_SHA256SUMS`, archive và checksum tại `dist/obs/`. Không ship `.git`, env thật, source nghiệp vụ. Image manifest ghi tag, image ID, platform và digest gốc; docker save/load có thể không giữ RepoDigests nên runtime chỉ dùng tag sau khi đối chiếu đúng ID trong manifest đã checksum. Giữ gói cũ để rollback obs.
+Script pull tám image amd64 ghim digest trong `infra/obs/obs.env.example`, save `obs-images.tar`, copy allowlist runtime, ghi `OBS_IMAGES`, `OBS_SOURCE_COMMIT`, `OBS_SHA256SUMS`, archive và checksum tại `dist/obs/`. Không ship `.git`, env thật, source nghiệp vụ. Image manifest ghi tag, image ID, platform và digest gốc; docker save/load có thể không giữ RepoDigests nên runtime chỉ dùng tag sau khi đối chiếu đúng ID trong manifest đã checksum. Giữ gói cũ để rollback obs.
 
 Local Git Bash (không dùng bash WSL chưa có Docker integration): copy env mẫu thành file bị ignore, tạo password giả chỉ dùng local; đặt `OBS_NETWORK` đúng mạng app local. Trong PowerShell có thể gọi Git Bash:
 
@@ -54,15 +54,16 @@ cd /opt/ticketing/obs-RELEASE
 sha256sum --check OBS_SHA256SUMS
 ```
 
-3. Tạo `/etc/ticketing/.env.obs` từ mẫu, `chmod 600`. Giữ các image digest/network/port, chọn admin riêng. Tạo password bằng `openssl rand -hex 24` và điền qua editor; không dán vào shell command. Định dạng env riêng **KEY=value không quote/khoảng trắng/interpolation**; password 24–128 ký tự chữ/số/`_`/`-`. Validator fail-fast với field thiếu/sai/duplicate/unknown và chỉ in tên field.
-4. Chạy check rồi start (không cần env prod/demo hoặc token Cloudflare):
+3. Chạy migration `trace_context` của identity, event, booking, payment, ticket, resale, finance **trước** khi rollout image ứng dụng mới. Cột nullable/additive; rollback ứng dụng giữ nguyên cột và dữ liệu, không backfill parent giả. Không ghi đè `.env.prod`, `.env.demo`, token Tunnel hoặc bất kỳ volume nào.
+4. Tạo role monitoring một lần bằng `infra/postgres/monitoring-role.sql` với password nhập qua editor/prompt bảo mật. Exporter chỉ dùng `ticketing_monitor`, không dùng `infra_admin`; role không có `USAGE`/`SELECT` schema nghiệp vụ. Tạo `/etc/ticketing/.env.obs` từ mẫu, `chmod 600`, thêm `POSTGRES_EXPORTER_DSN` với credential role này. Giữ các image digest/network/port, chọn admin riêng. Không dán password vào shell command. Định dạng env riêng **KEY=value không quote/khoảng trắng/interpolation**; password 24–128 ký tự chữ/số/`_`/`-`.
+5. Chạy check rồi start (không cần env prod/demo hoặc token Cloudflare):
 
 ```bash
 bash infra/obs/obs.sh check /etc/ticketing/.env.obs
 bash infra/obs/obs.sh start /etc/ticketing/.env.obs
 ```
 
-`check` kiểm checksum/load image/ID/amd64/network/promtool, không start/recreate ứng dụng. `start` chỉ force-recreate Prometheus/Grafana và chờ readiness. Không migration, không restart ứng dụng, không prune/remove-orphans/down. Nếu check/start thất bại, xem log obs và dừng; app giữ nguyên.
+`check` kiểm checksum/load image/ID/amd64/network/promtool, không start/recreate ứng dụng. `start` chỉ force-recreate observability daemons và chờ readiness. Không migration, không restart ứng dụng, không prune/remove-orphans/down. Alloy chạy UID 473, app log directory được mount read-only, không có docker.sock; init job chỉ chown checkpoint volume với capability tối thiểu. Jaeger chạy UID 10001 với Badger trên volume; init job chỉ chown thư mục Badger. Nếu check/start thất bại, xem log obs và dừng; app giữ nguyên.
 
 5. Tạo traffic smoke nhẹ vào ứng dụng; kiểm tra `http://127.0.0.1:9090/api/v1/targets` từ server và query `up{job="application"}` đủ năm service bằng 1. Kiểm tra counter tăng sau ít nhất hai lần scrape, datasource Grafana khỏe, dashboard có rate/ratio/p50/p95/p99. Backend cũ có thể `up=1` nhưng metric mới absent: chưa nghiệm thu RED; không tự nâng app.
 
@@ -82,7 +83,7 @@ Mở `http://localhost:3030`, đăng nhập admin rồi chọn **VENTIX → VENT
 bash infra/obs/obs.sh stop /etc/ticketing/.env.obs
 ```
 
-Chỉ dừng hai daemon, giữ `ticketing-prod_obs-prometheus`, `ticketing-prod_obs-grafana`, ứng dụng/Tunnel và dữ liệu. Không `down -v`, `volume rm`, `system prune` hoặc `--remove-orphans`.
+Chỉ dừng các daemon observability (Prometheus, Grafana, Loki, Jaeger, Alloy và exporters), giữ toàn bộ volume của chúng, ứng dụng, Tunnel, Kafka và dữ liệu. Không `down -v`, `volume rm`, `system prune` hoặc `--remove-orphans`.
 
 Nâng cấp: giải nén artifact obs mới riêng, giữ project/network/credential/volume, dùng env obs khớp digest artifact, chạy check/start từ thư mục mới. Cấu hình dashboard được provision lại; không sửa UI để lưu lâu dài. Password admin env dùng lúc khởi tạo Grafana DB; đổi env không tự đổi password đã lưu. Quản lý thay đổi mật khẩu qua Grafana sau đăng nhập.
 

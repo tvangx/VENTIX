@@ -1,0 +1,62 @@
+{
+  "uid": "ventix-system",
+  "title": "VENTIX — System",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "tags": ["ventix", "T-501"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Exporter targets (0 = down / not configured)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"exporters\"}",
+          "legendFormat": "{{exporter}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Redis connected clients",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [
+        { "refId": "A", "expr": "redis_connected_clients", "legendFormat": "{{instance}}" }
+      ],
+      "fieldConfig": { "defaults": { "noValue": "No data" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "title": "Kafka brokers",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [{ "refId": "A", "expr": "kafka_brokers", "instant": true }],
+      "fieldConfig": { "defaults": { "noValue": "No data" }, "overrides": [] }
+    }
+  ]
+}
