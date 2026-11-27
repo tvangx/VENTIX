@@ -9,7 +9,16 @@ async function main(): Promise<void> {
   const env = loadEnv(envSchema); // fail-fast nếu thiếu/sai biến
   await startTelemetry(env, SERVICE_NAME);
 
-  const logger = createLogger(SERVICE_NAME, { level: env.LOG_LEVEL });
+  const logger = createLogger(SERVICE_NAME, {
+    level: env.LOG_LEVEL,
+    file: env.LOG_FILE_PATH
+      ? {
+          path: env.LOG_FILE_PATH,
+          maxBytes: env.LOG_FILE_MAX_BYTES,
+          maxFiles: env.LOG_FILE_MAX_FILES,
+        }
+      : undefined,
+  });
   // Nạp muộn để OpenTelemetry (nếu bật) đã vá http/express trước.
   const { createApp } = await import("./bootstrap");
   const app = await createApp(env, logger);

@@ -17,6 +17,7 @@
     "test:conc": "jest --config jest.conc.config.js --runInBand --passWithNoTests"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
     "@ticketing/event-contracts": "workspace:*",
     "kafkajs": "^2.2.4",
     "prom-client": "^15.1.3"

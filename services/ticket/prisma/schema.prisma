@@ -250,6 +250,7 @@ model OutboxEvent {
   messageKey  String    @map("message_key")
   eventType   String    @map("event_type")
   payload     Json
+  traceContext Json? @map("trace_context")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   publishedAt DateTime? @map("published_at") @db.Timestamptz
 

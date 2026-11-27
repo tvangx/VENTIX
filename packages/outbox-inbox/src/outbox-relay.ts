@@ -5,6 +5,8 @@ import type { Logger } from "./logger";
 import { createRelayMetrics } from "./metrics";
 import type { OutboxRelayMetrics } from "./metrics";
 import type { Database } from "./sql-executor";
+import { context, propagation, SpanKind, trace, type Span } from "@opentelemetry/api";
+import { extractTraceContext, parseStoredTraceContext } from "./trace-context";
 
 export interface OutboxRelayOptions {
   db: Database;
@@ -25,6 +27,7 @@ interface OutboxRow {
   event_type: string;
   payload_text: string;
   age_seconds: number;
+  trace_context: unknown;
 }
 
 /**
@@ -88,7 +91,8 @@ export class OutboxRelay {
     const rows = await this.db.transaction(async (exec) => {
       const selected = await exec.query<OutboxRow>(
         `SELECT id, topic, message_key, event_type, payload::text AS payload_text,
-                EXTRACT(EPOCH FROM (clock_timestamp() - created_at))::float8 AS age_seconds
+                EXTRACT(EPOCH FROM (clock_timestamp() - created_at))::float8 AS age_seconds,
+                trace_context
            FROM outbox_events
           WHERE published_at IS NULL
           ORDER BY created_at, id
@@ -99,19 +103,41 @@ export class OutboxRelay {
       if (selected.length === 0) return selected;
 
       const byTopic = new Map<string, Message[]>();
+      const producerSpans: Span[] = [];
       for (const row of selected) {
         const list = byTopic.get(row.topic) ?? [];
-        list.push({
-          key: row.message_key,
-          value: row.payload_text,
-          headers: { "message-id": row.id, "event-type": row.event_type },
+        const headers: Record<string, string> = {
+          "message-id": row.id,
+          "event-type": row.event_type,
+        };
+        const parent = extractTraceContext(parseStoredTraceContext(row.trace_context));
+        const span = trace.getTracer("ticketing.outbox").startSpan(
+          "messaging publish",
+          {
+            kind: SpanKind.PRODUCER,
+            attributes: { "messaging.system": "kafka", "messaging.destination.name": row.topic },
+          },
+          parent,
+        );
+        context.with(trace.setSpan(parent, span), () => {
+          // Default W3C propagator emits only traceparent/tracestate, never baggage unless explicitly configured.
+          const carrier: Record<string, string> = {};
+          propagation.inject(context.active(), carrier);
+          if (carrier.traceparent) headers.traceparent = carrier.traceparent;
+          if (carrier.tracestate) headers.tracestate = carrier.tracestate;
         });
+        producerSpans.push(span);
+        list.push({ key: row.message_key, value: row.payload_text, headers });
         byTopic.set(row.topic, list);
       }
-      await this.producer.sendBatch({
-        acks: -1,
-        topicMessages: [...byTopic].map(([topic, messages]) => ({ topic, messages })),
-      });
+      try {
+        await this.producer.sendBatch({
+          acks: -1,
+          topicMessages: [...byTopic].map(([topic, messages]) => ({ topic, messages })),
+        });
+      } finally {
+        producerSpans.forEach((span) => span.end());
+      }
 
       await exec.query(
         `UPDATE outbox_events SET published_at = now() WHERE id = ANY($1::uuid[]) RETURNING id`,

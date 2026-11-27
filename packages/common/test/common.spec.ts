@@ -1,5 +1,8 @@
 import { HttpException } from "@nestjs/common";
 import { Writable } from "node:stream";
+import { mkdtemp, readdir, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { z } from "zod";
 import {
   ProblemException,
@@ -8,6 +11,7 @@ import {
   createLogger,
   loadEnv,
   requestContext,
+  RotatingLogDestination,
 } from "../src";
 
 function fakeHost(req: Record<string, unknown> = {}) {
@@ -46,6 +50,19 @@ describe("loadEnv", () => {
     } catch (e) {
       expect((e as Error).message).not.toContain("abc-secret");
     }
+  });
+});
+
+describe("RotatingLogDestination", () => {
+  it("rotates JSON files without throwing to the caller", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "ticketing-log-"));
+    const path = join(directory, "service.log");
+    const destination = new RotatingLogDestination(path, 20, 2);
+    destination.write('{"n":1}\n');
+    destination.write('{"n":2,"extra":"rotation"}\n');
+    await destination.flush();
+    expect(await readdir(directory)).toContain("service.log.1");
+    expect(await readFile(path, "utf8")).toContain('"n":2');
   });
 });
 

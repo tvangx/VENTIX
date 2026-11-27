@@ -25,6 +25,9 @@ export const envSchema = z
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
+    LOG_FILE_PATH: z.string().min(1).optional(),
+    LOG_FILE_MAX_BYTES: z.coerce.number().int().min(1024).default(10_485_760),
+    LOG_FILE_MAX_FILES: z.coerce.number().int().min(1).max(10).default(3),
     DATABASE_URL: z.string().url(),
     KYC_ENABLED: z.enum(["true", "false"]).default("false"),
     IDENTITY_OUTBOX_ENABLED: z.enum(["true", "false"]).default("false"),

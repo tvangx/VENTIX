@@ -51,6 +51,65 @@ services:
       driver: local
       options: { max-size: "5m", max-file: "2" }
 
+  loki:
+    image: ${LOKI_IMAGE:?Set pinned LOKI_IMAGE}
+    restart: unless-stopped
+    networks: [obs-access]
+    mem_limit: 384m
+    cpus: 0.4
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    command: ["-config.file=/etc/loki/config.yml", "-config.expand-env=false"]
+    ports: ["127.0.0.1:${LOKI_PORT:-3100}:3100"]
+    volumes:
+      - ../loki/config.yml:/etc/loki/config.yml:ro
+      - obs-loki:/loki
+
+  jaeger:
+    image: ${JAEGER_IMAGE:?Set pinned JAEGER_IMAGE}
+    restart: unless-stopped
+    networks: [obs-access]
+    mem_limit: 512m
+    cpus: 0.5
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports: ["127.0.0.1:${JAEGER_PORT:-16686}:16686"]
+    volumes: ["obs-jaeger:/badger"]
+
+  alloy:
+    image: ${ALLOY_IMAGE:?Set pinned ALLOY_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      alloy-init:
+        condition: service_completed_successfully
+    networks: [obs-access, obs-backend]
+    mem_limit: 256m
+    cpus: 0.3
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    user: "473:473"
+    command: ["run", "/etc/alloy/config.alloy", "--storage.path=/var/lib/alloy"]
+    ports: ["127.0.0.1:${ALLOY_OTLP_HTTP_PORT:-4318}:4318"]
+    volumes:
+      - ../alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - obs-alloy:/var/lib/alloy
+      # Runtime release mounts the app-owned log directory here read-only; never docker.sock.
+      - ${APP_LOG_DIR:?Set APP_LOG_DIR}:/var/log/ticketing:ro
+
+  # One-shot ownership setup for Alloy's own checkpoint volume; runtime remains uid 473.
+  alloy-init:
+    image: ${ALLOY_IMAGE:?Set pinned ALLOY_IMAGE}
+    restart: "no"
+    user: "0:0"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
+    entrypoint: ["/bin/sh", "-c", "mkdir -p /var/lib/alloy && chown -R 473:473 /var/lib/alloy"]
+    volumes:
+      - obs-alloy:/var/lib/alloy
+
 networks:
   # An internal-only bridge cannot serve the host-published UI port on all engines.
   # This bridge belongs only to obs; no application/connector network is modified.
@@ -63,3 +122,6 @@ networks:
 volumes:
   obs-prometheus:
   obs-grafana:
+  obs-loki:
+  obs-jaeger:
+  obs-alloy:

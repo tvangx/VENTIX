@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS outbox_events (
   message_key    text        NOT NULL,           -- key partition Kafka
   event_type     text        NOT NULL,
   payload        jsonb       NOT NULL,           -- envelope đầy đủ
+  trace_context  jsonb,                         -- chỉ traceparent/tracestate W3C, nullable cho event cũ
   created_at     timestamptz NOT NULL DEFAULT now(),
   published_at   timestamptz
 );
