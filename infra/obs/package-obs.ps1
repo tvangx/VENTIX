@@ -57,7 +57,7 @@ $checksums = Get-ChildItem -LiteralPath $bundle -Recurse -File | Sort-Object Ful
 }
 [IO.File]::WriteAllText((Join-Path $bundle "OBS_SHA256SUMS"), ($checksums -join "`n") + "`n", $utf8)
 $archive = Join-Path $output "$Release.tar"
-& tar -cf $archive -C $output $Release
+& (Join-Path $env:SystemRoot "System32/tar.exe") -cf $archive -C $output $Release
 if ($LASTEXITCODE -ne 0) { throw "Archive failed" }
 [IO.File]::WriteAllText("$archive.sha256", "$((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLower())  $Release.tar`n", $utf8)
 Write-Output "Prepared $archive ($((Get-Item -LiteralPath $archive).Length) bytes). No upload or app changes performed."
