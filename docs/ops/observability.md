@@ -10,7 +10,7 @@ Sáu service được duyệt (Identity/Event/Booking/Payment/Ticket/template) �
 
 Dashboard mới chỉ đọc tên mới. Kiểm tra query/dashboard ngoài repo nếu có đang dùng tên cũ. Finance/Resale/Merch/Notification chưa chuyển instrumentation trong T-404 và không nằm trong target mặc định; các assertion cũ của chúng được giữ nguyên. Khi triển khai thêm service, cần chuyển instrumentation tương ứng và thêm `{targets:["service:port"],labels:{service:"service"}}` vào `infra/prometheus/targets/apps.json`, rồi chạy promtool/check và kiểm chứng `up=1`/histogram. Không thêm target giả để coi service chưa chạy là đã giám sát.
 
-Muốn tracing/Outbox mới trên EC2, Tuấn cần rebuild/redeploy **bảy image backend** `ticketing-demo/{identity,event,booking,payment,ticket,resale,finance}:<release-mới>` từ source T-501: năm service đầu có runtime logging/instrumentation, còn cả bảy dùng migration và runtime Outbox trace context. Template không phải daemon EC2; Web không có thay đổi instrumentation. Artifact obs chứa tám image observability và config/runbook, không có `demo.sh`, `deploy.sh`, env ứng dụng hoặc image ứng dụng.
+Muốn tracing/Outbox mới trên EC2, Tuấn cần rebuild/redeploy **năm image backend demo** `ticketing-demo/{identity,event,booking,payment,ticket}:<release-mới>` từ source T-501; Web được đóng cùng demo artifact hiện có. Resale/Finance có migration `trace_context` additive nhưng chưa là daemon trong demo compose, nên không có image demo để rollout trong lượt này. Template không phải daemon EC2. Artifact obs chứa tám image observability và config/runbook, không có `demo.sh`, `deploy.sh`, env ứng dụng hoặc image ứng dụng.
 
 ## Truy cập và tài nguyên
 

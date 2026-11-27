@@ -59,7 +59,7 @@ $checksums = Get-ChildItem -LiteralPath $bundle -Recurse -File | Sort-Object Ful
   "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower())  $relative"
 }
 [IO.File]::WriteAllText((Join-Path $bundle "SHA256SUMS"), ($checksums -join "`n") + "`n", $utf8)
-& tar -cf (Join-Path $output "$Release.tar") -C $output $Release
+& (Join-Path $env:SystemRoot "System32/tar.exe") -cf (Join-Path $output "$Release.tar") -C $output $Release
 if ($LASTEXITCODE -ne 0) { throw "Archive failed" }
 $archive = Join-Path $output "$Release.tar"
 [IO.File]::WriteAllText("$archive.sha256", "$((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLower())  $Release.tar`n", $utf8)
