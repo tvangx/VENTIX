@@ -1,0 +1,51 @@
+# Single-node, bounded local trace store for the demo/8 GiB profile.
+# Badger survives container restart but is not horizontally scalable.
+service:
+  extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: []
+      exporters: [jaeger_storage_exporter]
+
+extensions:
+  healthcheckv2:
+    use_v2: true
+    http:
+      endpoint: 0.0.0.0:13133
+  jaeger_query:
+    storage:
+      traces: local_badger
+  jaeger_storage:
+    backends:
+      local_badger:
+        badger:
+          directories:
+            keys: /badger/keys
+            values: /badger/values
+          ephemeral: false
+          ttl:
+            spans: 168h
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: local_badger
+    queue:
+      enabled: true
+      sizer: items
+      num_consumers: 1
+      queue_size: 1024
+      block_on_overflow: true
+      wait_for_result: true
+      batch:
+        min_size: 256
+        max_size: 512
+        flush_timeout: 200ms

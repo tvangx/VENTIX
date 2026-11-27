@@ -73,9 +73,28 @@ services:
     cpus: 0.5
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
+    user: "10001:0"
+    depends_on:
+      jaeger-init:
+        condition: service_completed_successfully
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
+    command: ["--config=/etc/jaeger/config.yml"]
     ports: ["127.0.0.1:${JAEGER_PORT:-16686}:16686"]
+    volumes:
+      - ../jaeger/config.yml:/etc/jaeger/config.yml:ro
+      - obs-jaeger:/badger
+
+  # One-shot ownership setup for Badger's trace data. Runtime remains non-root.
+  jaeger-init:
+    image: ${JAEGER_IMAGE:?Set pinned JAEGER_IMAGE}
+    restart: "no"
+    user: "0:0"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
+    entrypoint:
+      ["/bin/sh", "-c", "mkdir -p /badger/keys /badger/values && chown -R 10001:0 /badger"]
     volumes: ["obs-jaeger:/badger"]
 
   alloy:
@@ -109,6 +128,38 @@ services:
     entrypoint: ["/bin/sh", "-c", "mkdir -p /var/lib/alloy && chown -R 473:473 /var/lib/alloy"]
     volumes:
       - obs-alloy:/var/lib/alloy
+
+  kafka-exporter:
+    image: ${KAFKA_EXPORTER_IMAGE:?Set pinned KAFKA_EXPORTER_IMAGE}
+    restart: unless-stopped
+    networks: [obs-backend]
+    mem_limit: 128m
+    cpus: 0.2
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    command: ["--kafka.server=kafka:29092", "--group.filter=.*", "--topic.filter=.*"]
+
+  redis-exporter:
+    image: ${REDIS_EXPORTER_IMAGE:?Set pinned REDIS_EXPORTER_IMAGE}
+    restart: unless-stopped
+    networks: [obs-backend]
+    mem_limit: 96m
+    cpus: 0.15
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    environment:
+      REDIS_ADDR: redis://redis:6379
+
+  postgres-exporter:
+    image: ${POSTGRES_EXPORTER_IMAGE:?Set pinned POSTGRES_EXPORTER_IMAGE}
+    restart: unless-stopped
+    networks: [obs-backend]
+    mem_limit: 128m
+    cpus: 0.2
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    environment:
+      DATA_SOURCE_NAME: ${POSTGRES_EXPORTER_DSN:?Set read-only monitoring DSN}
 
 networks:
   # An internal-only bridge cannot serve the host-published UI port on all engines.

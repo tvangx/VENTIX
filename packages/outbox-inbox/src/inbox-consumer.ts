@@ -135,7 +135,12 @@ export class InboxProcessor {
           await this.options.handler(exec, message);
           return true;
         });
-        return handled ? "processed" : "duplicate";
+        const outcome: InboxOutcome = handled ? "processed" : "duplicate";
+        this.logger.info(
+          { message_id: message.message_id, type: message.type, outcome },
+          "inbox message handled",
+        );
+        return outcome;
       } catch (err) {
         const permanent = err instanceof PermanentError;
         if (permanent || attempt >= this.maxAttempts) {

@@ -1,0 +1,53 @@
+{
+  "uid": "ventix-logs",
+  "title": "VENTIX — Logs & Traces",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "tags": ["ventix", "T-501"],
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values(service)",
+        "includeAll": true,
+        "allValue": ".+",
+        "current": { "text": "All", "value": "$__all" }
+      },
+      { "name": "trace_id", "type": "textbox", "current": { "text": "", "value": "" } }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "JSON logs (trace ID optional)",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service=~\"$service\"} | json | trace_id=~\"${trace_id:regex}|.*\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyJSON": true,
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 2,
+      "title": "Trace lookup in Jaeger",
+      "type": "text",
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 14 },
+      "options": {
+        "mode": "markdown",
+        "content": "Enter a trace ID above, then open [Jaeger trace lookup](http://localhost:16686/trace/${trace_id}). Logs retain `trace_id` and `span_id`; Jaeger is the trace source of truth."
+      }
+    }
+  ]
+}

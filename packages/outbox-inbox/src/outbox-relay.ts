@@ -103,7 +103,11 @@ export class OutboxRelay {
       if (selected.length === 0) return selected;
 
       const byTopic = new Map<string, Message[]>();
-      const producerSpans: Span[] = [];
+      const producerSpans: Array<{
+        span: Span;
+        row: OutboxRow;
+        parent: ReturnType<typeof extractTraceContext>;
+      }> = [];
       for (const row of selected) {
         const list = byTopic.get(row.topic) ?? [];
         const headers: Record<string, string> = {
@@ -126,7 +130,7 @@ export class OutboxRelay {
           if (carrier.traceparent) headers.traceparent = carrier.traceparent;
           if (carrier.tracestate) headers.tracestate = carrier.tracestate;
         });
-        producerSpans.push(span);
+        producerSpans.push({ span, row, parent });
         list.push({ key: row.message_key, value: row.payload_text, headers });
         byTopic.set(row.topic, list);
       }
@@ -135,8 +139,16 @@ export class OutboxRelay {
           acks: -1,
           topicMessages: [...byTopic].map(([topic, messages]) => ({ topic, messages })),
         });
+        for (const { span, row, parent } of producerSpans) {
+          context.with(trace.setSpan(parent, span), () => {
+            this.logger.info(
+              { message_id: row.id, event_type: row.event_type, topic: row.topic },
+              "outbox event published",
+            );
+          });
+        }
       } finally {
-        producerSpans.forEach((span) => span.end());
+        producerSpans.forEach(({ span }) => span.end());
       }
 
       await exec.query(
