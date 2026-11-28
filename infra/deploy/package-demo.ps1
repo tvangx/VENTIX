@@ -31,7 +31,7 @@ foreach ($service in @("identity", "event", "booking", "payment", "ticket", "web
 }
 # Only allowlisted runtime configuration is shipped. No .git, business source or env values.
 $files = @(
-  "infra/compose/docker-compose.prod.yml", "infra/compose/docker-compose.tunnel.yml", "infra/compose/docker-compose.apps.yml",
+  "infra/compose/docker-compose.prod.yml", "infra/compose/docker-compose.tunnel.yml", "infra/compose/docker-compose.apps.yml", "infra/compose/docker-compose.apps-observability.yml",
   "infra/kong/kong.prod.yml", "infra/kong/kong.demo.yml", "infra/kafka/create-topics.sh",
   "infra/postgres/prod-init/01-create-databases.sh", "infra/deploy/demo.sh", "infra/deploy/demo.env.example",
   "docs/ops/demo-deploy.md"

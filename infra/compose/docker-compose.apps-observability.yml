@@ -1,0 +1,63 @@
+# Optional T-501 runtime wiring. Apply only with docker-compose.apps.yml and
+# docker-compose.obs.yml; base demo deployment remains independent of Alloy.
+x-observability-env: &observability-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+
+x-app-log: &app-log
+  volumes:
+    - ${APP_LOG_DIR:?Set APP_LOG_DIR}:/var/log/ticketing
+
+services:
+  # The Node runtime images use uid 1000. The setgid directory lets files be
+  # read by Alloy's gid 473 while the Alloy bind mount stays read-only.
+  app-log-init:
+    image: ticketing-demo/identity:${DEMO_RELEASE:?Set DEMO_RELEASE}
+    restart: "no"
+    user: "0:0"
+    networks: [backend]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
+    command: ["/bin/sh", "-ec", "install -d -o 1000 -g 473 -m 2775 /var/log/ticketing"]
+    volumes:
+      - ${APP_LOG_DIR:?Set APP_LOG_DIR}:/var/log/ticketing
+
+  identity:
+    <<: *app-log
+    environment:
+      <<: *observability-env
+      LOG_FILE_PATH: /var/log/ticketing/identity.log
+    depends_on:
+      app-log-init: { condition: service_completed_successfully }
+
+  event:
+    <<: *app-log
+    environment:
+      <<: *observability-env
+      LOG_FILE_PATH: /var/log/ticketing/event.log
+    depends_on:
+      app-log-init: { condition: service_completed_successfully }
+
+  booking:
+    <<: *app-log
+    environment:
+      <<: *observability-env
+      LOG_FILE_PATH: /var/log/ticketing/booking.log
+    depends_on:
+      app-log-init: { condition: service_completed_successfully }
+
+  payment:
+    <<: *app-log
+    environment:
+      <<: *observability-env
+      LOG_FILE_PATH: /var/log/ticketing/payment.log
+    depends_on:
+      app-log-init: { condition: service_completed_successfully }
+
+  ticket:
+    <<: *app-log
+    environment:
+      <<: *observability-env
+      LOG_FILE_PATH: /var/log/ticketing/ticket.log
+    depends_on:
+      app-log-init: { condition: service_completed_successfully }

@@ -33,7 +33,7 @@ foreach ($line in Get-Content -LiteralPath "infra/obs/obs.env.example") {
 }
 if ($images.Count -ne 8) { throw "Expected eight pinned obs images" }
 $files = @(
-  "infra/compose/docker-compose.obs.yml", "infra/prometheus/prometheus.yml", "infra/prometheus/targets/apps.json",
+  "infra/compose/docker-compose.obs.yml", "infra/compose/docker-compose.apps-observability.yml", "infra/prometheus/prometheus.yml", "infra/prometheus/targets/apps.json",
   "infra/grafana/provisioning/datasources/prometheus.yml", "infra/grafana/provisioning/datasources/loki.yml",
   "infra/grafana/provisioning/datasources/jaeger.yml", "infra/grafana/provisioning/dashboards/red.yml",
   "infra/grafana/dashboards/red.json", "infra/grafana/dashboards/system.json", "infra/grafana/dashboards/business.json", "infra/grafana/dashboards/logs.json",

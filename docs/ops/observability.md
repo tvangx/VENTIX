@@ -10,7 +10,15 @@ Sáu service được duyệt (Identity/Event/Booking/Payment/Ticket/template) �
 
 Dashboard mới chỉ đọc tên mới. Kiểm tra query/dashboard ngoài repo nếu có đang dùng tên cũ. Finance/Resale/Merch/Notification chưa chuyển instrumentation trong T-404 và không nằm trong target mặc định; các assertion cũ của chúng được giữ nguyên. Khi triển khai thêm service, cần chuyển instrumentation tương ứng và thêm `{targets:["service:port"],labels:{service:"service"}}` vào `infra/prometheus/targets/apps.json`, rồi chạy promtool/check và kiểm chứng `up=1`/histogram. Không thêm target giả để coi service chưa chạy là đã giám sát.
 
-Muốn tracing/Outbox mới trên EC2, Tuấn cần rebuild/redeploy **năm image backend demo** `ticketing-demo/{identity,event,booking,payment,ticket}:<release-mới>` từ source T-501; Web được đóng cùng demo artifact hiện có. Resale/Finance có migration `trace_context` additive nhưng chưa là daemon trong demo compose, nên không có image demo để rollout trong lượt này. Template không phải daemon EC2. Artifact obs chứa tám image observability và config/runbook, không có `demo.sh`, `deploy.sh`, env ứng dụng hoặc image ứng dụng.
+Muốn tracing/Outbox mới trên EC2, Tuấn cần rebuild/redeploy **năm image backend demo** `ticketing-demo/{identity,event,booking,payment,ticket}:<release-mới>` từ source T-501; Web được đóng cùng demo artifact hiện có. Resale/Finance có migration `trace_context` additive nhưng chưa là daemon trong demo compose, nên không có image demo để rollout trong lượt này. Template không phải daemon EC2. Artifact obs chứa tám image observability, config/runbook và overlay `docker-compose.apps-observability.yml`; không có `demo.sh`, `deploy.sh`, env ứng dụng hoặc image ứng dụng.
+
+## Runtime wiring của năm app demo
+
+`docker-compose.apps.yml` là base độc lập: không mount host log, không có biến OTLP/file log và không chờ Alloy. Khi chưa chạy observability (kể cả T-208 demo), chỉ dùng base này.
+
+Chỉ khi rollout observability, dùng thêm `infra/compose/docker-compose.apps-observability.yml`. Overlay truyền trực tiếp `OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318` và `LOG_FILE_PATH=/var/log/ticketing/<service>.log` cho Identity, Event, Booking, Payment, Ticket. Nó mount cùng `APP_LOG_DIR`, vẫn giữ stdout/Docker `local` driver, và chỉ chờ `app-log-init` tạo thư mục; **không** có `depends_on` đến Alloy. Vì telemetry trong app là optional, Alloy chưa chạy hoặc restart không chặn health/request/worker.
+
+`app-log-init` dùng image Identity đã có trong demo release, chạy một lần với capability ownership tối thiểu để tạo `APP_LOG_DIR` owner `1000:473`, mode `2775` (setgid). Năm app chạy UID 1000 ghi được file; file mới kế thừa group 473 để Alloy UID/GID 473 đọc qua bind mount read-only. Không dùng Docker socket, privileged mode, public port hay secret mới.
 
 ## Truy cập và tài nguyên
 
@@ -28,7 +36,7 @@ Sau khi commit source, Docker Desktop Linux chạy được, đủ chỗ trên �
 powershell -NoProfile -File infra/obs/package-obs.ps1 -Release obs-YYYYMMDD-<commit>
 ```
 
-Script pull tám image amd64 ghim digest trong `infra/obs/obs.env.example`, save `obs-images.tar`, copy allowlist runtime, ghi `OBS_IMAGES`, `OBS_SOURCE_COMMIT`, `OBS_SHA256SUMS`, archive và checksum tại `dist/obs/`. Không ship `.git`, env thật, source nghiệp vụ. Image manifest ghi tag, image ID, platform và digest gốc; docker save/load có thể không giữ RepoDigests nên runtime chỉ dùng tag sau khi đối chiếu đúng ID trong manifest đã checksum. Giữ gói cũ để rollback obs.
+Script pull tám image amd64 ghim digest trong `infra/obs/obs.env.example`, save `obs-images.tar`, copy allowlist runtime (gồm app observability overlay), ghi `OBS_IMAGES`, `OBS_SOURCE_COMMIT`, `OBS_SHA256SUMS`, archive và checksum tại `dist/obs/`. Không ship `.git`, env thật, source nghiệp vụ. Image manifest ghi tag, image ID, platform và digest gốc; docker save/load có thể không giữ RepoDigests nên runtime chỉ dùng tag sau khi đối chiếu đúng ID trong manifest đã checksum. Giữ gói cũ để rollback obs.
 
 Local Git Bash (không dùng bash WSL chưa có Docker integration): copy env mẫu thành file bị ignore, tạo password giả chỉ dùng local; đặt `OBS_NETWORK` đúng mạng app local. Trong PowerShell có thể gọi Git Bash:
 
@@ -56,7 +64,25 @@ sha256sum --check OBS_SHA256SUMS
 
 3. Chạy migration `trace_context` của identity, event, booking, payment, ticket, resale, finance **trước** khi rollout image ứng dụng mới. Cột nullable/additive; rollback ứng dụng giữ nguyên cột và dữ liệu, không backfill parent giả. Không ghi đè `.env.prod`, `.env.demo`, token Tunnel hoặc bất kỳ volume nào.
 4. Tạo role monitoring một lần bằng `infra/postgres/monitoring-role.sql` với password nhập qua editor/prompt bảo mật. Exporter chỉ dùng `ticketing_monitor`, không dùng `infra_admin`; role không có `USAGE`/`SELECT` schema nghiệp vụ. Tạo `/etc/ticketing/.env.obs` từ mẫu, `chmod 600`, thêm `POSTGRES_EXPORTER_DSN` với credential role này. Giữ các image digest/network/port, chọn admin riêng. Không dán password vào shell command. Định dạng env riêng **KEY=value không quote/khoảng trắng/interpolation**; password 24–128 ký tự chữ/số/`_`/`-`.
-5. Chạy check rồi start (không cần env prod/demo hoặc token Cloudflare):
+5. Sau khi load/check artifact demo mới theo runbook T-208, dùng cùng `APP_LOG_DIR` trong `/etc/ticketing/.env.obs` để chạy overlay ứng dụng. Thay `RELEASE_DIR` bằng thư mục demo đã giải nén; không chạy lệnh này cho demo không observability:
+
+```bash
+app_obs=(docker compose -p ticketing-prod \
+  --env-file /etc/ticketing/.env.prod --env-file /etc/ticketing/.env.demo \
+  --env-file /etc/ticketing/.env.obs --env-file "$RELEASE_DIR/release.env" \
+  -f "$RELEASE_DIR/infra/compose/docker-compose.prod.yml" \
+  -f "$RELEASE_DIR/infra/compose/docker-compose.tunnel.yml" \
+  -f "$RELEASE_DIR/infra/compose/docker-compose.apps.yml" \
+  -f "$RELEASE_DIR/infra/compose/docker-compose.apps-observability.yml")
+"${app_obs[@]}" config --quiet
+"${app_obs[@]}" run -T --rm --no-deps app-log-init
+"${app_obs[@]}" up -d --no-deps --pull never --wait --wait-timeout 240 identity event booking payment ticket
+stat -c '%u:%g %a %n' "$APP_LOG_DIR"
+```
+
+Expected directory is `1000:473 2775`; `docker inspect` must show app bind mounts read-write and Alloy's `/var/log/ticketing` bind read-only. This starts correctly before Alloy and keeps Docker stdout logging. Do not add this overlay to base/T-208-only deployment.
+
+6. Chạy check rồi start observability (không cần env prod/demo hoặc token Cloudflare):
 
 ```bash
 bash infra/obs/obs.sh check /etc/ticketing/.env.obs
@@ -65,7 +91,7 @@ bash infra/obs/obs.sh start /etc/ticketing/.env.obs
 
 `check` kiểm checksum/load image/ID/amd64/network/promtool, không start/recreate ứng dụng. `start` chỉ force-recreate observability daemons và chờ readiness. Không migration, không restart ứng dụng, không prune/remove-orphans/down. Alloy chạy UID 473, app log directory được mount read-only, không có docker.sock; init job chỉ chown checkpoint volume với capability tối thiểu. Jaeger chạy UID 10001 với Badger trên volume; init job chỉ chown thư mục Badger. Nếu check/start thất bại, xem log obs và dừng; app giữ nguyên.
 
-5. Tạo traffic smoke nhẹ vào ứng dụng; kiểm tra `http://127.0.0.1:9090/api/v1/targets` từ server và query `up{job="application"}` đủ năm service bằng 1. Kiểm tra counter tăng sau ít nhất hai lần scrape, datasource Grafana khỏe, dashboard có rate/ratio/p50/p95/p99. Backend cũ có thể `up=1` nhưng metric mới absent: chưa nghiệm thu RED; không tự nâng app.
+7. Tạo traffic smoke nhẹ vào ứng dụng; kiểm tra `http://127.0.0.1:9090/api/v1/targets` từ server và query `up{job="application"}` đủ năm service bằng 1. Kiểm tra counter tăng sau ít nhất hai lần scrape, datasource Grafana khỏe, dashboard có rate/ratio/p50/p95/p99; Loki có JSON log và Jaeger có trace của từng service. Restart Alloy, gọi một request trong khi Alloy chưa sẵn sàng rồi kiểm health/worker; sau Alloy trở lại kiểm log/trace mới được thu. Backend cũ có thể `up=1` nhưng metric mới absent: chưa nghiệm thu RED; không tự nâng app.
 
 ## SSH tunnel từ Windows
 
