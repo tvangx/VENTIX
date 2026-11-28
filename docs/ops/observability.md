@@ -24,7 +24,7 @@ Chỉ khi rollout observability, dùng thêm `infra/compose/docker-compose.apps-
 
 - Prometheus: host **127.0.0.1:9090**, Grafana: **127.0.0.1:3030**, Loki: **127.0.0.1:3100**, Jaeger: **127.0.0.1:16686**, Alloy OTLP/HTTP: **127.0.0.1:4318**. Không public route/hostname hoặc đổi trust Kong/Cloudflare. Không mount docker.sock. Prometheus, Alloy và exporters nối backend có sẵn `ticketing-prod_backend`; Grafana, Loki và Jaeger chỉ nối bridge obs-access. Không tạo lại hoặc đổi mạng ứng dụng; backend prod vẫn internal.
 - Grafana tắt anonymous/sign-up, dùng admin riêng. Không đưa secret vào repo/chat/history. File env bên ngoài artifact, quyền 0600. Không in `docker compose config` đầy đủ với env thật.
-- Tổng trần container observability là **2.47 GiB RAM và 2.75 CPU**: Prometheus 512 MiB/0.5, Grafana 512 MiB/0.5, Loki 384 MiB/0.4, Jaeger 512 MiB/0.5, Alloy 256 MiB/0.3, Kafka exporter 128 MiB/0.2, Redis exporter 96 MiB/0.15, PostgreSQL exporter 128 MiB/0.2. Đây là giới hạn bảo vệ, không phải footprint; phải kiểm tra `free -h`, `df -h`, `docker stats` trên EC2 8 GiB trước start.
+- Tổng trần container observability là **2.59 GiB RAM (2656 MiB) và 2.95 CPU**: Prometheus 512 MiB/0.5, Grafana 512 MiB/0.5, Loki 384 MiB/0.4, Jaeger 512 MiB/0.5, Alloy 256 MiB/0.3, Kafka exporter 128 MiB/0.2, Redis exporter 96 MiB/0.15, **bốn** PostgreSQL exporter mỗi cái 64 MiB/0.1 (một exporter cho mỗi cluster). Đây là giới hạn bảo vệ, không phải footprint; phải kiểm tra `free -h`, `df -h`, `docker stats` trên EC2 8 GiB trước start.
 - Scrape 15s/timeout 5s; 20.000 samples/target/scrape để chặn bùng nổ nhãn. Prometheus retention **7 ngày hoặc 1 GiB** (ngưỡng đạt trước); Loki retention 7 ngày; Jaeger Badger TTL 7 ngày. WAL/head/compaction và Badger có thể tạm vượt dữ liệu hữu dụng, nên không coi đây là disk quota. Dành headroom cho WAL, Grafana SQLite, image/archive; theo dõi `df -h`, `docker stats`, `du` định kỳ. Không tăng EC2/dùng dịch vụ trả phí.
 - Dashboard chọn service và thời gian, mặc định 15 phút; rate window dùng `$__rate_interval`. Health probes bị loại khỏi RED; 404 vẫn tính. Scrape availability không đồng nghĩa app healthy. Panel metric presence giúp phát hiện backend cũ. Không traffic thì ratio/quantile là No data, không tô khỏe giả. Histogram cần tối thiểu hai scrape; low traffic có thể làm quantile thiếu/ước lượng thô.
 
@@ -48,6 +48,58 @@ Local Git Bash (không dùng bash WSL chưa có Docker integration): copy env m�
 
 Git Bash/Linux có make: `make obs-check`, `make obs-up`, `make obs-down` với `OBS_ENV=/absolute/path` và `OBS_PROJECT=ticketing-prod` (mặc định). Wrapper dùng Compose standalone obs; kiểm thử merge với base+tunnel+apps không thay config ứng dụng. Dev chạy app trên host có thể đổi target sang `host.docker.internal:<port>` (Linux cần tự cấu hình host-gateway); không áp file target dev lên EC2.
 
+## PostgreSQL: bốn cluster, bốn exporter
+
+EC2 có bốn cluster độc lập (prod compose): `postgres` (identity/event/finance và các DB dùng chung khác), `postgres-booking` (`booking_db`), `postgres-payment` (`payment_db`), `postgres-ticket` (`ticket_db`). Mỗi cluster có một `postgres_exporter` riêng — chế độ single-target chính thức của postgres_exporter `v0.17.1` (README: multi-target `/probe` là **BETA**, chỉ dành cho trường hợp không chạy được exporter riêng). Không dùng DSN nhiều nguồn.
+
+| Cluster   | Container EC2                       | Exporter (obs)              | Nhãn Prometheus                      |
+| --------- | ----------------------------------- | --------------------------- | ------------------------------------ |
+| `shared`  | `ticketing-prod-postgres-1`         | `postgres-exporter-shared`  | `{job="postgres", cluster="shared"}` |
+| `booking` | `ticketing-prod-postgres-booking-1` | `postgres-exporter-booking` | `cluster="booking"`                  |
+| `payment` | `ticketing-prod-postgres-payment-1` | `postgres-exporter-payment` | `cluster="payment"`                  |
+| `ticket`  | `ticketing-prod-postgres-ticket-1`  | `postgres-exporter-ticket`  | `cluster="ticket"`                   |
+
+Exporter dùng `DATA_SOURCE_URI=<host>:5432/postgres?sslmode=disable` cố định theo DNS service prod trên mạng `ticketing-prod_backend`, `DATA_SOURCE_USER=ticketing_monitor` và password riêng từng cluster từ `.env.obs`. Không port host, không docker.sock, root filesystem read-only, `cap_drop: ALL`. Nhãn `cluster` chỉ có bốn giá trị cố định; `datname` bị chặn bởi số DB.
+
+**Quyền của `ticketing_monitor` (mỗi cluster):** `LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 3`; chỉ một membership `pg_monitor WITH INHERIT TRUE, SET FALSE`; `CONNECT` chỉ DB `postgres`. Không `CONNECT` vào `*_db`, không `USAGE`/`SELECT` schema/bảng nghiệp vụ; `pg_monitor` (qua `pg_read_all_stats`) đã đủ cho `pg_stat_*` và `pg_database_size()`. Từ PostgreSQL 16, `NOINHERIT` chỉ là mặc định cho grant mới — vì exporter không `SET ROLE`, grant `pg_monitor` phải ghi rõ `INHERIT TRUE`, nếu không exporter mất quyền thống kê.
+
+**Áp dụng (Tuấn chạy trên EC2, từ thư mục artifact obs đã kiểm checksum):**
+
+```bash
+docker ps --format '{{.Names}}' | grep -E '^ticketing-prod-postgres(-booking|-payment|-ticket)?-1$'
+for c in ticketing-prod-postgres-1 ticketing-prod-postgres-booking-1 \
+         ticketing-prod-postgres-payment-1 ticketing-prod-postgres-ticket-1; do
+  echo "== $c"
+  docker exec -i "$c" sh -c 'exec psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres' \
+    < infra/postgres/monitoring-role.sql || { echo "STOP at $c"; break; }
+done
+```
+
+Script idempotent và giống hệt cho cả bốn cluster: tạo role nếu chưa có, chuẩn hóa thuộc tính, cấp `pg_monitor`/`CONNECT postgres`, thu hồi grant trực tiếp trên DB khác, rồi tự kiểm tra và in `NOTICE: ticketing_monitor verified on this cluster`. Nếu kiểm tra thất bại (membership lạ, còn `CONNECT` vào `*_db` qua `PUBLIC`…) script dừng với `ERROR`, không đổi gì thêm: xem lỗi, sửa thủ công bằng `REVOKE`, không `DROP ROLE`. Admin lấy từ biến `POSTGRES_USER` sẵn trong container qua socket local; không đưa credential admin lên command line.
+
+**Đặt password (prompt, không vào history/log):** cho từng cluster, sinh một giá trị riêng rồi đặt bằng `\password` của psql (prompt không echo; psql băm SCRAM phía client nên plaintext không tới server log hay `.psql_history`):
+
+```bash
+openssl rand -hex 24          # chạy 4 lần, mỗi cluster một giá trị; không ghi ra file tạm
+docker exec -it ticketing-prod-postgres-booking-1 sh -c 'exec psql -X -U "$POSTGRES_USER" -d postgres'
+# trong psql:  \password ticketing_monitor   → dán giá trị hai lần → \q
+```
+
+Lặp lại cho `ticketing-prod-postgres-1`, `-payment-1`, `-ticket-1`. Sau đó `sudoedit /etc/ticketing/.env.obs` (hoặc editor tương đương, file `0600`) và điền `POSTGRES_MONITOR_PASSWORD_SHARED|BOOKING|PAYMENT|TICKET` đúng cluster; bốn giá trị phải khác nhau (`obs.sh check` từ chối trùng). Xóa scrollback terminal sau khi xong. Không dùng `ALTER ROLE ... PASSWORD '...'`, `-c`, `echo`/heredoc hay biến shell chứa password.
+
+**Role `ticketing_monitor` đã có trên cluster chính từ lần rollout lỗi:** lệnh `GRANT CONNECT` nhiều DB lỗi nguyên câu (không DB nào được cấp), nhưng `CREATE ROLE` và `GRANT pg_monitor` đã commit với `inherit_option = false` nên role hiện **không** dùng được `pg_monitor`. Không DROP. Chỉ cần chạy vòng lặp trên: script nhận role sẵn có, chuẩn hóa thuộc tính, đặt lại grant `pg_monitor WITH INHERIT TRUE, SET FALSE`, thu hồi grant DB thừa và kiểm tra. Sau đó **đổi password** bằng `\password` như trên (không biết chắc password cũ đã từng xuất hiện ở đâu). Kiểm tra thủ công nếu cần:
+
+```sql
+SELECT g.rolname, m.inherit_option, m.set_option, m.admin_option
+FROM pg_auth_members m JOIN pg_roles g ON g.oid = m.roleid
+JOIN pg_roles r ON r.oid = m.member WHERE r.rolname = 'ticketing_monitor';
+-- Kỳ vọng đúng một dòng: pg_monitor | t | f | f
+```
+
+`.env.obs` cũ có `POSTGRES_EXPORTER_DSN` sẽ bị `obs.sh` từ chối (không in giá trị); xóa dòng đó bằng editor và thay bằng bốn field mới.
+
+**Nghiệm thu:** `up{job="postgres"}` và `pg_up{job="postgres"}` bằng 1 cho đủ bốn `cluster`; dashboard **VENTIX — System** có panel "PostgreSQL reachable per cluster", kết nối và dung lượng DB theo `cluster/datname`. `up=1` nhưng `pg_up=0` nghĩa là exporter chạy nhưng không đăng nhập/kết nối được cluster (sai password, role chưa có hoặc DB down): kiểm tra log exporter tương ứng, không cấp thêm quyền.
+
 ## Tuấn thực hiện trên EC2
 
 1. Xác nhận release ứng dụng đang chạy và metric mới. Kiểm tra headroom RAM/disk bằng `free -h`, `df -h`, `docker system df`. Chuyển archive và checksum qua SSH hiện có, giữ artifact obs riêng với artifact app. Không giải nén đè lên release app.
@@ -63,7 +115,7 @@ sha256sum --check OBS_SHA256SUMS
 ```
 
 3. Chạy migration `trace_context` của identity, event, booking, payment, ticket, resale, finance **trước** khi rollout image ứng dụng mới. Cột nullable/additive; rollback ứng dụng giữ nguyên cột và dữ liệu, không backfill parent giả. Không ghi đè `.env.prod`, `.env.demo`, token Tunnel hoặc bất kỳ volume nào.
-4. Tạo role monitoring một lần bằng `infra/postgres/monitoring-role.sql` với password nhập qua editor/prompt bảo mật. Exporter chỉ dùng `ticketing_monitor`, không dùng `infra_admin`; role không có `USAGE`/`SELECT` schema nghiệp vụ. Tạo `/etc/ticketing/.env.obs` từ mẫu, `chmod 600`, thêm `POSTGRES_EXPORTER_DSN` với credential role này. Giữ các image digest/network/port, chọn admin riêng. Không dán password vào shell command. Định dạng env riêng **KEY=value không quote/khoảng trắng/interpolation**; password 24–128 ký tự chữ/số/`_`/`-`.
+4. Tạo/chuẩn hóa role monitoring trên **từng** cluster PostgreSQL — xem mục [PostgreSQL: bốn cluster, bốn exporter](#postgresql-bốn-cluster-bốn-exporter). Exporter chỉ dùng `ticketing_monitor`, không dùng `infra_admin`; role không có `USAGE`/`SELECT` schema nghiệp vụ. Tạo `/etc/ticketing/.env.obs` từ mẫu bằng editor, `chmod 600`, điền bốn `POSTGRES_MONITOR_PASSWORD_*`. Giữ các image digest/network/port, chọn admin riêng. Không dán password vào shell command. Định dạng env riêng **KEY=value không quote/khoảng trắng/interpolation**; password 24–128 ký tự chữ/số/`_`/`-`.
 5. Sau khi load/check artifact demo mới theo runbook T-208, dùng cùng `APP_LOG_DIR` trong `/etc/ticketing/.env.obs` để chạy overlay ứng dụng. Thay `RELEASE_DIR` bằng thư mục demo đã giải nén; không chạy lệnh này cho demo không observability:
 
 ```bash
@@ -119,9 +171,12 @@ Rollback cấu hình cùng phiên bản image: từ artifact obs trước, chạ
 
 ```powershell
 node infra/obs/config.test.cjs
+node infra/postgres/monitoring-role.int.test.cjs
 pnpm build
 node infra/obs/smoke.cjs
 ```
+
+`monitoring-role.int.test.cjs` dựng bốn cluster PostgreSQL tạm (image và `prod-init` của prod) trên network tạm với alias giống prod, tái hiện lỗi script cũ (`booking_db does not exist`, grant `NOINHERIT` vô hiệu), chạy script mới hai lần mỗi cluster, kiểm quyền âm/dương bằng chính role monitor, khởi động bốn exporter từ `docker-compose.obs.yml` và một Prometheus tạm đọc `infra/prometheus/prometheus.yml` để xác nhận bốn target có nhãn `cluster` đều `up=1`/`pg_up=1`. Chỉ dùng credential giả; dọn container/network tạm của chính nó.
 
 Smoke dùng bootstrap thật năm backend trên host, PostgreSQL Testcontainers riêng từng service (workers tắt), một TCP relay Docker chỉ chuyển byte để tên container/port trong target mặc định trỏ tới host. Không giả metric/API response, không dùng credential/data demo. Kiểm datasource/dashboard query qua Grafana, counter tăng, `up=1`, recreate giữ TSDB/Grafana preferences, stop giữ app; Kong test cô lập chặn 25 probe metrics GET/OPTIONS. Đặt `K6_BINARY` trỏ tới k6 chính thức nếu có để chạy smoke 1 VU/15s và bắt buộc có checks thật; không dùng lượt chạy 0 checks để nghiệm thu. Không chạy build/generate Prisma cùng smoke trên Windows; harness dùng bản sao DLL engine riêng để tránh khóa DLL của client khi quan sát.
 

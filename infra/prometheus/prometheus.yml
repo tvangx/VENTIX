@@ -10,8 +10,20 @@ scrape_configs:
         labels: { exporter: kafka }
       - targets: ["redis-exporter:9121"]
         labels: { exporter: redis }
-      - targets: ["postgres-exporter:9187"]
-        labels: { exporter: postgres }
+  # One postgres_exporter per independent cluster; `cluster` is a fixed, bounded set.
+  - job_name: postgres
+    sample_limit: 5000
+    label_limit: 20
+    label_value_length_limit: 200
+    static_configs:
+      - targets: ["postgres-exporter-shared:9187"]
+        labels: { exporter: postgres, cluster: shared }
+      - targets: ["postgres-exporter-booking:9187"]
+        labels: { exporter: postgres, cluster: booking }
+      - targets: ["postgres-exporter-payment:9187"]
+        labels: { exporter: postgres, cluster: payment }
+      - targets: ["postgres-exporter-ticket:9187"]
+        labels: { exporter: postgres, cluster: ticket }
   - job_name: application
     honor_labels: true
     metrics_path: /metrics
