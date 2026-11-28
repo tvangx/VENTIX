@@ -1,4 +1,17 @@
 # Standalone additive stack; shares only the existing application network.
+x-postgres-exporter: &postgres-exporter
+  image: ${POSTGRES_EXPORTER_IMAGE:?Set pinned POSTGRES_EXPORTER_IMAGE}
+  restart: unless-stopped
+  networks: [obs-backend]
+  mem_limit: 64m
+  cpus: 0.1
+  read_only: true
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  logging:
+    driver: local
+    options: { max-size: "2m", max-file: "2" }
+
 services:
   prometheus:
     image: ${PROMETHEUS_IMAGE:?Set pinned PROMETHEUS_IMAGE}
@@ -150,16 +163,36 @@ services:
     environment:
       REDIS_ADDR: redis://redis:6379
 
-  postgres-exporter:
-    image: ${POSTGRES_EXPORTER_IMAGE:?Set pinned POSTGRES_EXPORTER_IMAGE}
-    restart: unless-stopped
-    networks: [obs-backend]
-    mem_limit: 128m
-    cpus: 0.2
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
+  # One exporter per independent PostgreSQL cluster (official single-target mode;
+  # /probe multi-target is beta upstream). Host is the prod service DNS name, the
+  # credential is the per-cluster least-privilege ticketing_monitor role.
+  postgres-exporter-shared:
+    <<: *postgres-exporter
     environment:
-      DATA_SOURCE_NAME: ${POSTGRES_EXPORTER_DSN:?Set read-only monitoring DSN}
+      DATA_SOURCE_URI: postgres:5432/postgres?sslmode=disable
+      DATA_SOURCE_USER: ticketing_monitor
+      DATA_SOURCE_PASS: ${POSTGRES_MONITOR_PASSWORD_SHARED:?Set POSTGRES_MONITOR_PASSWORD_SHARED}
+
+  postgres-exporter-booking:
+    <<: *postgres-exporter
+    environment:
+      DATA_SOURCE_URI: postgres-booking:5432/postgres?sslmode=disable
+      DATA_SOURCE_USER: ticketing_monitor
+      DATA_SOURCE_PASS: ${POSTGRES_MONITOR_PASSWORD_BOOKING:?Set POSTGRES_MONITOR_PASSWORD_BOOKING}
+
+  postgres-exporter-payment:
+    <<: *postgres-exporter
+    environment:
+      DATA_SOURCE_URI: postgres-payment:5432/postgres?sslmode=disable
+      DATA_SOURCE_USER: ticketing_monitor
+      DATA_SOURCE_PASS: ${POSTGRES_MONITOR_PASSWORD_PAYMENT:?Set POSTGRES_MONITOR_PASSWORD_PAYMENT}
+
+  postgres-exporter-ticket:
+    <<: *postgres-exporter
+    environment:
+      DATA_SOURCE_URI: postgres-ticket:5432/postgres?sslmode=disable
+      DATA_SOURCE_USER: ticketing_monitor
+      DATA_SOURCE_PASS: ${POSTGRES_MONITOR_PASSWORD_TICKET:?Set POSTGRES_MONITOR_PASSWORD_TICKET}
 
 networks:
   # An internal-only bridge cannot serve the host-published UI port on all engines.

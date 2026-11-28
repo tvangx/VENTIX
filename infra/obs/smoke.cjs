@@ -89,6 +89,22 @@ async function main() {
     envFile,
     readFileSync(join(__dirname, "obs.env.example"), "utf8")
       .replace("GRAFANA_ADMIN_PASSWORD=", `GRAFANA_ADMIN_PASSWORD=${password}`)
+      .replace(
+        "POSTGRES_MONITOR_PASSWORD_SHARED=",
+        "POSTGRES_MONITOR_PASSWORD_SHARED=synthetic-shared-smoke-only-t501",
+      )
+      .replace(
+        "POSTGRES_MONITOR_PASSWORD_BOOKING=",
+        "POSTGRES_MONITOR_PASSWORD_BOOKING=synthetic-booking-smoke-only-t501",
+      )
+      .replace(
+        "POSTGRES_MONITOR_PASSWORD_PAYMENT=",
+        "POSTGRES_MONITOR_PASSWORD_PAYMENT=synthetic-payment-smoke-only-t501",
+      )
+      .replace(
+        "POSTGRES_MONITOR_PASSWORD_TICKET=",
+        "POSTGRES_MONITOR_PASSWORD_TICKET=synthetic-ticket-smoke-only-t501",
+      )
       .replace("OBS_NETWORK=ticketing-prod_backend", `OBS_NETWORK=${network}`)
       .replace("PROMETHEUS_PORT=9090", "PROMETHEUS_PORT=19090")
       .replace("GRAFANA_PORT=3030", "GRAFANA_PORT=13030"),
